@@ -1,0 +1,136 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TLabel Annotation Format",
+  "version": "0.2.0",
+  "description": "Schema for TLabel cross-sensor tactile annotation files",
+  "type": "object",
+  "required": ["schema_version", "sensor_info", "capabilities", "episodes"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^0\\.2\\.0$",
+      "description": "TLabel schema version"
+    },
+    "sensor_info": {
+      "type": "object",
+      "required": ["sensor_name", "sensor_type", "adapter_name", "adapter_version"],
+      "properties": {
+        "sensor_name": {
+          "type": "string",
+          "description": "Sensor product name"
+        },
+        "sensor_type": {
+          "type": "string",
+          "enum": ["vision_based", "distributed_array", "hybrid"],
+          "description": "Sensor category"
+        },
+        "manufacturer": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "resolution": {
+          "type": "string"
+        },
+        "frame_rate": {
+          "type": "number",
+          "minimum": 1
+        },
+        "adapter_name": {
+          "type": "string",
+          "description": "TLabel adapter identifier"
+        },
+        "adapter_version": {
+          "type": "string",
+          "description": "Adapter version (semver)"
+        }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "required": ["contact"],
+      "properties": {
+        "contact": { "type": "boolean" },
+        "contact_region": { "type": "boolean" },
+        "force_magnitude": { "type": "boolean" },
+        "force_direction": { "type": "boolean" },
+        "slip_event": { "type": "boolean" },
+        "slip_direction": { "type": "boolean" },
+        "manipulation_phase": { "type": "boolean" },
+        "texture": { "type": "boolean" },
+        "whole_hand_coordination": { "type": "boolean" },
+        "object_deformation": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "episodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["episode_id", "task", "frames"],
+        "properties": {
+          "episode_id": { "type": "string" },
+          "task": { "type": "string" },
+          "object": { "type": "string" },
+          "metadata": {
+            "type": "object",
+            "properties": {
+              "duration_s": { "type": "number" },
+              "num_frames": { "type": "integer" }
+            }
+          },
+          "frames": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["frame_idx", "timestamp_s"],
+              "properties": {
+                "frame_idx": { "type": "integer" },
+                "timestamp_s": { "type": "number" },
+                "contact": { "type": "boolean" },
+                "contact_region": { "type": "string" },
+                "force_magnitude": { "type": "number", "minimum": 0, "maximum": 1 },
+                "force_direction": {
+                  "type": "array",
+                  "items": { "type": "number" },
+                  "minItems": 3,
+                  "maxItems": 3
+                },
+                "slip_event": { "type": "boolean" },
+                "slip_direction": {
+                  "oneOf": [
+                    {
+                      "type": "array",
+                      "items": { "type": "number" },
+                      "minItems": 3,
+                      "maxItems": 3
+                    },
+                    { "type": "null" }
+                  ]
+                },
+                "manipulation_phase": {
+                  "type": "string",
+                  "enum": ["approach", "contact", "lift", "hold", "place", "release"]
+                },
+                "texture": { "type": "string" },
+                "whole_hand_coordination": {
+                  "oneOf": [
+                    { "type": "object" },
+                    { "type": "null" }
+                  ]
+                },
+                "object_deformation": {
+                  "oneOf": [
+                    { "type": "object" },
+                    { "type": "null" }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
