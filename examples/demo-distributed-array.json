@@ -1,0 +1,91 @@
+{
+  "schema_version": "0.2.0",
+  "sensor_info": {
+    "sensor_name": "PaXini-PXCap",
+    "sensor_type": "distributed_array",
+    "manufacturer": "PaXini",
+    "model": "PXCap",
+    "frame_rate": 100,
+    "adapter_name": "tlabel-paxini",
+    "adapter_version": "0.2.0"
+  },
+  "capabilities": {
+    "contact": true,
+    "contact_region": true,
+    "force_magnitude": true,
+    "force_direction": true,
+    "slip_event": true,
+    "slip_direction": true,
+    "manipulation_phase": true,
+    "texture": false,
+    "whole_hand_coordination": true,
+    "object_deformation": false
+  },
+  "episodes": [
+    {
+      "episode_id": "demo_002",
+      "task": "peg_in_hole",
+      "object": "metal_peg",
+      "metadata": {
+        "duration_s": 5.0,
+        "num_frames": 500
+      },
+      "frames": [
+        {
+          "frame_idx": 0,
+          "timestamp_s": 0.0,
+          "contact": false,
+          "contact_region": null,
+          "force_magnitude": 0.0,
+          "force_direction": null,
+          "slip_event": false,
+          "slip_direction": null,
+          "manipulation_phase": "approach",
+          "whole_hand_coordination": null
+        },
+        {
+          "frame_idx": 100,
+          "timestamp_s": 1.0,
+          "contact": true,
+          "contact_region": "taxel_group_thumb",
+          "force_magnitude": 0.65,
+          "force_direction": [0.02, 0.05, -0.99],
+          "slip_event": false,
+          "slip_direction": null,
+          "manipulation_phase": "contact",
+          "whole_hand_coordination": {
+            "pattern": "precision_grasp",
+            "active_fingers": ["thumb", "index", "middle"]
+          }
+        },
+        {
+          "frame_idx": 350,
+          "timestamp_s": 3.5,
+          "contact": true,
+          "contact_region": "taxel_group_thumb",
+          "force_magnitude": 0.88,
+          "force_direction": [0.01, 0.03, -1.0],
+          "slip_event": true,
+          "slip_direction": [-0.9, -0.1, 0.42],
+          "manipulation_phase": "place",
+          "whole_hand_coordination": {
+            "pattern": "precision_grasp",
+            "active_fingers": ["thumb", "index", "middle"]
+          }
+        },
+        {
+          "frame_idx": 499,
+          "timestamp_s": 4.99,
+          "contact": false,
+          "contact_region": null,
+          "force_magnitude": 0.0,
+          "force_direction": null,
+          "slip_event": false,
+          "slip_direction": null,
+          "manipulation_phase": "release",
+          "whole_hand_coordination": null
+        }
+      ]
+    }
+  ]
+}
