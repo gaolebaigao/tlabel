@@ -2,7 +2,7 @@
 
 **A Unified Annotation Framework for Cross-Sensor Tactile Manipulation Data**
 
-[![Paper](https://img.shields.io/badge/Paper-arXiv-red)]()
+[![Paper](https://img.shields.io/badge/Paper-arXiv-red)](https://arxiv.org/abs/2505.XXXXX)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 TLabel is the first cross-sensor tactile annotation schema with capability declarations. It enables heterogeneous tactile sensors — regardless of operating principle — to produce compatible semantic annotations while preserving their unique strengths.
@@ -100,7 +100,7 @@ See [docs/tlabel-format.md](docs/tlabel-format.md) for the full specification.
 
 *Xi Luo* (Niuxu Tech)
 
-[[arXiv]]() | [[PDF]](paper/tlabel-paper.pdf)
+[[arXiv]](https://arxiv.org/submit/7651949) | [[PDF]](paper/tlabel-paper.pdf)
 
 LaTeX source available in [`paper/`](paper/).
 
