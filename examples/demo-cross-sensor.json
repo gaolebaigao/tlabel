@@ -1,0 +1,26 @@
+{
+  "schema_version": "0.2.0",
+  "sensor_info": {
+    "name": "Cross-Sensor Demo",
+    "description": "Demonstrates how different sensor types annotate the same pick-and-place task in TLabel Format"
+  },
+  "sensors": {
+    "daimon_infinity": {
+      "sensor_type": "vision_based",
+      "coverage": "8/11"
+    },
+    "paxini_pxcap": {
+      "sensor_type": "hall_effect",
+      "coverage": "6/11"
+    },
+    "gelsight_meta": {
+      "sensor_type": "vision_based",
+      "coverage": "5/11"
+    },
+    "digit_meta": {
+      "sensor_type": "vision_based",
+      "coverage": "5/11"
+    }
+  },
+  "note": "Same manipulation moment, four sensors. Same semantic dimensions, different coverage. Semantic meaning is unified via TLabel Format."
+}
