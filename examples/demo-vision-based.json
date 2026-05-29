@@ -1,0 +1,86 @@
+{
+  "schema_version": "0.2.0",
+  "sensor_info": {
+    "sensor_name": "Daimon-Infinity",
+    "sensor_type": "vision_based",
+    "manufacturer": "Daimon",
+    "model": "Infinity",
+    "resolution": "640x480",
+    "frame_rate": 30,
+    "adapter_name": "tlabel-daimon",
+    "adapter_version": "0.2.0"
+  },
+  "capabilities": {
+    "contact": true,
+    "contact_region": true,
+    "force_magnitude": true,
+    "force_direction": true,
+    "slip_event": true,
+    "slip_direction": true,
+    "manipulation_phase": true,
+    "texture": true,
+    "whole_hand_coordination": false,
+    "object_deformation": false
+  },
+  "episodes": [
+    {
+      "episode_id": "demo_001",
+      "task": "pick_place",
+      "object": "plastic_bottle",
+      "metadata": {
+        "duration_s": 3.0,
+        "num_frames": 90
+      },
+      "frames": [
+        {
+          "frame_idx": 0,
+          "timestamp_s": 0.0,
+          "contact": false,
+          "contact_region": null,
+          "force_magnitude": 0.0,
+          "force_direction": null,
+          "slip_event": false,
+          "slip_direction": null,
+          "manipulation_phase": "approach",
+          "texture": null
+        },
+        {
+          "frame_idx": 30,
+          "timestamp_s": 1.0,
+          "contact": true,
+          "contact_region": "fingertip_left",
+          "force_magnitude": 0.45,
+          "force_direction": [0.1, -0.2, 0.97],
+          "slip_event": false,
+          "slip_direction": null,
+          "manipulation_phase": "hold",
+          "texture": "smooth_plastic"
+        },
+        {
+          "frame_idx": 60,
+          "timestamp_s": 2.0,
+          "contact": true,
+          "contact_region": "fingertip_left",
+          "force_magnitude": 0.52,
+          "force_direction": [0.05, -0.15, 0.99],
+          "slip_event": true,
+          "slip_direction": [0.85, 0.35, 0.40],
+          "manipulation_phase": "hold",
+          "texture": "smooth_plastic"
+        },
+        {
+          "frame_idx": 89,
+          "timestamp_s": 2.97,
+          "contact": false,
+          "contact_region": null,
+          "force_magnitude": 0.0,
+          "force_direction": null,
+          "slip_event": false,
+          "slip_direction": null,
+          "manipulation_phase": "release",
+          "texture": null
+        }
+      ]
+    }
+  ]
+}
