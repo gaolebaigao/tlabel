@@ -2,141 +2,208 @@
 
 **A Unified Annotation Framework for Cross-Sensor Tactile Manipulation Data**
 
-[![Paper](https://img.shields.io/badge/Paper-arXiv-red)](https://arxiv.org/submit/7651949)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Paper](https://img.shields.io/badge/Paper-Figshare-blue)](https://doi.org/10.6084/m9.figshare.32527053)
+[![Format Spec](https://img.shields.io/badge/Spec-TLabel_Format_v2-green)](docs/tlabel-format.md)
+[![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
-TLabel is the first cross-sensor tactile annotation schema with capability declarations. It enables heterogeneous tactile sensors to produce compatible semantic annotations while preserving their unique strengths.
+---
 
-## Why TLabel?
+## What is TLabel?
 
-Tactile datasets today ship as raw sensor signals without semantic annotations. Each sensor type demands its own ad-hoc processing, and results from different sensors cannot be compared or fused. TLabel addresses this by:
+TLabel is the first cross-sensor tactile annotation schema with **capability declarations**. It enables heterogeneous tactile sensors — regardless of operating principle — to produce compatible semantic annotations while preserving their unique strengths.
 
-- **Standardizing annotations** at the semantic level (contact, force, slip, manipulation phases)
-- **Declaring capabilities** - each sensor adapter explicitly states which dimensions it can and cannot annotate
-- **Enabling cross-sensor comparison** through a shared output format
+### The Problem
 
-## Key Results
+Tactile datasets today ship as raw sensor signals (video frames, HDF5 arrays, custom blobs) without semantic annotations. Each sensor type demands its own ad-hoc processing, and results from different sensors cannot be compared or fused.
 
-| Metric | Result |
-|--------|--------|
-| Hard errors across 590K+ observations | **0** |
-| Cross-scenario generalization accuracy | **+7.93%** (p=0.029) |
-| Slip-risk detection F1 | **+10.35%** (p<0.001) |
-| Sensors validated | Daimon-Infinity + PaXini PXCap + GelSight + DIGIT |
+### The Solution
 
-## Cross-Sensor Validation
+TLabel Format defines **10 semantic dimensions** for tactile annotation. Each sensor adapter declares which dimensions it can and cannot annotate via a `capabilities` dictionary, and only outputs supported fields.
 
-TLabel enables semantic alignment across sensors with fundamentally different physics:
-
-| TLabel Dimension | Daimon | PaXini | GelSight | DIGIT |
-|:---|:---:|:---:|:---:|:---:|
-| contact | Yes | Yes | Yes | Yes |
-| force_magnitude | Yes | Yes | Yes | Yes |
-| slip_event | Yes | Partial | Yes | Yes |
-| manipulation_phase | Yes | Yes | Yes | Yes |
-| **Core coverage** | **8/11** | **6/11** | **5/11** | **5/11** |
-
-**4 core dimensions achieved full cross-sensor coverage** - contact, force_magnitude, slip_event, and manipulation_phase are annotated across all four sensor types, demonstrating that TLabel unifies semantic interpretation regardless of sensing modality.
+```
+┌─────────────┐    ┌──────────────┐    ┌─────────────┐
+│  GelSight   │───▶│  Adapter     │───▶│ TLabel JSON │
+│  (images)   │    │  (capabilities)│   │ (unified)   │
+└─────────────┘    └──────────────┘    └─────────────┘
+┌─────────────┐    ┌──────────────┐    ┌─────────────┐
+│  PaXini     │───▶│  Adapter     │───▶│ TLabel JSON │
+│  (vectors)  │    │  (capabilities)│   │ (unified)   │
+└─────────────┘    └──────────────┘    └─────────────┘
+```
 
 ## Quick Start
 
-### Read TLabel annotations
+### Installation
 
-```python
-from tlabel import TLabelReader
-
-reader = TLabelReader("path/to/annotations.tlabel.json")
-for frame in reader.frames():
-    print(frame.contact, frame.force_magnitude, frame.slip_event)
+```bash
+git clone https://github.com/liesliy/tlabel.git
+cd tlabel
+pip install -r requirements.txt
 ```
 
-### Use a TLabel adapter
+### Annotate a Dataset
 
 ```python
-from tlabel.adapters import DaimonInfinityAdapter, PaxiniAdapter
+from tlabel.adapters import GelSightAdapter, PaxiniAdapter
 
-adapter = DaimonInfinityAdapter(sensor_config)
-print(adapter.capabilities)
-annotations = adapter.annotate(episode_data)
+# GelSight (vision-based)
+adapter = GelSightAdapter(
+    data_path="path/to/daimon-infinity/",
+    capabilities=["contact_detection", "force_level", "slip_detection", 
+                  "slip_direction", "texture", "3d_shape", "shear_force"]
+)
+annotations = adapter.annotate()
+adapter.save(annotations, "output_gelsight.json")
+
+# PaXini (6D Hall-effect array)
+adapter = PaxiniAdapter(
+    data_path="path/to/paxini-hdf5/",
+    capabilities=["contact_detection", "force_level", "slip_detection",
+                  "whole_hand_coord"]
+)
+annotations = adapter.annotate()
+adapter.save(annotations, "output_paxini.json")
 ```
 
-## TLabel Format
+### Validate Annotations
 
-Each TLabel annotation file follows this structure:
+```python
+from tlabel.validation import validate_annotations
+
+report = validate_annotations("output_gelsight.json")
+print(f"Hard errors: {report.hard_errors}")  # Should be 0
+print(f"Anomaly rate: {report.anomaly_rate:.2%}")
+print(f"Grade: {report.grade}")  # A/B/C/D
+```
+
+## 10 Semantic Dimensions
+
+| # | Dimension | Description | Scope |
+|---|-----------|-------------|-------|
+| 1 | `contact_detection` | Contact state classification | All sensors |
+| 2 | `force_level` | Multi-level force classification | All sensors |
+| 3 | `slip_detection` | Object slip detection | Most sensors |
+| 4 | `slip_direction` | Slip direction vector | Vision-based |
+| 5 | `texture` | Surface texture classification | Vision-based |
+| 6 | `3d_shape` | Local surface shape | Vision-based |
+| 7 | `shear_force` | Tangential force component | Vision-based |
+| 8 | `whole_hand_coord` | Multi-region coordination | Arrays |
+| 9 | `vibration` | High-freq oscillation (>200Hz) | Reserved |
+| 10 | `temperature` | Thermal contact info | Reserved |
+
+## Validated Sensors
+
+| Sensor | Type | Episodes | Observations | Hard Errors | Anomaly Rate |
+|--------|------|----------|-------------|-------------|-------------|
+| Daimon-Infinity (GelSight) | Vision-based | 94 | 370K+ | **0** | 2.91% |
+| PaXini PXCap (6D Hall) | Distributed array | 15 | 219K+ | **0** | 0.14% |
+
+### Downstream Benefits
+
+Adding TLabel annotations to raw features:
+- **+7.93%** cross-scenario generalization accuracy (p<0.01)
+- **+10.35%** slip-risk F1 score (p<0.001)
+
+## Output Format
+
+Each annotation is a JSON object:
 
 ```json
 {
-  "schema_version": "0.2.0",
-  "sensor_info": { ... },
-  "capabilities": {
-    "contact": true,
-    "force_magnitude": true,
-    "slip_event": true,
-    "manipulation_phase": true,
-    "texture": true,
-    "whole_hand_coordination": false,
-    "object_deformation": false
+  "schema_version": "2.0",
+  "sensor_info": {
+    "type": "gelsight",
+    "model": "Daimon-Infinity",
+    "spatial_layout": "5_fingertips"
   },
-  "episodes": [ ... ]
+  "capabilities": {
+    "contact_detection": true,
+    "force_level": true,
+    "slip_detection": true,
+    "slip_direction": true,
+    "whole_hand_coord": false
+  },
+  "frames": [
+    {
+      "frame_id": 0,
+      "contact_state": "contact",
+      "force_level": "medium",
+      "slip_detected": false,
+      "phase": "grasp",
+      ...
+    }
+  ]
 }
 ```
 
-Capability declarations are the core innovation: each adapter declares which semantic dimensions it can and cannot annotate. Only supported fields appear in the output. This means a vision-based sensor and a Hall-effect array produce the same format with different coverage - no forced alignment, no data fabrication.
+## Project Structure
 
-See [docs/tlabel-format.md](docs/tlabel-format.md) for the full specification.
+```
+tlabel/
+├── README.md
+├── requirements.txt
+├── docs/
+│   └── tlabel-format.md          # Full specification
+├── adapters/
+│   ├── gelsight_adapter.py       # GelSight/Daimon adapter
+│   └── paxini_adapter.py         # PaXini 6D Hall adapter
+├── validation/
+│   └── validate.py               # 8-item consistency checker
+├── downstream/
+│   └── evaluate.py               # Downstream task evaluation
+└── examples/
+    └── sample_output.json        # Example annotation
+```
 
-## Documentation
+## Adding a New Sensor
 
-| Document | Description |
-|----------|-------------|
-| [TLabel Format Spec](docs/tlabel-format.md) | Complete annotation schema specification |
-| [Annotation Spec](docs/annotation-spec.md) | Annotation methodology and guidelines |
+To add support for a new tactile sensor:
 
-## Paper
+1. Create an adapter class that inherits from `BaseAdapter`
+2. Implement `compute_capabilities()` — declare which of the 10 dimensions your sensor supports
+3. Implement `annotate_frame()` — map raw sensor signals to TLabel semantic fields
+4. Run validation — ensure zero hard errors
 
-**TLabel: A Unified Annotation Framework for Cross-Sensor Tactile Manipulation Data**
+```python
+from tlabel.adapters import BaseAdapter
 
-*Xi Luo* (Niuxu Tech)
+class MySensorAdapter(BaseAdapter):
+    def compute_capabilities(self):
+        return {
+            "contact_detection": True,
+            "force_level": True,
+            "slip_detection": True,
+            # ... declare what your sensor can do
+        }
+    
+    def annotate_frame(self, raw_frame):
+        return {
+            "contact_state": self._detect_contact(raw_frame),
+            "force_level": self._classify_force(raw_frame),
+            # ...
+        }
+```
 
-[[arXiv]](https://arxiv.org/submit/7651949) | [[PDF]](paper/tlabel-paper.pdf)
+## Citation
 
-LaTeX source available in [`paper/`](paper/).
-
-### Citation
+If you use TLabel in your research, please cite:
 
 ```bibtex
 @article{luo2026tlabel,
   title={TLabel: A Unified Annotation Framework for Cross-Sensor Tactile Manipulation Data},
   author={Luo, Xi},
-  journal={arXiv preprint},
-  year={2026}
+  journal={figshare},
+  year={2026},
+  doi={10.6084/m9.figshare.32527053}
 }
 ```
 
-## Validation
-
-TLabel has been validated on four sensors with fundamentally different physics:
-
-| Sensor | Type | Key Capability |
-|--------|------|---------------|
-| Daimon-Infinity | Vision-based GelSight | 8/11 dimensions - widest coverage |
-| PaXini PXCap | 6D Hall-effect array | Multi-finger coordination |
-| GelSight (Meta) | Vision-based elastomer | Force estimation from optical flow |
-| DIGIT (Meta) | Vision-based compact | Slip detection from displacement |
-
 ## License
 
-This project is licensed under the MIT License - see [LICENSE](LICENSE) for details.
+MIT License. See [LICENSE](LICENSE) for details.
 
-The TLabel Format specification is free to implement by anyone. We encourage the community to build adapters for additional sensors.
+## Contact
 
-## Acknowledgments
+Xi Luo — [luoxi@touchlabelai.cn](mailto:luoxi@touchlabelai.cn)
 
-TLabel builds on insights from the tactile sensing community, including [Open X-Embodiment](https://robotics-transformer-x.github.io/), [LeRobot](https://github.com/huggingface/lerobot), and [OpenTouch](https://opentouch.ai/).
-
----
-
-<p align="center">
-  <strong>TouchLabel AI</strong> - Tactile Data Annotation Infrastructure<br>
-  <a href="https://www.niuxutech.com">Niuxu Tech</a> · Hangzhou, China
-</p>
+Niuxu Tech — Hangzhou, China
