@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tlabel"
+version = "0.1.0a1"
+description = "TouchLabel AI - Tactile Data Annotation Toolkit"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "Niuzu Tech", email = "luoxi@touchlabelai.cn"},
+]
+keywords = ["tactile", "annotation", "robotics", "GelSight", "PaXini", "touch"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "numpy>=1.20",
+]
+
+[project.optional-dependencies]
+gelsight = ["opencv-python>=4.0"]
+paxini = ["h5py>=3.0"]
+daimon = ["pyarrow>=10.0"]
+all = ["opencv-python>=4.0", "h5py>=3.0", "pyarrow>=10.0"]
+dev = ["pytest", "jupyter"]
+
+[project.urls]
+Homepage = "https://github.com/liesliy/tlabel"
+
+[tool.setuptools.packages.find]
+include = ["tlabel*"]
