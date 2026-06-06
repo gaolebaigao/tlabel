@@ -9,6 +9,8 @@ class TestImport:
     def test_import_tlabel(self):
         import tlabel
         assert hasattr(tlabel, "load")
+        assert hasattr(tlabel, "demo")
+        assert hasattr(tlabel, "list_demos")
         assert hasattr(tlabel, "__version__")
 
     def test_import_adapters(self):
@@ -297,3 +299,57 @@ class TestExport:
                 lines = f.readlines()
             assert len(lines) == 2  # header + 1 data row
             assert "contact" in lines[0]
+
+
+class TestDemo:
+    def test_default_demo(self):
+        import tlabel
+        data = tlabel.demo()
+        assert isinstance(data, tlabel.TLabelData)
+        assert data.num_frames > 0
+        assert data.sensor_type == "gelsight_mini"
+
+    def test_all_sensors(self):
+        import tlabel
+        for sensor in ["gelsight", "digit", "paxini", "daimon"]:
+            data = tlabel.demo(sensor)
+            assert data.num_frames > 0
+            assert len(data.dimension_keys) > 0
+
+    def test_list_demos(self):
+        import tlabel
+        demos = tlabel.list_demos()
+        assert "gelsight" in demos
+        assert "digit" in demos
+        assert "paxini" in demos
+        assert "daimon" in demos
+
+    def test_unknown_sensor(self):
+        import tlabel
+        with pytest.raises(ValueError, match="未知的传感器类型"):
+            tlabel.demo("nonexistent_sensor")
+
+    def test_demo_data_usable(self):
+        """demo数据可以正常review和export"""
+        import tlabel
+        data = tlabel.demo("gelsight")
+        # 可以get_frame
+        f = data.get_frame(0, logical=True)
+        assert f is not None
+        # 可以batch_patch
+        n = data.batch_patch(0, 10, "contact", 0.0)
+        assert n >= 0
+        # 可以export
+        with tempfile.TemporaryDirectory() as td:
+            path = data.export(os.path.join(td, "demo_out"), format="json")
+            assert os.path.exists(path)
+
+    def test_digit_22_dims(self):
+        import tlabel
+        data = tlabel.demo("digit")
+        assert len(data.dimension_keys) == 22
+
+    def test_paxini_20_dims(self):
+        import tlabel
+        data = tlabel.demo("paxini")
+        assert len(data.dimension_keys) == 20
