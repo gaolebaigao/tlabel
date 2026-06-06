@@ -70,23 +70,19 @@ class TLabelFrame:
         cascades = []
         if field == "contact":
             if new_value == 0:
-                # 接触归零 → 力度和滑移也归零
-                if self.tlabel_v2.get("force_magnitude", 0) > 0:
-                    cascades.append({"field": "force_magnitude", "old_value": self.tlabel_v2["force_magnitude"], "new_value": 0.0})
-                    self.tlabel_v2["force_magnitude"] = 0.0
-                if self.tlabel_v2.get("force_peak", 0) > 0:
-                    cascades.append({"field": "force_peak", "old_value": self.tlabel_v2["force_peak"], "new_value": 0.0})
-                    self.tlabel_v2["force_peak"] = 0.0
-                if self.tlabel_v2.get("slip_event", 0) > 0:
-                    cascades.append({"field": "slip_event", "old_value": self.tlabel_v2["slip_event"], "new_value": 0.0})
-                    self.tlabel_v2["slip_event"] = 0.0
-                if self.tlabel_v2.get("contact_area", 0) > 0:
-                    cascades.append({"field": "contact_area", "old_value": self.tlabel_v2["contact_area"], "new_value": 0.0})
-                    self.tlabel_v2["contact_area"] = 0.0
-                # HACK: contact归零时contact_transition也应归零
-                if self.tlabel_v2.get("contact_transition", 0) > 0.5:
-                    cascades.append({"field": "contact_transition", "old_value": self.tlabel_v2["contact_transition"], "new_value": 0.0})
-                    self.tlabel_v2["contact_transition"] = 0.0
+                # 接触归零 → 力度/滑移/力变化/面积/接触过渡全部归零
+                zero_fields = [
+                    "force_magnitude", "force_peak", "slip_event",
+                    "delta_force_normal", "delta_force_shear",
+                    "contact_area", "contact_transition",
+                ]
+                for zf in zero_fields:
+                    if self.tlabel_v2.get(zf, 0) != 0:
+                        # contact_transition阈值0.5以上才归零
+                        if zf == "contact_transition" and self.tlabel_v2.get(zf, 0) <= 0.5:
+                            continue
+                        cascades.append({"field": zf, "old_value": self.tlabel_v2[zf], "new_value": 0.0})
+                        self.tlabel_v2[zf] = 0.0
                 if self.manipulation_phase in ("initial_contact", "stable_contact", "slip", "grasp", "hold"):
                     old_phase = self.manipulation_phase
                     self.manipulation_phase = "idle"
@@ -144,6 +140,13 @@ class TLabelData:
         return self.sensor_info.get("type", "unknown")
 
     @property
+    def dimension_keys(self) -> List[str]:
+        """返回当前传感器支持的所有标注维度键名"""
+        if not self.frames:
+            return []
+        return list(self.frames[0].tlabel_v2.keys())
+
+    @property
     def modified_count(self) -> int:
         return sum(1 for f in self.frames if f.is_modified)
 
@@ -171,7 +174,7 @@ class TLabelData:
         panel = TLabelPanel(self, lang=lang, **kwargs)
         return panel
 
-    def export(self, output_path: str, format: str = "json"):
+    def export(self, output_path: str, format: str = "auto"):
         """导出标注数据"""
         from tlabel.export.writer import export_data
         return export_data(self, output_path, format=format)
@@ -209,6 +212,10 @@ class TLabelData:
 
     def __len__(self):
         return self.num_frames
+
+    def __getitem__(self, index):
+        """支持 data[0] 按索引访问帧"""
+        return self.frames[index]
 
     def __repr__(self):
         return (f"TLabelData(sensor={self.sensor_type}, "

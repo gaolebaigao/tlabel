@@ -6,27 +6,48 @@ TLabel数据导出器
 
 import json
 import csv
+import numpy as np
 from pathlib import Path
 from typing import Optional
 
 from tlabel.core.types import TLabelData
 
 
-def export_data(data: TLabelData, output_path: str, format: str = "json"):
+class NumpyEncoder(json.JSONEncoder):
+    """处理numpy类型的JSON序列化"""
+    def default(self, obj):
+        if isinstance(obj, (np.integer,)):
+            return int(obj)
+        if isinstance(obj, (np.floating,)):
+            return float(obj)
+        if isinstance(obj, (np.ndarray,)):
+            return obj.tolist()
+        return super().default(obj)
+
+
+def export_data(data: TLabelData, output_path: str, format: str = "auto"):
     """
     导出TLabelData为文件
     
     参数:
         data: TLabelData实例
-        output_path: 输出路径（不含扩展名）
-        format: "json" | "csv"
+        output_path: 输出路径
+        format: "json" | "csv" | "auto"（根据文件后缀自动判断）
     """
+    # 自动检测格式：根据后缀名或默认json
+    if format == "auto":
+        suffix = Path(output_path).suffix.lower()
+        if suffix == ".csv":
+            format = "csv"
+        else:
+            format = "json"
+
     if format == "json":
         return _export_json(data, output_path)
     elif format == "csv":
         return _export_csv(data, output_path)
     else:
-        raise ValueError(f"不支持的导出格式: {format}，可选: json, csv")
+        raise ValueError(f"不支持的导出格式: {format}，可选: json, csv, auto")
 
 
 def _export_json(data: TLabelData, output_path: str):
@@ -39,7 +60,7 @@ def _export_json(data: TLabelData, output_path: str):
 
     result = data.to_dict()
     with open(path, "w", encoding="utf-8") as f:
-        json.dump(result, f, indent=2, ensure_ascii=False)
+        json.dump(result, f, indent=2, ensure_ascii=False, cls=NumpyEncoder)
 
     return str(path)
 
