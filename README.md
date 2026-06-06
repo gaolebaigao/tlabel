@@ -1,12 +1,13 @@
 # TouchLabel AI 🦞
 
-<h3 align="center">传感器无关的触觉数据标注工具</h3>
-<p align="center"><strong>load → review → export · 三步闭环</strong></p>
+<h3 align="center">Sensor-Agnostic Tactile Data Annotation Toolkit</h3>
+<p align="center"><strong>load → review → export · Three steps to close the loop</strong></p>
 
 <p align="center">
   <a href="https://pypi.org/project/tlabel/"><img src="https://img.shields.io/pypi/v/tlabel?color=e85d75" alt="PyPI"></a>
   <a href="https://pypi.org/project/tlabel/"><img src="https://img.shields.io/pypi/pyversions/tlabel" alt="Python"></a>
   <a href="https://github.com/liesliy/tlabel/blob/main/LICENSE"><img src="https://img.shields.io/pypi/l/tlabel" alt="License"></a>
+  <a href="README_CN.md">中文文档</a>
 </p>
 
 ![TouchLabel AI Panel Demo](docs/demo_panel.gif)
@@ -22,22 +23,22 @@ pip install tlabel
 ```python
 import tlabel
 
-# 1️⃣ 加载 — 自动识别传感器格式
+# 1️⃣ Load — auto-detect sensor format
 data = tlabel.load("gelsight_force.pkl")     # GelSight / DIGIT
 data = tlabel.load("paxini_episode.h5")      # PaXini
-data = tlabel.load("daimon_data/")           # Daimon (目录或 .parquet)
+data = tlabel.load("daimon_data/")           # Daimon (directory or .parquet)
 
-# 2️⃣ 标注 — Jupyter 交互面板
-data.review()          # 中文界面
-data.review(lang="en") # English
+# 2️⃣ Annotate — interactive Jupyter panel
+data.review()          # Chinese UI
+data.review(lang="en") # English UI
 
-# 3️⃣ 导出
+# 3️⃣ Export
 data.export("output.json")   # TLabel Format v2 JSON
-data.export("output.csv")    # CSV 平面表
+data.export("output.csv")    # CSV flat table
 ```
 
 <details>
-<summary>📥 用 Demo 数据试一下</summary>
+<summary>📥 Try with demo data</summary>
 
 ```bash
 pip install tlabel
@@ -63,26 +64,25 @@ data.review()
 |--------|--------|:----------:|:------------:|:------:|
 | **GelSight Mini** | `.pkl` | 22 | ✅ | ✅ Stable |
 | **DIGIT** | `.pkl` | 22 | ✅ | ✅ Stable |
-| **Daimon DM-TacClaw** | `.parquet` / dir | 22 | ✅ (video) / 20 (no video) | ✅ Stable |
+| **Daimon DM-TacClaw** | `.parquet` / dir | 22 (video) / 20 (no video) | ✅ / — | ✅ Stable |
 | **PaXini PXCap** | `.h5` / `.hdf5` | 20 | — | ✅ Stable |
 
-> **22 维 vs 20 维**：力觉型传感器（PaXini）无光学图像，不支持光流特征；图像型传感器全量 22 维。
-> Daimon 在无视频文件时自动降级为 20 维。
+> Force-type sensors (PaXini) lack optical images and don't support optical flow features, yielding 20 dimensions. Image-type sensors output all 22 dimensions. Daimon gracefully degrades to 20 dims when no video file is present.
 
 ---
 
 ## 📦 Installation
 
 ```bash
-# 基础安装（仅 numpy）
+# Minimal (numpy only)
 pip install tlabel
 
-# 按传感器装可选依赖
+# Per-sensor optional dependencies
 pip install tlabel[gelsight]   # GelSight / DIGIT → opencv-python
 pip install tlabel[paxini]     # PaXini → h5py
 pip install tlabel[daimon]     # Daimon → pyarrow + opencv-python
 
-# 一步到位
+# Everything
 pip install tlabel[all]
 ```
 
@@ -90,12 +90,12 @@ pip install tlabel[all]
 
 ## 🎨 Panel Features
 
-- 🎨 **彩色时间轴**：绿=接触 · 红=滑移 · 灰=无接触
-- 🕸 **22维雷达图**：TLabel Format v2 全维度可视化，中英文标注
-- ✏️ **帧修正 & 批量 patch**：选中区间一键修改，联动规则自动清除关联字段
-- 🔗 **Cascade 联动**：`contact=0` 时自动归零 7 个力/滑移/面积字段 + `manipulation_phase→idle`
-- 🌐 **中英文切换**：面板右上角一键切换
-- 📤 **导出**：JSON / CSV，后缀自动判断格式
+- 🎨 **Color-coded timeline**: green = contact · red = slip · gray = no contact
+- 🕸 **22-dim radar chart**: full TLabel Format v2 visualization with bilingual labels
+- ✏️ **Frame & batch patching**: select a range, modify in one click
+- 🔗 **Cascade rules**: setting `contact=0` auto-zeroes 7 related fields + resets `manipulation_phase→idle`
+- 🌐 **Bilingual toggle**: Chinese / English, one click in the top-right corner
+- 📤 **Export**: JSON / CSV, auto-detected by file extension
 
 ---
 
@@ -103,35 +103,35 @@ pip install tlabel[all]
 
 ### Static Features (18-dim)
 
-| # | Key | 中文 | Description |
-|---|-----|------|-------------|
-| 1 | `contact` | 接触状态 | Binary contact flag |
-| 2 | `deformation_magnitude` | 形变幅度 | Surface deformation intensity |
-| 3 | `force_magnitude` | 力度 | Normal force magnitude |
-| 4 | `force_peak` | 力峰值 | Peak force in episode window |
-| 5 | `force_direction` | 力方向 | Force vector angle (°) |
-| 6 | `slip_entropy` | 滑移熵 | Uncertainty of slip detection |
-| 7 | `slip_event` | 滑移事件 | Binary slip event flag |
-| 8 | `texture_energy` | 纹理能量 | Surface texture frequency energy |
-| 9 | `edge_density` | 边缘密度 | Contact edge pixel ratio |
-| 10 | `contact_area` | 接触面积 | Contact region area ratio |
-| 11 | `centroid_x` | 质心X | Contact centroid x-position |
-| 12 | `normal_field_magnitude` | 法向场幅度 | Normal pressure field magnitude |
-| 13 | `normal_field_variance` | 法向场方差 | Normal field spatial variance |
-| 14 | `shear_field_magnitude` | 剪切场幅度 | Shear stress magnitude |
-| 15 | `shear_field_direction` | 剪切场方向 | Shear direction angle (°) |
-| 16 | `delta_force_normal` | 法向力变化 | Frame-to-frame ΔF_normal |
-| 17 | `delta_force_shear` | 剪切力变化 | Frame-to-frame ΔF_shear |
-| 18 | `friction_cone_ratio` | 摩擦锥比 | Tangential/normal force ratio |
+| # | Key | Description |
+|---|-----|-------------|
+| 1 | `contact` | Binary contact flag |
+| 2 | `deformation_magnitude` | Surface deformation intensity |
+| 3 | `force_magnitude` | Normal force magnitude |
+| 4 | `force_peak` | Peak force in episode window |
+| 5 | `force_direction` | Force vector angle (°) |
+| 6 | `slip_entropy` | Uncertainty of slip detection |
+| 7 | `slip_event` | Binary slip event flag |
+| 8 | `texture_energy` | Surface texture frequency energy |
+| 9 | `edge_density` | Contact edge pixel ratio |
+| 10 | `contact_area` | Contact region area ratio |
+| 11 | `centroid_x` | Contact centroid x-position |
+| 12 | `normal_field_magnitude` | Normal pressure field magnitude |
+| 13 | `normal_field_variance` | Normal field spatial variance |
+| 14 | `shear_field_magnitude` | Shear stress magnitude |
+| 15 | `shear_field_direction` | Shear direction angle (°) |
+| 16 | `delta_force_normal` | Frame-to-frame ΔF_normal |
+| 17 | `delta_force_shear` | Frame-to-frame ΔF_shear |
+| 18 | `friction_cone_ratio` | Tangential/normal force ratio |
 
 ### Temporal Features (4-dim, v0.2.0)
 
-| # | Key | 中文 | Image-type | Force-type | Description |
-|---|-----|------|:----------:|:----------:|-------------|
-| 19 | `optical_flow_magnitude` | 光流幅度 | ✅ | — | Inter-frame motion magnitude (Farneback) |
-| 20 | `optical_flow_direction` | 光流方向 | ✅ | — | Optical flow angle (°) |
-| 21 | `temporal_deformation_rate` | 形变速率 | ✅ | ✅ | Rate of deformation change |
-| 22 | `contact_transition` | 接触转换 | ✅ | ✅ | Contact state transition probability |
+| # | Key | Image-type | Force-type | Description |
+|---|-----|:----------:|:----------:|-------------|
+| 19 | `optical_flow_magnitude` | ✅ | — | Inter-frame motion magnitude (Farneback) |
+| 20 | `optical_flow_direction` | ✅ | — | Optical flow angle (°) |
+| 21 | `temporal_deformation_rate` | ✅ | ✅ | Rate of deformation change |
+| 22 | `contact_transition` | ✅ | ✅ | Contact state transition probability |
 
 ---
 
@@ -162,7 +162,6 @@ frame.is_modified                        # Has patches?
 frame.patch("contact", 0)                         # Single frame (cascade=True)
 frame.patch("contact", 0, cascade=False)           # No cascade
 data.batch_patch(10, 50, "contact", 0)             # Range patch
-data.batch_patch(10, 50, "slip_event", 1)          # With cascade
 
 # ── Review & Export ──
 data.review()                    # Jupyter panel (Chinese)
@@ -224,7 +223,7 @@ We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## 📄 License
 
-[MIT](LICENSE) © Niuzu Tech (牛宿科技)
+[MIT](LICENSE) © Niuzu Tech
 
 ---
 
