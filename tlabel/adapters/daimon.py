@@ -39,6 +39,12 @@ try:
 except ImportError:
     HAS_PYARROW = False
 
+try:
+    import cv2
+    HAS_CV2 = True
+except ImportError:
+    HAS_CV2 = False
+
 # HACK: 占位值常量 — Daimon用9930.0表示无效维度
 PLACEHOLDER = 9930.0
 
@@ -77,6 +83,115 @@ STATE_DIMS = {
     "right_acc_x": 108, "right_acc_y": 109, "right_acc_z": 110,
     "right_gyro_x": 111, "right_gyro_y": 112, "right_gyro_z": 113,
 }
+
+
+# === 视频解码相关函数 ===
+def _find_tactile_video(parquet_path: Path, episode_index: int = 0) -> Optional[Path]:
+    """定位触觉视频文件
+    
+    策略：
+    1. 读meta/info.json的videos字段，找含tactile/wrist的key
+    2. 拼接路径：videos/{video_key}/episode_{:06d}/video.mp4
+    3. fallback：遍历videos/子目录，找含tactile的
+    """
+    if not HAS_CV2:
+        return None
+
+    # 向上查找meta目录
+    current = parquet_path.parent
+    for _ in range(5):
+        meta_dir = current / "meta"
+        videos_dir = current / "videos"
+        
+        if meta_dir.exists():
+            info_file = meta_dir / "info.json"
+            if info_file.exists():
+                try:
+                    with open(info_file, "r") as f:
+                        info = json.load(f)
+                    
+                    # 尝试从info.json的videos字段找tactile视频
+                    videos = info.get("videos", [])
+                    for vk in videos:
+                        vk_lower = vk.lower()
+                        if "tactile" in vk_lower or "wrist" in vk_lower:
+                            # 戴盟触觉视频在 wrist 相机里
+                            ep_str = f"episode_{episode_index:06d}"
+                            video_path = videos_dir / vk / ep_str / "video.mp4"
+                            if video_path.exists():
+                                return video_path
+                except Exception:
+                    pass
+        
+        # fallback: 遍历videos子目录
+        if videos_dir.exists():
+            for subdir in videos_dir.iterdir():
+                if subdir.is_dir():
+                    subdir_name = subdir.name.lower()
+                    if "tactile" in subdir_name or "wrist" in subdir_name:
+                        ep_str = f"episode_{episode_index:06d}"
+                        video_path = subdir / ep_str / "video.mp4"
+                        if video_path.exists():
+                            return video_path
+        
+        current = current.parent
+    
+    return None
+
+
+def _extract_video_frames(video_path: Path, max_frames: Optional[int] = None) -> List[np.ndarray]:
+    """用cv2.VideoCapture逐帧解码mp4
+    
+    返回：List[np.ndarray] (BGR格式)
+    注意：流式处理，不一次全加载到内存
+    """
+    if not HAS_CV2 or not video_path.exists():
+        return []
+    
+    frames = []
+    cap = cv2.VideoCapture(str(video_path))
+    try:
+        frame_idx = 0
+        while True:
+            if max_frames is not None and frame_idx >= max_frames:
+                break
+            ret, frame = cap.read()
+            if not ret:
+                break
+            frames.append(frame)
+            frame_idx += 1
+    finally:
+        cap.release()
+    
+    return frames
+
+
+def _compute_optical_flow(prev_frame: np.ndarray, curr_frame: np.ndarray) -> tuple:
+    """Farneback光流计算
+    
+    输入：两个BGR帧
+    输出：(magnitude, direction)
+    """
+    if not HAS_CV2:
+        return 0.0, 0.0
+    
+    try:
+        prev_gray = cv2.cvtColor(prev_frame, cv2.COLOR_BGR2GRAY)
+        curr_gray = cv2.cvtColor(curr_frame, cv2.COLOR_BGR2GRAY)
+        
+        flow = cv2.calcOpticalFlowFarneback(
+            prev_gray, curr_gray, None,
+            pyr_scale=0.5, levels=3, winsize=15,
+            iterations=3, poly_n=5, poly_sigma=1.2, flags=0
+        )
+        
+        mag, ang = cv2.cartToPolar(flow[..., 0], flow[..., 1])
+        magnitude = float(np.mean(mag))
+        direction = float(np.degrees(np.mean(ang))) % 360.0
+        
+        return magnitude, direction
+    except Exception:
+        return 0.0, 0.0
 
 # 有效维度索引 (排除9930占位)
 # 根据ugripper_right配置: right arm(7-13), gripper_left(65), finger(67-102?),
@@ -180,8 +295,13 @@ def _compute_contact_from_gripper(gripper_val: float,
 def _extract_tlabel_v2(state: np.ndarray, action: np.ndarray,
                         prev_state: Optional[np.ndarray],
                         robot_type: str,
-                        force_metrics: Optional[Dict] = None) -> Dict[str, float]:
-    """从observation.state提取18维TLabel v2特征
+                        force_metrics: Optional[Dict] = None,
+                        # --- 时序4维新参数 ---
+                        optical_flow_magnitude: float = 0.0,
+                        optical_flow_direction: float = 0.0,
+                        temporal_deformation_rate: float = 0.0,
+                        contact_transition: float = 0.0) -> Dict[str, float]:
+    """从observation.state提取22维TLabel v2特征
 
     戴盟的触觉数据主要在视频流里（deformation/shear/depth），
     数值维度(finger0-35)多为9930占位。
@@ -298,6 +418,11 @@ def _extract_tlabel_v2(state: np.ndarray, action: np.ndarray,
         "delta_force_normal": round(delta_fn, 4),
         "delta_force_shear": round(delta_fs, 4),
         "friction_cone_ratio": round(min(friction_ratio, 10.0), 4),
+        # --- 时序4维 ---
+        "optical_flow_magnitude": round(optical_flow_magnitude, 4),
+        "optical_flow_direction": round(optical_flow_direction, 2),
+        "temporal_deformation_rate": round(temporal_deformation_rate, 4),
+        "contact_transition": round(contact_transition, 4),
     }
 
 
@@ -365,10 +490,15 @@ class DaimonAdapter(BaseAdapter):
             "normal_field_magnitude": True,
             "normal_field_variance": True,
             "shear_field_magnitude": False,    # 需视频流shear
-            "shear_field_direction": False,    # 需视频流shear
+            "shear_field_direction": False,   # 需视频流shear
             "delta_force_normal": True,
             "delta_force_shear": True,
             "friction_cone_ratio": True,
+            # --- 时序4维: 视频可用时全True，否则2维False ---
+            "optical_flow_magnitude": HAS_CV2,
+            "optical_flow_direction": HAS_CV2,
+            "temporal_deformation_rate": True,
+            "contact_transition": True,
         }
 
     def get_sensor_info(self) -> Dict[str, Any]:
@@ -433,6 +563,23 @@ class DaimonAdapter(BaseAdapter):
         task_idx = int(df["task_index"].iloc[0]) if "task_index" in df.columns else 0
         task_desc = tasks.get(task_idx, "unknown task")
 
+        # === 尝试加载触觉视频 ===
+        video_frames = []
+        if episode_index is None and "episode_index" in df.columns:
+            episode_index = int(df["episode_index"].iloc[0])
+        
+        video_available = False
+        if HAS_CV2:
+            tactile_video = _find_tactile_video(parquet_path, episode_index or 0)
+            if tactile_video is not None:
+                video_frames = _extract_video_frames(tactile_video, max_frames=num_frames)
+                if len(video_frames) > 0:
+                    video_available = True
+                    # 帧对齐: 如果视频帧数≠parquet帧数，用最近邻插值
+                    if len(video_frames) != num_frames:
+                        # HACK: 简单最近邻，video_frames将按需索引
+                        pass
+
         # 逐帧处理
         tlabel_frames = []
         frames_contact = []
@@ -443,12 +590,61 @@ class DaimonAdapter(BaseAdapter):
         timestamps = df["timestamp"].values if "timestamp" in df.columns else None
         frame_indices = df["frame_index"].values if "frame_index" in df.columns else np.arange(num_frames)
 
+        prev_tlabel_v2 = None
+        prev_video_frame = None
+        dt = 1.0 / fps if fps > 0 else 1.0 / 30.0
+
         for i in range(num_frames):
             state = np.array(states[i])
             action = np.array(actions[i]) if actions is not None else np.zeros(111)
             prev_state = np.array(states[i - 1]) if i > 0 else None
 
-            tlabel_v2 = _extract_tlabel_v2(state, action, prev_state, robot_type)
+            # --- 时序4维计算 ---
+            optical_flow_mag = 0.0
+            optical_flow_dir = 0.0
+            temp_deform_rate = 0.0
+            contact_trans = 0.0
+
+            if video_available and len(video_frames) > 0:
+                # 帧对齐: 用最近邻
+                frame_idx = min(i, len(video_frames) - 1)
+                curr_video_frame = video_frames[frame_idx]
+
+                if prev_video_frame is not None:
+                    optical_flow_mag, optical_flow_dir = _compute_optical_flow(
+                        prev_video_frame, curr_video_frame
+                    )
+                
+                prev_video_frame = curr_video_frame
+
+            # temporal_deformation_rate: 帧间deformation差分
+            if prev_tlabel_v2 is not None and dt > 0:
+                # 从当前state估算deformation
+                state_m = _mask_placeholder(state)
+                finger_data = state_m[67:103]
+                finger_valid = finger_data[~np.isnan(finger_data)]
+                curr_deform = float(np.std(finger_valid)) if len(finger_valid) > 1 else 0.0
+                prev_deform = prev_tlabel_v2.get("deformation_magnitude", 0.0)
+                temp_deform_rate = abs(curr_deform - prev_deform) / dt
+
+            tlabel_v2 = _extract_tlabel_v2(
+                state, action, prev_state, robot_type,
+                optical_flow_magnitude=optical_flow_mag,
+                optical_flow_direction=optical_flow_dir,
+                temporal_deformation_rate=temp_deform_rate,
+                contact_transition=contact_trans,
+            )
+
+            # contact_transition: 帧间contact + contact_area变化
+            if prev_tlabel_v2 is not None:
+                curr_contact = tlabel_v2["contact"]
+                prev_contact = prev_tlabel_v2.get("contact", 0.0)
+                curr_area = tlabel_v2.get("contact_area", 0.0)
+                prev_area = prev_tlabel_v2.get("contact_area", 0.0)
+                tlabel_v2["contact_transition"] = round(
+                    min(1.0, abs(curr_contact - prev_contact) +
+                        abs(curr_area - prev_area) * 5.0), 4
+                )
 
             frames_contact.append(tlabel_v2["contact"] > 0.5)
             frames_slip.append(tlabel_v2["slip_event"] > 0.5)
@@ -463,6 +659,7 @@ class DaimonAdapter(BaseAdapter):
                 "right_acc": [float(v) for v in state_m[108:111]] if not np.any(np.isnan(state_m[108:111])) else None,
                 "right_gyro": [float(v) for v in state_m[111:114]] if not np.any(np.isnan(state_m[111:114])) else None,
                 "robot_type": robot_type,
+                "video_available": video_available,
             }
 
             confidence = self._compute_confidence(tlabel_v2)
@@ -476,6 +673,7 @@ class DaimonAdapter(BaseAdapter):
                 sensor_specific=sensor_specific,
             )
             tlabel_frames.append(frame)
+            prev_tlabel_v2 = tlabel_v2
 
         # 批量推断操作阶段
         phases = _infer_phases(frames_contact, frames_slip)
@@ -507,11 +705,16 @@ class DaimonAdapter(BaseAdapter):
             "fps": fps,
         }
 
+        # 构建capabilities（视频可用性影响光流维度）
+        caps = self.get_capabilities()
+        caps["optical_flow_magnitude"] = video_available
+        caps["optical_flow_direction"] = video_available
+
         return TLabelData(
             frames=tlabel_frames,
             sensor_info=sensor_info,
             episode_info=episode_info,
-            capabilities=self.get_capabilities(),
+            capabilities=caps,
         )
 
     @staticmethod

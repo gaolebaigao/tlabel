@@ -59,6 +59,9 @@ def _export_csv(data: TLabelData, output_path: str):
         "normal_field_magnitude", "normal_field_variance",
         "shear_field_magnitude", "shear_field_direction",
         "delta_force_normal", "delta_force_shear", "friction_cone_ratio",
+        # --- 时序4维 ---
+        "optical_flow_magnitude", "optical_flow_direction",
+        "temporal_deformation_rate", "contact_transition",
     ]
 
     headers = ["frame_idx", "timestamp_s", "manipulation_phase", "confidence"] + TLABEL_DIMS

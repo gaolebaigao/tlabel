@@ -86,15 +86,23 @@ def _compute_shear_field(diff_img):
 
 def _extract_tlabel_v2(diff_img, is_contact, delta_mag_shear=None,
                         delta_mag_normal=None, coef_friction=None,
-                        prev_diff_img=None):
-    """从单帧背景减除后的图像提取TLabel v2 18维特征"""
+                        prev_diff_img=None,
+                        # --- 时序4维新参数 ---
+                        optical_flow_magnitude=0.0,
+                        optical_flow_direction=0.0,
+                        temporal_deformation_rate=0.0,
+                        contact_transition=0.0):
+    """从单帧背景减除后的图像提取TLabel v2 22维特征"""
     empty = {k: 0.0 for k in [
         "contact", "deformation_magnitude", "force_magnitude", "force_peak",
         "force_direction", "slip_entropy", "slip_event", "texture_energy",
         "edge_density", "contact_area", "centroid_x",
         "normal_field_magnitude", "normal_field_variance",
         "shear_field_magnitude", "shear_field_direction",
-        "delta_force_normal", "delta_force_shear", "friction_cone_ratio"
+        "delta_force_normal", "delta_force_shear", "friction_cone_ratio",
+        # --- 时序4维 ---
+        "optical_flow_magnitude", "optical_flow_direction",
+        "temporal_deformation_rate", "contact_transition",
     ]}
 
     if diff_img is None or diff_img.size == 0:
@@ -182,6 +190,11 @@ def _extract_tlabel_v2(diff_img, is_contact, delta_mag_shear=None,
         "delta_force_normal": round(delta_fn, 4),
         "delta_force_shear": round(delta_fs, 4),
         "friction_cone_ratio": round(min(friction_ratio, 10.0), 4),
+        # --- 时序4维 ---
+        "optical_flow_magnitude": round(optical_flow_magnitude, 4),
+        "optical_flow_direction": round(optical_flow_direction, 2),
+        "temporal_deformation_rate": round(temporal_deformation_rate, 4),
+        "contact_transition": round(contact_transition, 4),
     }
 
 
@@ -235,6 +248,11 @@ class GelSightAdapter(BaseAdapter):
             "shear_field_magnitude": True, "shear_field_direction": True,
             "delta_force_normal": True, "delta_force_shear": True,
             "friction_cone_ratio": True,
+            # --- 时序4维 ---
+            "optical_flow_magnitude": True,
+            "optical_flow_direction": True,
+            "temporal_deformation_rate": True,
+            "contact_transition": True,
         }
 
     def get_sensor_info(self) -> Dict[str, Any]:
@@ -321,6 +339,11 @@ class GelSightAdapter(BaseAdapter):
         # 提取TLabel v2特征
         tlabel_frames = []
         prev_diff = None
+        prev_img = None
+        prev_contact = 0.0
+        prev_contact_area = 0.0
+        prev_deformation = 0.0
+        dt = 1.0 / sample_rate  # 帧间隔
 
         for i, fi in enumerate(frames_info):
             gidx = fi["global_idx"]
@@ -329,14 +352,50 @@ class GelSightAdapter(BaseAdapter):
                 img = _decode_jpeg(all_images[gidx])
                 diff_img = _bg_subtract(img, background) if img is not None else None
             else:
+                img = None
                 diff_img = None
+
+            # --- 时序4维计算 ---
+            optical_flow_mag = 0.0
+            optical_flow_dir = 0.0
+            temp_deform_rate = 0.0
+            contact_trans = 0.0
+
+            if HAS_CV2 and prev_img is not None and img is not None:
+                # Farneback光流计算
+                prev_gray = cv2.cvtColor(prev_img, cv2.COLOR_BGR2GRAY)
+                curr_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                try:
+                    flow = cv2.calcOpticalFlowFarneback(
+                        prev_gray, curr_gray, None, 0.5, 3, 15, 3, 5, 1.2, 0
+                    )
+                    mag, ang = cv2.cartToPolar(flow[..., 0], flow[..., 1])
+                    optical_flow_mag = float(np.mean(mag))
+                    optical_flow_dir = float(np.degrees(np.mean(ang)))
+                except Exception:
+                    pass  # 光流计算失败则保持0
+
+            # temporal_deformation_rate: 帧间deformation差分
+            if prev_deformation > 0 and diff_img is not None:
+                curr_deform = float(np.sqrt(np.mean(diff_img**2)))
+                temp_deform_rate = abs(curr_deform - prev_deformation) / dt
+
+            # contact_transition: 帧间contact + contact_area变化
+            curr_contact = 1.0 if fi["is_contact"] else 0.0
+            curr_contact_area = temp_deform_rate  # HACK: 用diff_img范数近似
+            contact_trans = min(1.0, abs(curr_contact - prev_contact) +
+                               abs(curr_contact_area - prev_contact_area) * 5.0)
 
             tlabel_v2 = _extract_tlabel_v2(
                 diff_img, fi["is_contact"],
                 delta_mag_shear=fi["delta_mag_shear"],
                 delta_mag_normal=fi["delta_mag_normal"],
                 coef_friction=fi["coef_friction"],
-                prev_diff_img=prev_diff
+                prev_diff_img=prev_diff,
+                optical_flow_magnitude=optical_flow_mag,
+                optical_flow_direction=optical_flow_dir,
+                temporal_deformation_rate=temp_deform_rate,
+                contact_transition=contact_trans,
             )
 
             # 计算置信度
@@ -360,7 +419,12 @@ class GelSightAdapter(BaseAdapter):
                 sensor_specific=sensor_specific,
             )
             tlabel_frames.append(frame)
+            # 更新prev状态
             prev_diff = diff_img
+            prev_img = img
+            prev_contact = 1.0 if fi["is_contact"] else 0.0
+            prev_contact_area = curr_contact_area
+            prev_deformation = float(np.sqrt(np.mean(diff_img**2))) if diff_img is not None else 0.0
 
         contact_count = sum(1 for fi in frames_info if fi["is_contact"])
         slip_count = sum(1 for fi in frames_info if fi["is_slip"])

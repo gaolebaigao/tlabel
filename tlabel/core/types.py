@@ -83,6 +83,10 @@ class TLabelFrame:
                 if self.tlabel_v2.get("contact_area", 0) > 0:
                     cascades.append({"field": "contact_area", "old_value": self.tlabel_v2["contact_area"], "new_value": 0.0})
                     self.tlabel_v2["contact_area"] = 0.0
+                # HACK: contact归零时contact_transition也应归零
+                if self.tlabel_v2.get("contact_transition", 0) > 0.5:
+                    cascades.append({"field": "contact_transition", "old_value": self.tlabel_v2["contact_transition"], "new_value": 0.0})
+                    self.tlabel_v2["contact_transition"] = 0.0
                 if self.manipulation_phase in ("initial_contact", "stable_contact", "slip", "grasp", "hold"):
                     old_phase = self.manipulation_phase
                     self.manipulation_phase = "idle"
@@ -118,7 +122,7 @@ class TLabelData:
                  sensor_info: Dict,
                  episode_info: Dict,
                  capabilities: Dict,
-                 schema_version: str = "0.3.0"):
+                 schema_version: str = "0.4.0"):
         self.frames = frames
         self.sensor_info = sensor_info
         self.episode_info = episode_info
@@ -180,7 +184,7 @@ class TLabelData:
         return {
             "schema_version": self.schema_version,
             "format": "tlabel_v2",
-            "tlabel_dimensions": 18,
+            "tlabel_dimensions": 22,
             "sensor": self.sensor_info,
             "episode": {
                 **self.episode_info,

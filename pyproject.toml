@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tlabel"
-version = "0.1.0a1"
+version = "0.2.0a1"
 description = "TouchLabel AI - Tactile Data Annotation Toolkit"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -32,7 +32,7 @@ dependencies = [
 [project.optional-dependencies]
 gelsight = ["opencv-python>=4.0"]
 paxini = ["h5py>=3.0"]
-daimon = ["pyarrow>=10.0"]
+daimon = ["pyarrow>=10.0", "opencv-python>=4.0"]
 all = ["opencv-python>=4.0", "h5py>=3.0", "pyarrow>=10.0"]
 dev = ["pytest", "jupyter"]
 

@@ -202,7 +202,7 @@ class TestTLabelData:
     def test_to_dict(self):
         data = self._make_data(5)
         d = data.to_dict()
-        assert d["schema_version"] == "0.3.0"
+        assert d["schema_version"] == "0.4.0"
         assert "frames" in d
         assert len(d["frames"]) == 5
 

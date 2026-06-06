@@ -58,6 +58,11 @@ class PaxiniAdapter(BaseAdapter):
             "delta_force_normal": True,
             "delta_force_shear": False,
             "friction_cone_ratio": False,
+            # --- 时序4维: 只有后2维 ---
+            "optical_flow_magnitude": False,  # 无视频流
+            "optical_flow_direction": False,   # 无视频流
+            "temporal_deformation_rate": True,
+            "contact_transition": True,
         }
 
     def get_sensor_info(self) -> Dict[str, Any]:
@@ -132,6 +137,8 @@ class PaxiniAdapter(BaseAdapter):
         # 逐帧处理
         tlabel_frames = []
         prev_contacts = None
+        prev_tlabel_v2 = None
+        dt = 1.0 / sample_rate if sample_rate > 0 else 1.0
 
         for fi in range(num_frames):
             r_tac = right_tac[fi]
@@ -153,8 +160,11 @@ class PaxiniAdapter(BaseAdapter):
             if prev_contacts is not None:
                 slip_detected = self._detect_slip(all_contacts, prev_contacts)
 
-            # 提取18维TLabel v2
-            tlabel_v2 = self._extract_tlabel_v2(all_contacts, slip_detected, prev_contacts)
+            # 提取22维TLabel v2
+            tlabel_v2 = self._extract_tlabel_v2(
+                all_contacts, slip_detected, prev_contacts,
+                prev_tlabel_v2=prev_tlabel_v2, dt=dt
+            )
 
             # 操作阶段
             any_contact = any(c["state"] != "no_contact" for c in all_contacts)
@@ -179,6 +189,7 @@ class PaxiniAdapter(BaseAdapter):
             )
             tlabel_frames.append(frame)
             prev_contacts = all_contacts
+            prev_tlabel_v2 = tlabel_v2
 
         sensor_info = {
             "type": "distributed_taxel_array",
@@ -271,8 +282,9 @@ class PaxiniAdapter(BaseAdapter):
         return False
 
     @staticmethod
-    def _extract_tlabel_v2(contacts, slip_detected, prev_contacts=None):
-        """帕西尼18维TLabel v2提取"""
+    def _extract_tlabel_v2(contacts, slip_detected, prev_contacts=None,
+                           prev_tlabel_v2=None, dt=1.0):
+        """帕西尼22维TLabel v2提取"""
         active_forces = [c["mean_force"] for c in contacts if c["state"] != "no_contact"]
         active_max = [c["max_force"] for c in contacts if c["state"] != "no_contact"]
         active_ratios = [c["contact_ratio"] for c in contacts if c["state"] != "no_contact"]
@@ -311,6 +323,23 @@ class PaxiniAdapter(BaseAdapter):
         else:
             centroid_x = 0.5
 
+        # --- 时序4维计算 ---
+        # temporal_deformation_rate: 帧间deformation_magnitude差分
+        temporal_deform_rate = 0.0
+        if prev_tlabel_v2 is not None and dt > 0:
+            prev_deform = prev_tlabel_v2.get("deformation_magnitude", 0.0)
+            temporal_deform_rate = abs(nf_mag - prev_deform) / dt
+
+        # contact_transition: 帧间contact + contact_area差分
+        contact_trans = 0.0
+        if prev_tlabel_v2 is not None:
+            curr_contact = 1.0 if any_contact else 0.0
+            prev_contact = prev_tlabel_v2.get("contact", 0.0)
+            curr_area = min(total_ratio, 1.0)
+            prev_area = prev_tlabel_v2.get("contact_area", 0.0)
+            contact_trans = min(1.0, abs(curr_contact - prev_contact) +
+                               abs(curr_area - prev_area) * 5.0)
+
         return {
             "contact": 1.0 if any_contact else 0.0,
             "deformation_magnitude": round(nf_mag, 4),
@@ -330,6 +359,11 @@ class PaxiniAdapter(BaseAdapter):
             "delta_force_normal": round(delta_fn, 4),
             "delta_force_shear": 0.0,
             "friction_cone_ratio": 0.0,
+            # --- 时序4维 (光流2维为0) ---
+            "optical_flow_magnitude": 0.0,
+            "optical_flow_direction": 0.0,
+            "temporal_deformation_rate": round(temporal_deform_rate, 4),
+            "contact_transition": round(contact_trans, 4),
         }
 
     @staticmethod

@@ -66,7 +66,7 @@ def generate_panel_html(data_dict: dict, lang: str = "auto", instance_id: str = 
 <div style="display:flex;gap:16px;padding:16px 20px;">
   <!-- Radar Chart -->
   <div style="flex:1;background:#fff;border-radius:10px;padding:12px;border:1px solid #e9ecef;">
-    <div style="font-size:12px;color:#868e96;margin-bottom:4px;" data-i18n="chart.radar">18维特征</div>
+    <div style="font-size:12px;color:#868e96;margin-bottom:4px;" data-i18n="chart.radar">22维特征</div>
     <canvas id="{instance_id}-radar" width="300" height="280" style="width:100%;"></canvas>
   </div>
   <!-- Frame Detail -->
@@ -124,14 +124,14 @@ def generate_panel_html(data_dict: dict, lang: str = "auto", instance_id: str = 
       'stats.frames': '帧数', 'stats.duration': '时长', 'stats.contact': '接触率',
       'stats.slip': '滑移率', 'stats.modified': '已修正',
       'timeline.title': '时间轴',
-      'chart.radar': '18维特征',
+      'chart.radar': '22维特征',
       'detail.title': '帧详情',
       'batch.title': '区间批量修正', 'batch.frameRange': '帧范围：', 'batch.apply': '应用',
       'actions.exportFull': '导出JSON', 'actions.exportCSV': '导出CSV',
       'contact.yes': '有接触', 'contact.no': '无接触',
       'slip.yes': '滑移', 'slip.no': '无滑移',
       'phase': '操作阶段', 'confidence': '置信度',
-      // 雷达图18维中文名
+      // 雷达图22维中文名
       'dim.contact': '接触', 'dim.deformation_magnitude': '形变', 'dim.force_magnitude': '力度',
       'dim.force_peak': '力峰值', 'dim.force_direction': '力方向', 'dim.slip_entropy': '滑移熵',
       'dim.slip_event': '滑移事件', 'dim.texture_energy': '纹理能量', 'dim.edge_density': '边缘密度',
@@ -139,6 +139,9 @@ def generate_panel_html(data_dict: dict, lang: str = "auto", instance_id: str = 
       'dim.normal_field_magnitude': '法向场强', 'dim.normal_field_variance': '法向方差',
       'dim.shear_field_magnitude': '切向场强', 'dim.shear_field_direction': '切向方向',
       'dim.delta_force_normal': 'δ法向力', 'dim.delta_force_shear': 'δ切向力', 'dim.friction_cone_ratio': '摩擦锥比',
+      // 时序4维中文名
+      'dim.optical_flow_magnitude': '光流幅度', 'dim.optical_flow_direction': '光流方向',
+      'dim.temporal_deformation_rate': '形变速率', 'dim.contact_transition': '接触转换',
       // 批量修正下拉框
       'field.contact': '接触 (0/1)', 'field.slip_event': '滑移事件 (0/1)',
       'field.force_magnitude': '力度', 'field.manipulation_phase': '操作阶段',
@@ -148,7 +151,7 @@ def generate_panel_html(data_dict: dict, lang: str = "auto", instance_id: str = 
       'stats.frames': 'Frames', 'stats.duration': 'Duration', 'stats.contact': 'Contact',
       'stats.slip': 'Slip', 'stats.modified': 'Modified',
       'timeline.title': 'Timeline',
-      'chart.radar': '18-Dim Features',
+      'chart.radar': '22-Dim Features',
       'detail.title': 'Frame Detail',
       'batch.title': 'Range Batch Patch', 'batch.frameRange': 'Range: ', 'batch.apply': 'Apply',
       'actions.exportFull': 'Export JSON', 'actions.exportCSV': 'Export CSV',
@@ -162,6 +165,9 @@ def generate_panel_html(data_dict: dict, lang: str = "auto", instance_id: str = 
       'dim.normal_field_magnitude': 'NF Mag', 'dim.normal_field_variance': 'NF Var',
       'dim.shear_field_magnitude': 'SF Mag', 'dim.shear_field_direction': 'SF Dir',
       'dim.delta_force_normal': 'δF_N', 'dim.delta_force_shear': 'δF_S', 'dim.friction_cone_ratio': 'Friction',
+      // 时序4维英文名
+      'dim.optical_flow_magnitude': 'OF Mag', 'dim.optical_flow_direction': 'OF Dir',
+      'dim.temporal_deformation_rate': 'Deform Rate', 'dim.contact_transition': 'Contact Trans',
       'field.contact': 'Contact (0/1)', 'field.slip_event': 'Slip Event (0/1)',
       'field.force_magnitude': 'Force Magnitude', 'field.manipulation_phase': 'Phase',
     }}
@@ -296,6 +302,9 @@ def generate_panel_html(data_dict: dict, lang: str = "auto", instance_id: str = 
       normal_field_magnitude: 50, normal_field_variance: 500,
       shear_field_magnitude: 20, shear_field_direction: 180,
       delta_force_normal: 10, delta_force_shear: 10, friction_cone_ratio: 5,
+      // 时序4维
+      optical_flow_magnitude: 20, optical_flow_direction: 360,
+      temporal_deformation_rate: 50, contact_transition: 1,
     }};
 
     const dimKeys = Object.keys(maxVals);
@@ -464,7 +473,10 @@ def generate_panel_html(data_dict: dict, lang: str = "auto", instance_id: str = 
       'edge_density','contact_area','centroid_x',
       'normal_field_magnitude','normal_field_variance',
       'shear_field_magnitude','shear_field_direction',
-      'delta_force_normal','delta_force_shear','friction_cone_ratio'];
+      'delta_force_normal','delta_force_shear','friction_cone_ratio',
+      // 时序4维
+      'optical_flow_magnitude','optical_flow_direction',
+      'temporal_deformation_rate','contact_transition'];
     let csv = 'frame_idx,timestamp_s,manipulation_phase,confidence,' + dims.join(',') + '\\n';
     for (const f of frames) {{
       const tl = f.tlabel_v2 || {{}};
