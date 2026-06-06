@@ -3,97 +3,125 @@
 ## 1. 安装
 
 ```bash
-# 基础安装（只有numpy，什么传感器都能加载标注，只是缺可视化依赖）
+# 基础安装
 pip install tlabel
 
-# 按你的传感器装可选依赖
-pip install tlabel[gelsight]   # GelSight / DIGIT（需要opencv）
-pip install tlabel[paxini]     # 帕西尼（需要h5py）
-pip install tlabel[daimon]     # 戴盟（需要pyarrow）
+# 按传感器装可选依赖
+pip install tlabel[gelsight]   # GelSight / DIGIT → opencv-python
+pip install tlabel[paxini]     # PaXini → h5py
+pip install tlabel[daimon]     # Daimon → pyarrow + opencv-python
 
-# 或者一步到位
+# 一步到位
 pip install tlabel[all]
 ```
 
-> 如果你是从源码装：`cd tlabel-pip && pip install -e .`
+> 源码安装：`cd tlabel-pip && pip install -e .`
 
-## 2. 加载数据
+## 2. 试用 Demo 数据
+
+不想找真实数据？我们准备了合成 demo：
+
+```python
+import json
+from tlabel.core.types import TLabelFrame, TLabelData
+
+# 下载 demo 数据（GelSight 150帧，22维）
+# 也可以从 examples/data/demo_gelsight.json 本地加载
+with open("examples/data/demo_gelsight.json") as f:
+    raw = json.load(f)
+
+frames = [
+    TLabelFrame(f["frame_idx"], f["timestamp_s"], f["tlabel_v2"],
+                f.get("manipulation_phase", "idle"), f.get("confidence", 1.0))
+    for f in raw["frames"]
+]
+data = TLabelData(frames, raw["sensor"], raw["episode"], raw["capabilities"])
+data.review()  # Jupyter 面板
+```
+
+可用的 demo 数据：
+- `examples/data/demo_gelsight.json` — GelSight Mini 150帧，22维（含光流）
+- `examples/data/demo_paxini.json` — PaXini PXCap 120帧，20维（无力觉图像）
+
+## 3. 加载真实数据
 
 ```python
 import tlabel
 
-# 自动识别格式，直接传路径就行
-data = tlabel.load("gelsight_force.pkl")     # GelSight/DIGIT .pkl
-data = tlabel.load("paxini_episode.h5")      # 帕西尼 .h5
-data = tlabel.load("daimon_data/")           # 戴盟 目录或.parquet
+# 自动识别格式
+data = tlabel.load("gelsight_force.pkl")     # GelSight / DIGIT
+data = tlabel.load("paxini_episode.h5")      # PaXini
+data = tlabel.load("daimon_data/")           # Daimon 目录或 .parquet
 
-# 如果自动识别不准，手动指定
+# 手动指定
 data = tlabel.load("data.pkl", format="gelsight")
 ```
 
-加载完会打印摘要，告诉你多少帧、接触率多少。
+## 4. 标注面板
 
-## 3. 看标注面板
-
-**必须在 Jupyter Notebook 里用**（JupyterLab也行）：
+**必须在 Jupyter Notebook / JupyterLab 里用**：
 
 ```python
-data.review()          # 中文界面
-data.review(lang="en") # 英文界面
+data.review()          # 中文
+data.review(lang="en") # English
 ```
 
-会弹出一个面板，包含：
-- **时间轴**：绿=接触、红=滑移、灰=无接触
-- **雷达图**：18维特征分布
+面板功能：
+- **时间轴**：绿=接触 · 红=滑移 · 灰=无接触
+- **雷达图**：22维特征分布（力觉型20维）
 - **统计栏**：帧数、时长、接触率、滑移率
 - 右上角**中英文切换**
 
-## 4. 修改标注
+## 5. 修改标注
 
 ```python
-# 单帧修改 — 传位置参数（不是keyword）
+# 单帧修改
 frame = data[0]
-frame.patch("contact", 0)          # 改接触状态
-frame.patch("slip_event", 1)       # 改滑移事件
-frame.patch("force_magnitude", 3.5) # 改力度
-
-# 联动规则：contact改成0时，force_magnitude和slip_event自动归零
-# 不用你手动清，改contact就行
+frame.patch("contact", 0)            # contact→0 自动联动清除7个关联字段
+frame.patch("slip_event", 1)         # 改滑移
+frame.patch("force_magnitude", 3.5)  # 改力度
 
 # 批量修改
-data.batch_patch(10, 50, "contact", 0)       # 第10-50帧接触改0
-data.batch_patch(10, 50, "slip_event", 1)     # 第10-50帧滑移改1
+data.batch_patch(10, 50, "contact", 0)    # 第10-50帧接触改0
+data.batch_patch(10, 50, "slip_event", 1)  # 第10-50帧滑移改1
 ```
 
-## 5. 导出
+### Cascade 联动规则
+
+`contact` 设为 0 时，以下字段自动归零：
+- `force_magnitude`, `force_peak`, `slip_event`
+- `delta_force_normal`, `delta_force_shear`
+- `contact_area`
+- `contact_transition`（仅当值 > 0.5 时）
+- `manipulation_phase` → `"idle"`
+
+## 6. 导出
 
 ```python
-# JSON（TLabel Format v2 完整结构）
-data.export("output.json")
+# 后缀自动判断格式
+data.export("output.json")   # JSON（TLabel Format v2）
+data.export("output.csv")    # CSV 平面表
 
-# CSV（平面表，方便Excel看）
-data.export("output.csv")
+# 显式指定格式
+data.export("output", format="json")
 ```
 
-## 6. 常见问题
+## 7. 常见问题
 
 **Q: `pip install tlabel` 找不到包？**
-A: 还没发PyPI，目前只能源码装：`pip install -e .`
+A: 确认 Python ≥ 3.8，或用源码安装 `pip install -e .`
 
-**Q: 加载报错 `No module named 'cv2'`？**
-A: GelSight/DIGIT需要opencv：`pip install opencv-python`
+**Q: `No module named 'cv2'`？**
+A: GelSight / DIGIT / Daimon 需要 `pip install opencv-python`
 
-**Q: 加载报错 `No module named 'h5py'`？**
-A: 帕西尼需要h5py：`pip install h5py`
+**Q: `No module named 'h5py'`？**
+A: PaXini 需要 `pip install h5py`
 
-**Q: 加载报错 `No module named 'pyarrow'`？**
-A: 戴盟需要pyarrow：`pip install pyarrow`
+**Q: `No module named 'pyarrow'`？**
+A: Daimon 需要 `pip install pyarrow`
 
 **Q: 面板不显示？**
-A: 必须在Jupyter里跑，普通Python终端不行。
-
-**Q: 加戴盟数据怎么传路径？**
-A: 传目录路径或.parquet文件路径都行，会自动检测。
+A: 必须在 Jupyter 里跑，普通 Python 终端不支持 HTML 渲染
 
 ---
 
