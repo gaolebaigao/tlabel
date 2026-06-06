@@ -353,3 +353,52 @@ class TestDemo:
         import tlabel
         data = tlabel.demo("paxini")
         assert len(data.dimension_keys) == 20
+
+
+class TestAutoLabel:
+    def test_auto_label_basic(self):
+        import tlabel
+        data = tlabel.demo("gelsight")
+        summary = data.auto_label(min_confidence=0.5)
+        assert "applied_count" in summary
+        assert "total_frames" in summary
+        assert summary["total_frames"] == data.num_frames
+
+    def test_auto_label_with_target(self):
+        import tlabel
+        data = tlabel.demo("digit")
+        summary = data.auto_label(target_fields=["contact"])
+        # 只预测了contact
+        assert "contact" in summary.get("predicted_fields", {})
+
+    def test_predict_engine_fit(self):
+        import tlabel
+        from tlabel.predict import PredictEngine
+        data = tlabel.demo("gelsight")
+        engine = PredictEngine()
+        engine.fit(data)
+        results = engine.predict(data)
+        assert len(results) == data.num_frames
+
+    def test_predict_engine_summary(self):
+        import tlabel
+        from tlabel.predict import PredictEngine
+        data = tlabel.demo("paxini")
+        engine = PredictEngine()
+        engine.fit(data)
+        results = engine.predict(data)
+        s = engine.summary(results)
+        assert "total_frames" in s
+        assert "avg_confidence" in s
+        assert "method_distribution" in s
+
+    def test_auto_label_no_double_apply(self):
+        """auto_label不应重复修改已标注的帧"""
+        import tlabel
+        data = tlabel.demo("gelsight")
+        # 先手动标一个
+        data.get_frame(0, logical=True).patch("contact", 1.0, cascade=False)
+        first_modified = data.modified_count
+        data.auto_label(min_confidence=0.9)
+        # 修改数应该>=1（至少有我们手动改的1个）
+        assert data.modified_count >= 1

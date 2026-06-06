@@ -183,6 +183,30 @@ class TLabelData:
         panel = TLabelPanel(self, lang=lang, **kwargs)
         return panel
 
+    def auto_label(self, min_confidence: float = 0.6,
+                   target_fields: Optional[List[str]] = None,
+                   fit_first: bool = True) -> Dict:
+        """
+        AI辅助预标注 — 自动推断未标注/低置信帧的关键维度
+        
+        Args:
+            min_confidence: 最低置信度阈值，低于此值的预测不应用
+            target_fields: 只预测指定维度（如["contact", "slip_event"]）
+            fit_first: 是否先用当前数据做统计拟合
+        
+        Returns:
+            预标注统计摘要
+        """
+        from tlabel.predict.engine import PredictEngine
+        engine = PredictEngine()
+        if fit_first:
+            engine.fit(self)
+        results = engine.predict(self, target_fields=target_fields)
+        applied = engine.apply(self, results, min_confidence=min_confidence)
+        summary = engine.summary(results)
+        summary["applied_count"] = applied
+        return summary
+
     def export(self, output_path: str, format: str = "auto"):
         """导出标注数据"""
         from tlabel.export.writer import export_data
