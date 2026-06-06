@@ -150,7 +150,16 @@ class TLabelData:
     def modified_count(self) -> int:
         return sum(1 for f in self.frames if f.is_modified)
 
-    def get_frame(self, frame_idx: int) -> Optional[TLabelFrame]:
+    def get_frame(self, frame_idx: int, logical: bool = False) -> Optional[TLabelFrame]:
+        """按帧索引获取帧数据
+        
+        Args:
+            frame_idx: logical=False时为全局frame_idx(原始编号)；logical=True时为位置索引(0=第一帧)
+        """
+        if logical:
+            if 0 <= frame_idx < len(self.frames):
+                return self.frames[frame_idx]
+            return None
         for f in self.frames:
             if f.frame_idx == frame_idx:
                 return f
