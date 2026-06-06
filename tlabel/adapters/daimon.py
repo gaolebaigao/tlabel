@@ -5,30 +5,40 @@ Daimon-Infinity数据格式特点:
 - 主数据: Parquet格式 (data/chunk-xxx/file-xxx.parquet)
 - observation.state: 114维float32 (位姿+关节+触觉+IMU)
 - action: 111维float32
-- 触觉: 高分辨率视触觉传感器 (视频流, 640x480 RGB + 384x288 deformation/shear/depth)
+- 触觉视频: FFV1编码.mov (deformation/shear/depth各一路, gbrp16le/gray16le)
 - 数值触觉: finger0~finger35 (idx 67-102, 常为9930占位)
 - 占位值: 9930.0 = 无效/未启用维度
 - fps: 30
 
 目录结构:
   DM-DataClaw/datasets/v1_3_usb_backups_XXXX/DEVICE_ID_lerobot_TIME/
-  ├── meta/info.json          # 数据集配置
+  ├── meta/info.json          # 数据集配置(含videos字段)
   ├── meta/stats.json         # 统计信息
   ├── meta/tasks.parquet      # 任务描述
   ├── data/chunk-000/file-000.parquet  # 主数据
-  ├── videos/                 # 视频数据
-  └── episodes_metadata.json  # 分集元数据
+  ├── videos/
+  │   ├── observation.deformation.gripperrighttactile/
+  │   │   └── chunk-000/file-000.mov   # FFV1/gbrp16le
+  │   ├── observation.shear.gripperrighttactile/
+  │   │   └── chunk-000/file-000.mov   # FFV1/gbrp16le
+  │   ├── observation.depth.gripperrighttactile/
+  │   │   └── chunk-000/file-000.mov   # FFV1/gray16le
+  │   └── observation.images.cam_right/
+  │       └── chunk-000/file-000.mp4   # h264/yuv420p
+  └── episodes_metadata.json
 
 支持加载方式:
-  1. 指定parquet文件路径 (自动查找同级meta/)
+  1. 指定parquet文件路径 (自动查找同级meta/和videos/)
   2. 指定episode目录路径 (自动查找data/和meta/)
   3. 指定parquet文件 (直接加载)
 """
 
 import json
+import struct
+import tempfile
 import numpy as np
 from pathlib import Path
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Tuple
 
 from tlabel.adapters.base import BaseAdapter
 from tlabel.core.types import TLabelData, TLabelFrame
@@ -45,6 +55,12 @@ try:
 except ImportError:
     HAS_CV2 = False
 
+try:
+    import subprocess
+    HAS_SUBPROCESS = True
+except ImportError:
+    HAS_SUBPROCESS = False
+
 # HACK: 占位值常量 — Daimon用9930.0表示无效维度
 PLACEHOLDER = 9930.0
 
@@ -59,7 +75,7 @@ STATE_DIMS = {
     "left_eye_x": 21, "left_eye_y": 22, "left_eye_z": 23,
     "left_eye_qx": 24, "left_eye_qy": 25, "left_eye_qz": 26, "left_eye_qw": 27,
     "right_eye_x": 28, "right_eye_y": 29, "right_eye_z": 30,
-    "right_eye_qx": 31, "right_eye_qy": 32, "right_eye_qz": 33, "right_eye_qw": 34,
+    "right_eye_qx": 31, "right_qy": 32, "right_qz": 33, "right_qw": 34,
     "third_x": 35, "third_y": 36, "third_z": 37,
     "third_qx": 38, "third_qy": 39, "third_qz": 40, "third_qw": 41,
     "arm_left_1": 42, "arm_left_2": 43, "arm_left_3": 44, "arm_left_4": 45,
@@ -85,69 +101,193 @@ STATE_DIMS = {
 }
 
 
-# === 视频解码相关函数 ===
-def _find_tactile_video(parquet_path: Path, episode_index: int = 0) -> Optional[Path]:
-    """定位触觉视频文件
-    
-    策略：
-    1. 读meta/info.json的videos字段，找含tactile/wrist的key
-    2. 拼接路径：videos/{video_key}/episode_{:06d}/video.mp4
-    3. fallback：遍历videos/子目录，找含tactile的
-    """
-    if not HAS_CV2:
-        return None
+# ============================================================
+# 视频查找与解码（Bug1-6全部重写）
+# ============================================================
 
-    # 向上查找meta目录
+# 触觉视频键名的匹配模式（优先级从高到低）
+_TACTILE_VIDEO_PATTERNS = [
+    # deformation视频 — 核心触觉信号，最高优先级
+    ("deformation", ["deformation.gripper"]),
+    # shear视频 — 力场方向
+    ("shear", ["shear.gripper"]),
+    # depth视频 — 接触深度
+    ("depth", ["depth.gripper"]),
+    # 普通相机（非触觉，但可做光流fallback）
+    ("cam", ["images.cam"]),
+    # RGB触觉（声明有但经常404，放最后）
+    ("rgb_tactile", ["images.gripper"]),
+]
+
+
+def _find_tactile_videos(parquet_path: Path) -> Dict[str, Path]:
+    """定位所有可用的触觉视频文件
+
+    修复Bug1: 匹配实际键名如observation.deformation.gripperrighttactile
+    修复Bug2: 支持chunk级别路径 videos/{key}/chunk-000/file-000.ext
+    修复Bug3: 同时搜索.mp4和.mov文件
+    修复Bug5: 找到的文件必须真实存在（跳过404的RGB触觉）
+
+    返回: {video_type: Path} 如 {"deformation": Path(...), "shear": Path(...)}
+    """
+    result = {}
+
+    # 向上查找包含meta/和videos/的根目录
+    root_dir = _find_dataset_root(parquet_path)
+    if root_dir is None:
+        return result
+
+    meta_dir = root_dir / "meta"
+    videos_dir = root_dir / "videos"
+
+    # 策略1: 从info.json的videos字段精确匹配
+    info_file = meta_dir / "info.json"
+    if info_file.exists():
+        try:
+            with open(info_file, "r") as f:
+                info = json.load(f)
+
+            video_keys = info.get("videos", [])
+            for vk in video_keys:
+                vk_lower = vk.lower()
+                for vtype, patterns in _TACTILE_VIDEO_PATTERNS:
+                    if any(p in vk_lower for p in patterns):
+                        # 尝试多种路径格式
+                        path = _resolve_video_path(videos_dir, vk)
+                        if path is not None:
+                            # 同类型可能有多路（left/right），只取第一个找到的
+                            if vtype not in result:
+                                result[vtype] = path
+                        break
+        except Exception:
+            pass
+
+    # 策略2: fallback — 直接遍历videos/子目录
+    if not result and videos_dir.exists():
+        for subdir in sorted(videos_dir.iterdir()):
+            if not subdir.is_dir():
+                continue
+            subdir_name = subdir.name.lower()
+            for vtype, patterns in _TACTILE_VIDEO_PATTERNS:
+                if any(p in subdir_name for p in patterns):
+                    if vtype in result:
+                        break
+                    # 在子目录里找视频文件
+                    path = _find_video_in_dir(subdir)
+                    if path is not None:
+                        result[vtype] = path
+                    break
+
+    return result
+
+
+def _find_dataset_root(parquet_path: Path) -> Optional[Path]:
+    """向上查找包含meta/目录的数据集根目录"""
     current = parquet_path.parent
-    for _ in range(5):
-        meta_dir = current / "meta"
-        videos_dir = current / "videos"
-        
-        if meta_dir.exists():
-            info_file = meta_dir / "info.json"
-            if info_file.exists():
-                try:
-                    with open(info_file, "r") as f:
-                        info = json.load(f)
-                    
-                    # 尝试从info.json的videos字段找tactile视频
-                    videos = info.get("videos", [])
-                    for vk in videos:
-                        vk_lower = vk.lower()
-                        if "tactile" in vk_lower or "wrist" in vk_lower:
-                            # 戴盟触觉视频在 wrist 相机里
-                            ep_str = f"episode_{episode_index:06d}"
-                            video_path = videos_dir / vk / ep_str / "video.mp4"
-                            if video_path.exists():
-                                return video_path
-                except Exception:
-                    pass
-        
-        # fallback: 遍历videos子目录
-        if videos_dir.exists():
-            for subdir in videos_dir.iterdir():
-                if subdir.is_dir():
-                    subdir_name = subdir.name.lower()
-                    if "tactile" in subdir_name or "wrist" in subdir_name:
-                        ep_str = f"episode_{episode_index:06d}"
-                        video_path = subdir / ep_str / "video.mp4"
-                        if video_path.exists():
-                            return video_path
-        
+    for _ in range(6):
+        if (current / "meta").exists() or (current / "videos").exists():
+            return current
         current = current.parent
-    
     return None
 
 
+def _resolve_video_path(videos_dir: Path, video_key: str) -> Optional[Path]:
+    """根据video_key查找实际视频文件
+
+    支持2种路径格式：
+    1. chunk级别（实际格式）: videos/{key}/chunk-NNN/file-NNN.{mov|mp4}
+    2. episode级别（旧格式）: videos/{key}/episode_NNNNNN/video.{mov|mp4}
+    """
+    key_dir = videos_dir / video_key
+    if not key_dir.exists():
+        return None
+
+    # 尝试chunk级别路径: chunk-000/file-000.{mov,mp4}
+    for chunk_dir in sorted(key_dir.iterdir()):
+        if not chunk_dir.is_dir() or not chunk_dir.name.startswith("chunk-"):
+            continue
+        for file_path in sorted(chunk_dir.iterdir()):
+            if file_path.suffix.lower() in (".mov", ".mp4"):
+                if file_path.exists() and file_path.stat().st_size > 0:
+                    return file_path
+
+    # 尝试episode级别路径（兼容旧数据格式）
+    for ep_dir in sorted(key_dir.iterdir()):
+        if not ep_dir.is_dir():
+            continue
+        for ext in (".mov", ".mp4"):
+            video_file = ep_dir / f"video{ext}"
+            if video_file.exists() and video_file.stat().st_size > 0:
+                return video_file
+
+    # 尝试直接在key_dir下找视频文件
+    for ext in (".mov", ".mp4"):
+        direct = key_dir / f"video{ext}"
+        if direct.exists() and direct.stat().st_size > 0:
+            return direct
+
+    return None
+
+
+def _find_video_in_dir(directory: Path) -> Optional[Path]:
+    """在目录中递归查找第一个有效的视频文件"""
+    for path in sorted(directory.rglob("*")):
+        if path.suffix.lower() in (".mov", ".mp4"):
+            if path.exists() and path.stat().st_size > 0:
+                return path
+    return None
+
+
+def _probe_video(video_path: Path) -> Dict[str, Any]:
+    """用ffprobe检测视频编码信息
+
+    返回: {codec, pix_fmt, width, height, nb_frames, duration}
+    """
+    if not HAS_SUBPROCESS:
+        return {}
+
+    try:
+        cmd = [
+            "ffprobe", "-v", "quiet", "-print_format", "json",
+            "-show_streams", "-show_format",
+            str(video_path)
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        if result.returncode != 0:
+            return {}
+
+        probe = json.loads(result.stdout)
+        streams = probe.get("streams", [])
+        video_stream = None
+        for s in streams:
+            if s.get("codec_type") == "video":
+                video_stream = s
+                break
+
+        if video_stream is None:
+            return {}
+
+        return {
+            "codec": video_stream.get("codec_name", "unknown"),
+            "pix_fmt": video_stream.get("pix_fmt", "unknown"),
+            "width": int(video_stream.get("width", 0)),
+            "height": int(video_stream.get("height", 0)),
+            "nb_frames": int(video_stream.get("nb_frames", 0)),
+            "duration": float(video_stream.get("duration", 0)),
+        }
+    except Exception:
+        return {}
+
+
 def _extract_video_frames(video_path: Path, max_frames: Optional[int] = None) -> List[np.ndarray]:
-    """用cv2.VideoCapture逐帧解码mp4
-    
-    返回：List[np.ndarray] (BGR格式)
-    注意：流式处理，不一次全加载到内存
+    """用cv2逐帧解码常规mp4视频
+
+    返回: List[np.ndarray] (BGR uint8格式)
+    仅适用于h264/mpeg4等cv2可解码的格式
     """
     if not HAS_CV2 or not video_path.exists():
         return []
-    
+
     frames = []
     cap = cv2.VideoCapture(str(video_path))
     try:
@@ -162,41 +302,305 @@ def _extract_video_frames(video_path: Path, max_frames: Optional[int] = None) ->
             frame_idx += 1
     finally:
         cap.release()
-    
+
     return frames
 
 
-def _compute_optical_flow(prev_frame: np.ndarray, curr_frame: np.ndarray) -> tuple:
-    """Farneback光流计算
-    
-    输入：两个BGR帧
-    输出：(magnitude, direction)
+def _extract_ffv1_frames(video_path: Path, pix_fmt: str,
+                          width: int, height: int,
+                          max_frames: Optional[int] = None) -> List[np.ndarray]:
+    """用ffmpeg rawvideo提取FFV1编码视频帧
+
+    修复Bug4: FFV1/gbrp16le无法用cv2解码 → 用ffmpeg rawvideo
+    修复Bug6: 16位数据转8位丢失 → 完整提取16位后去基线归一化
+
+    pix_fmt支持:
+    - gbrp16le: 3平面(G,B,R)各16位小端，每帧 = width*height*2*3 字节
+    - gray16le: 单平面16位小端，每帧 = width*height*2 字节
+
+    返回: List[np.ndarray] (float32, 已去基线归一化到0-1)
+    """
+    if not HAS_SUBPROCESS:
+        return []
+
+    # 计算每帧字节大小
+    if pix_fmt == "gbrp16le":
+        frame_bytes = width * height * 2 * 3  # 3 planes × 16bit
+    elif pix_fmt == "gray16le":
+        frame_bytes = width * height * 2  # 1 plane × 16bit
+    else:
+        return []
+
+    cmd = [
+        "ffmpeg", "-i", str(video_path),
+        "-f", "rawvideo", "-pix_fmt", pix_fmt,
+        "-v", "quiet",
+        "-"
+    ]
+
+    try:
+        proc = subprocess.run(cmd, capture_output=True, timeout=300)
+        if proc.returncode != 0:
+            return []
+
+        raw = proc.stdout
+        total_frames = len(raw) // frame_bytes
+        if total_frames == 0:
+            return []
+
+        if max_frames is not None:
+            total_frames = min(total_frames, max_frames)
+
+        frames = []
+        for i in range(total_frames):
+            offset = i * frame_bytes
+            frame_raw = raw[offset:offset + frame_bytes]
+
+            if pix_fmt == "gbrp16le":
+                # gbrp16le: 3个平面依次排列 (G, B, R)，每平面 width*height 个 uint16
+                plane_size = width * height
+                g_plane = np.frombuffer(frame_raw[:plane_size * 2], dtype='<u2').reshape(height, width).astype(np.float32)
+                b_plane = np.frombuffer(frame_raw[plane_size * 2:plane_size * 4], dtype='<u2').reshape(height, width).astype(np.float32)
+                r_plane = np.frombuffer(frame_raw[plane_size * 4:], dtype='<u2').reshape(height, width).astype(np.float32)
+
+                # 去基线: 戴盟基线值≈30000，减去后得到实际触觉信号
+                # 基线取帧内中位数更鲁棒
+                g_baseline = float(np.median(g_plane))
+                b_baseline = float(np.median(b_plane))
+                r_baseline = float(np.median(r_plane))
+
+                g_signal = np.abs(g_plane - g_baseline)
+                b_signal = np.abs(b_plane - b_baseline)
+                r_signal = np.abs(r_plane - r_baseline)
+
+                # 合并为3通道信号图，归一化到0-1
+                # 信号范围一般在0-2000，用99百分位做上界
+                max_val = max(
+                    float(np.percentile(g_signal, 99)),
+                    float(np.percentile(b_signal, 99)),
+                    float(np.percentile(r_signal, 99)),
+                    1.0  # 防止除零
+                )
+
+                normalized = np.stack([
+                    r_signal / max_val,
+                    g_signal / max_val,
+                    b_signal / max_val,
+                ], axis=-1)
+                normalized = np.clip(normalized, 0.0, 1.0)
+                frames.append(normalized)
+
+            elif pix_fmt == "gray16le":
+                depth = np.frombuffer(frame_raw, dtype='<u2').reshape(height, width).astype(np.float32)
+                # depth值很小（max≈24），直接归一化
+                d_max = float(np.max(depth))
+                if d_max > 0:
+                    normalized = (depth / d_max).reshape(height, width, 1)
+                    # 扩展为3通道方便后续处理
+                    normalized = np.repeat(normalized, 3, axis=-1)
+                else:
+                    normalized = np.zeros((height, width, 3), dtype=np.float32)
+                frames.append(normalized)
+
+        return frames
+
+    except subprocess.TimeoutExpired:
+        return []
+    except Exception:
+        return []
+
+
+def _extract_ffv1_frames_streaming(video_path: Path, pix_fmt: str,
+                                     width: int, height: int,
+                                     max_frames: Optional[int] = None) -> List[np.ndarray]:
+    """流式提取FFV1视频帧（适合大文件，内存友好）
+
+    与_extract_ffv1_frames功能相同，但逐帧读取而非全量加载
+    """
+    if not HAS_SUBPROCESS:
+        return []
+
+    if pix_fmt == "gbrp16le":
+        frame_bytes = width * height * 2 * 3
+    elif pix_fmt == "gray16le":
+        frame_bytes = width * height * 2
+    else:
+        return []
+
+    cmd = [
+        "ffmpeg", "-i", str(video_path),
+        "-f", "rawvideo", "-pix_fmt", pix_fmt,
+        "-v", "quiet",
+        "-"
+    ]
+
+    frames = []
+    try:
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        frame_count = 0
+        while True:
+            if max_frames is not None and frame_count >= max_frames:
+                break
+            raw = proc.stdout.read(frame_bytes)
+            if len(raw) < frame_bytes:
+                break
+
+            if pix_fmt == "gbrp16le":
+                plane_size = width * height
+                g = np.frombuffer(raw[:plane_size * 2], dtype='<u2').reshape(height, width).astype(np.float32)
+                b = np.frombuffer(raw[plane_size * 2:plane_size * 4], dtype='<u2').reshape(height, width).astype(np.float32)
+                r = np.frombuffer(raw[plane_size * 4:], dtype='<u2').reshape(height, width).astype(np.float32)
+
+                g_bl = float(np.median(g))
+                b_bl = float(np.median(b))
+                r_bl = float(np.median(r))
+                g_sig = np.abs(g - g_bl)
+                b_sig = np.abs(b - b_bl)
+                r_sig = np.abs(r - r_bl)
+
+                mv = max(float(np.percentile(g_sig, 99)), float(np.percentile(b_sig, 99)),
+                         float(np.percentile(r_sig, 99)), 1.0)
+                norm = np.stack([r_sig / mv, g_sig / mv, b_sig / mv], axis=-1)
+                frames.append(np.clip(norm, 0.0, 1.0))
+
+            elif pix_fmt == "gray16le":
+                d = np.frombuffer(raw, dtype='<u2').reshape(height, width).astype(np.float32)
+                d_max = float(np.max(d))
+                if d_max > 0:
+                    n = np.repeat((d / d_max).reshape(height, width, 1), 3, axis=-1)
+                else:
+                    n = np.zeros((height, width, 3), dtype=np.float32)
+                frames.append(n)
+
+            frame_count += 1
+
+        proc.stdout.close()
+        proc.terminate()
+        proc.wait(timeout=5)
+    except Exception:
+        pass
+
+    return frames
+
+
+def _compute_tactile_features_from_video(deform_frame: Optional[np.ndarray],
+                                          shear_frame: Optional[np.ndarray],
+                                          prev_deform_frame: Optional[np.ndarray] = None) -> Dict[str, float]:
+    """从deformation/shear视频帧计算触觉特征
+
+    这些特征之前标记为"需视频流"，现在从实际视频数据中提取：
+    - deformation_magnitude: deformation场总变形量
+    - contact_area: 超过阈值的像素比例
+    - texture_energy: Laplacian方差（纹理复杂度）
+    - edge_density: Canny边缘密度
+    - shear_field_magnitude/direction: shear场大小和方向
+    - normal_field: 法向场大小
+    """
+    result = {
+        "deformation_magnitude": 0.0,
+        "contact_area": 0.0,
+        "texture_energy": 0.0,
+        "edge_density": 0.0,
+        "shear_field_magnitude": 0.0,
+        "shear_field_direction": 0.0,
+        "normal_field_magnitude": 0.0,
+        "normal_field_variance": 0.0,
+        "contact": 0.0,
+    }
+
+    # --- 从deformation帧计算 ---
+    if deform_frame is not None and deform_frame.size > 0:
+        # deform_frame: (H, W, 3) float32, R/G/B各通道是去基线后的触觉信号
+        # 3通道对应3个方向的形变
+        gray = np.mean(deform_frame, axis=2)  # 平均通道
+
+        # deformation_magnitude: 3通道RMS
+        result["deformation_magnitude"] = float(np.sqrt(np.mean(deform_frame ** 2)))
+
+        # contact: 超过阈值认为有接触
+        threshold = 0.05  # 归一化后的阈值
+        contact_mask = gray > threshold
+        result["contact"] = 1.0 if np.any(contact_mask) else 0.0
+
+        # contact_area: 接触面积比
+        result["contact_area"] = float(np.mean(contact_mask))
+
+        # texture_energy: Laplacian方差
+        if gray.shape[0] > 2 and gray.shape[1] > 2:
+            from scipy.ndimage import laplace
+            try:
+                lap = laplace(gray)
+                result["texture_energy"] = float(np.var(lap))
+            except ImportError:
+                # fallback: 手动Laplacian
+                pad = np.pad(gray, 1, mode='edge')
+                lap = (pad[:-2, 1:-1] + pad[2:, 1:-1] + pad[1:-1, :-2] + pad[1:-1, 2:] - 4 * pad[1:-1, 1:-1])
+                result["texture_energy"] = float(np.var(lap))
+
+        # edge_density: 梯度幅度超过90百分位的比例
+        if gray.shape[0] > 1 and gray.shape[1] > 1:
+            gy, gx = np.gradient(gray)
+            grad_mag = np.sqrt(gx ** 2 + gy ** 2)
+            if grad_mag.max() > 0:
+                p90 = np.percentile(grad_mag, 90)
+                result["edge_density"] = float(np.mean(grad_mag > p90))
+
+        # normal_field: 从3通道形变场计算
+        # 每通道代表一个方向的力场分量
+        r_ch = deform_frame[:, :, 0]
+        g_ch = deform_frame[:, :, 1]
+        b_ch = deform_frame[:, :, 2]
+        nf_mag = float(np.sqrt(np.mean(r_ch ** 2 + g_ch ** 2 + b_ch ** 2)))
+        result["normal_field_magnitude"] = nf_mag
+        result["normal_field_variance"] = float(np.var(np.sqrt(r_ch ** 2 + g_ch ** 2 + b_ch ** 2)))
+
+    # --- 从shear帧计算 ---
+    if shear_frame is not None and shear_frame.size > 0:
+        gray = np.mean(shear_frame, axis=2)
+        r_ch = shear_frame[:, :, 0]
+        g_ch = shear_frame[:, :, 1]
+
+        if gray.shape[0] > 1 and gray.shape[1] > 1:
+            r_gy, r_gx = np.gradient(r_ch)
+            g_gy, g_gx = np.gradient(g_ch)
+            shear_x = float(np.mean(np.abs(r_gx)))
+            shear_y = float(np.mean(np.abs(g_gy)))
+            result["shear_field_magnitude"] = np.sqrt(shear_x ** 2 + shear_y ** 2)
+            result["shear_field_direction"] = float(np.degrees(np.arctan2(shear_y, shear_x)))
+
+    return result
+
+
+def _compute_optical_flow_from_tactile(prev_frame: np.ndarray, curr_frame: np.ndarray) -> Tuple[float, float]:
+    """从触觉视频帧（deformation）计算光流
+
+    输入: 归一化后的float32帧 (H, W, 3)
+    输出: (magnitude, direction)
     """
     if not HAS_CV2:
         return 0.0, 0.0
-    
+
     try:
-        prev_gray = cv2.cvtColor(prev_frame, cv2.COLOR_BGR2GRAY)
-        curr_gray = cv2.cvtColor(curr_frame, cv2.COLOR_BGR2GRAY)
-        
+        # 转uint8给Farneback
+        prev_u8 = (np.clip(prev_frame, 0, 1) * 255).astype(np.uint8)
+        curr_u8 = (np.clip(curr_frame, 0, 1) * 255).astype(np.uint8)
+        prev_gray = cv2.cvtColor(prev_u8, cv2.COLOR_RGB2GRAY)
+        curr_gray = cv2.cvtColor(curr_u8, cv2.COLOR_RGB2GRAY)
+
         flow = cv2.calcOpticalFlowFarneback(
             prev_gray, curr_gray, None,
             pyr_scale=0.5, levels=3, winsize=15,
             iterations=3, poly_n=5, poly_sigma=1.2, flags=0
         )
-        
         mag, ang = cv2.cartToPolar(flow[..., 0], flow[..., 1])
-        magnitude = float(np.mean(mag))
-        direction = float(np.degrees(np.mean(ang))) % 360.0
-        
-        return magnitude, direction
+        return float(np.mean(mag)), float(np.degrees(np.mean(ang))) % 360.0
     except Exception:
         return 0.0, 0.0
 
-# 有效维度索引 (排除9930占位)
-# 根据ugripper_right配置: right arm(7-13), gripper_left(65), finger(67-102?),
-# right IMU(108-113)
 
+# ============================================================
+# 数值处理辅助函数
+# ============================================================
 
 def _is_valid(val):
     """检查值是否有效（非占位）"""
@@ -214,7 +618,6 @@ def _mask_placeholder(arr):
 
 def _load_info_json(parquet_path: Path) -> Dict:
     """查找并加载meta/info.json"""
-    # 向上查找到包含meta/目录的父级
     current = parquet_path.parent
     for _ in range(5):
         meta_dir = current / "meta"
@@ -250,106 +653,89 @@ def _detect_robot_type(info: Dict) -> str:
     return info.get("robot_type", "unknown")
 
 
-def _get_valid_state_dims(info: Dict) -> List[int]:
-    """根据robot_type确定observation.state中哪些维度有效"""
-    robot_type = _detect_robot_type(info)
-
-    if robot_type == "ugripper_right":
-        # 右手单夹爪配置: 右臂位姿(7-13), gripper_left(65), 右IMU(108-113)
-        # 根据实际stats.json，gripper(64)也是9930
-        valid = list(range(7, 14)) + [65] + list(range(108, 114))
-        # finger维度可能是9930，也可能有数据
-        return valid
-    elif robot_type == "ugripper_left":
-        valid = list(range(0, 7)) + [64] + list(range(102, 108))
-        return valid
-    elif robot_type == "dual_ugripper":
-        valid = list(range(0, 14)) + [64, 65] + list(range(102, 114))
-        return valid
-    else:
-        return list(range(114))
-
-
 def _compute_contact_from_gripper(gripper_val: float,
                                    finger_data: np.ndarray,
                                    valid_dims: List[int]) -> bool:
     """从夹爪状态和触觉数据推断接触"""
-    # gripper闭合 + finger有非9930数据 → 可能接触
-    # gripper开合度较小 → 可能正在夹持
     if np.isnan(gripper_val):
         return False
-
-    # 夹爪闭合到一定程度
-    gripper_closed = gripper_val < 0.0  # negative = more closed (depends on config)
-
-    # finger数据有效
+    gripper_closed = gripper_val < 0.0
     finger_valid = finger_data[~np.isnan(finger_data)]
     if len(finger_valid) > 0:
         finger_active = np.any(np.abs(finger_valid) > 0.5)
     else:
         finger_active = False
-
     return gripper_closed or finger_active
 
 
-def _extract_tlabel_v2(state: np.ndarray, action: np.ndarray,
-                        prev_state: Optional[np.ndarray],
-                        robot_type: str,
-                        force_metrics: Optional[Dict] = None,
-                        # --- 时序4维新参数 ---
-                        optical_flow_magnitude: float = 0.0,
-                        optical_flow_direction: float = 0.0,
-                        temporal_deformation_rate: float = 0.0,
-                        contact_transition: float = 0.0) -> Dict[str, float]:
-    """从observation.state提取22维TLabel v2特征
+def _extract_tlabel_v2_from_state(state: np.ndarray, action: np.ndarray,
+                                   prev_state: Optional[np.ndarray],
+                                   robot_type: str,
+                                   force_metrics: Optional[Dict] = None,
+                                   # 视频补充的特征（覆盖state估算的值）
+                                   video_features: Optional[Dict] = None,
+                                   # --- 时序4维 ---
+                                   optical_flow_magnitude: float = 0.0,
+                                   optical_flow_direction: float = 0.0,
+                                   temporal_deformation_rate: float = 0.0,
+                                   contact_transition: float = 0.0) -> Dict[str, float]:
+    """从observation.state + 视频特征提取22维TLabel v2
 
-    戴盟的触觉数据主要在视频流里（deformation/shear/depth），
-    数值维度(finger0-35)多为9930占位。
-    这里从gripper状态和有效finger数据推断接触信息。
+    优先使用视频特征（更准确），无视频时fallback到state估算
     """
-    # Mask placeholders
     state_m = _mask_placeholder(state)
 
-    # 接触检测
-    gripper_left = state_m[65] if not np.isnan(state_m[65]) else np.nan
-    gripper_right = state_m[66] if len(state_m) > 66 and not np.isnan(state_m[66]) else np.nan
-    gripper_main = gripper_left if not np.isnan(gripper_left) else gripper_right
+    # 视频特征优先
+    vf = video_features or {}
 
-    # Finger data (idx 67-102)
-    finger_data = state_m[67:103]
-    finger_valid = finger_data[~np.isnan(finger_data)]
+    # 接触检测: 视频优先 > gripper+finger估算
+    if "contact" in vf:
+        is_contact = vf["contact"] > 0.5
+    else:
+        gripper_left = state_m[65] if not np.isnan(state_m[65]) else np.nan
+        gripper_right = state_m[66] if len(state_m) > 66 and not np.isnan(state_m[66]) else np.nan
+        gripper_main = gripper_left if not np.isnan(gripper_left) else gripper_right
+        finger_data = state_m[67:103]
+        finger_valid = finger_data[~np.isnan(finger_data)]
+        is_contact = False
+        if not np.isnan(gripper_main) and gripper_main < 0:
+            is_contact = True
+        if len(finger_valid) > 0 and np.any(np.abs(finger_valid) > 0.3):
+            is_contact = True
 
-    # 接触推断: gripper闭合 + finger有响应
-    is_contact = False
-    if not np.isnan(gripper_main) and gripper_main < 0:
-        is_contact = True
-    if len(finger_valid) > 0 and np.any(np.abs(finger_valid) > 0.3):
-        is_contact = True
-
-    # Force metrics from tactile_cache (if available)
+    # Force: 视频deformation_magnitude优先，否则gripper估算
     if force_metrics:
-        # 优先使用预计算的触觉力度
         force_mag = force_metrics.get("mean_force", 0.0)
         force_peak = force_metrics.get("max_force", 0.0)
-        contact_area = force_metrics.get("contact_ratio", 0.0)
+    elif "deformation_magnitude" in vf:
+        # 视频deformation直接反映力度
+        force_mag = vf["deformation_magnitude"] * 100  # 缩放到合理范围
+        force_peak = force_mag * 1.5
     else:
-        # 从gripper开合度估算力
-        if not np.isnan(gripper_main):
-            force_mag = max(0, abs(gripper_main) * 10)  # 粗略估算
+        gripper_left = state_m[65] if not np.isnan(state_m[65]) else np.nan
+        gripper_right = state_m[66] if len(state_m) > 66 and not np.isnan(state_m[66]) else np.nan
+        gripper_main = gripper_left if not np.isnan(gripper_left) else gripper_right
+        if gripper_main is not np.nan and not np.isnan(gripper_main):
+            force_mag = max(0, abs(gripper_main) * 10)
         else:
             force_mag = 0.0
         force_peak = force_mag
-        # 接触面积从finger数据推断
-        if len(finger_valid) > 0:
-            contact_area = float(np.sum(np.abs(finger_valid) > 0.3)) / max(len(finger_valid), 1)
-        else:
-            contact_area = 0.0
 
-    # Deformation from finger variance
-    if len(finger_valid) > 1:
-        deformation_mag = float(np.std(finger_valid))
+    # Deformation: 视频优先
+    if "deformation_magnitude" in vf:
+        deformation_mag = vf["deformation_magnitude"]
     else:
-        deformation_mag = 0.0
+        finger_data = state_m[67:103]
+        finger_valid = finger_data[~np.isnan(finger_data)]
+        deformation_mag = float(np.std(finger_valid)) if len(finger_valid) > 1 else 0.0
+
+    # Contact area: 视频优先
+    if "contact_area" in vf:
+        contact_area = vf["contact_area"]
+    else:
+        finger_data = state_m[67:103]
+        finger_valid = finger_data[~np.isnan(finger_data)]
+        contact_area = float(np.sum(np.abs(finger_valid) > 0.3)) / max(len(finger_valid), 1) if len(finger_valid) > 0 else 0.0
 
     # IMU-based slip detection
     right_acc = state_m[108:111]
@@ -357,47 +743,59 @@ def _extract_tlabel_v2(state: np.ndarray, action: np.ndarray,
     slip_event = 0.0
     slip_entropy = 0.0
     if not np.any(np.isnan(right_acc)):
-        acc_mag = float(np.sqrt(np.sum(right_acc**2)))
-        if acc_mag > 5.0:  # 突然加速度变化 → 可能滑移
+        acc_mag = float(np.sqrt(np.sum(right_acc ** 2)))
+        if acc_mag > 5.0:
             slip_event = min(acc_mag / 20.0, 1.0)
         if not np.any(np.isnan(right_gyro)):
-            gyro_mag = float(np.sqrt(np.sum(right_gyro**2)))
+            gyro_mag = float(np.sqrt(np.sum(right_gyro ** 2)))
             if gyro_mag > 1.0:
                 slip_event = max(slip_event, min(gyro_mag / 5.0, 1.0))
 
-    # Delta force (帧间差分)
+    # Delta force
     delta_fn = 0.0
     delta_fs = 0.0
     if prev_state is not None:
         prev_m = _mask_placeholder(prev_state)
         if not np.isnan(prev_m[65]) and not np.isnan(state_m[65]):
             delta_fn = abs(state_m[65] - prev_m[65])
-        # IMU差分
         prev_acc = prev_m[108:111]
         if not np.any(np.isnan(prev_acc)) and not np.any(np.isnan(right_acc)):
-            delta_fs = float(np.sqrt(np.sum((right_acc - prev_acc)**2)))
+            delta_fs = float(np.sqrt(np.sum((right_acc - prev_acc) ** 2)))
 
-    # Normal field (from finger spatial distribution)
-    nf_mag = force_mag
-    nf_var = 0.0
-    if len(finger_valid) > 1:
-        nf_var = float(np.var(finger_valid))
+    # Normal/shear field: 视频优先
+    nf_mag = vf.get("normal_field_magnitude", force_mag)
+    nf_var = vf.get("normal_field_variance", 0.0)
+    sf_mag = vf.get("shear_field_magnitude", 0.0)
+    sf_dir = vf.get("shear_field_direction", 0.0)
+
+    # 无视频时从finger数据估算法向场
+    if "normal_field_magnitude" not in vf:
+        finger_data = state_m[67:103]
+        finger_valid = finger_data[~np.isnan(finger_data)]
+        if len(finger_valid) > 1:
+            nf_var = float(np.var(finger_valid))
 
     # Friction cone ratio
     friction_ratio = delta_fs / nf_mag if nf_mag > 1e-6 else 0.0
 
-    # Force direction (from gripper + IMU)
-    if not np.any(np.isnan(right_acc)) and np.sqrt(np.sum(right_acc**2)) > 0.01:
+    # Force direction
+    if not np.any(np.isnan(right_acc)) and np.sqrt(np.sum(right_acc ** 2)) > 0.01:
         force_dir = float(np.degrees(np.arctan2(right_acc[1], right_acc[0])))
     else:
         force_dir = 0.0
 
-    # Pressure centroid (from finger spatial distribution)
+    # Centroid
+    finger_data = state_m[67:103]
+    finger_valid = finger_data[~np.isnan(finger_data)]
     if len(finger_valid) > 0 and np.sum(np.abs(finger_valid)) > 1e-10:
         weighted_pos = np.sum(np.arange(len(finger_valid)) * np.abs(finger_valid))
         centroid_x = weighted_pos / (np.sum(np.abs(finger_valid)) * max(len(finger_valid) - 1, 1))
     else:
         centroid_x = 0.5
+
+    # Texture/edge: 视频优先
+    texture_energy = vf.get("texture_energy", 0.0)
+    edge_density = vf.get("edge_density", 0.0)
 
     return {
         "contact": 1.0 if is_contact else 0.0,
@@ -407,14 +805,14 @@ def _extract_tlabel_v2(state: np.ndarray, action: np.ndarray,
         "force_direction": round(force_dir, 2),
         "slip_entropy": round(slip_entropy, 4),
         "slip_event": round(slip_event, 4),
-        "texture_energy": 0.0,  # 需要视频流deformation数据
-        "edge_density": 0.0,    # 需要视频流数据
+        "texture_energy": round(texture_energy, 4),
+        "edge_density": round(edge_density, 4),
         "contact_area": round(min(contact_area, 1.0), 4),
         "centroid_x": round(centroid_x, 4),
         "normal_field_magnitude": round(nf_mag, 4),
         "normal_field_variance": round(nf_var, 4),
-        "shear_field_magnitude": 0.0,  # 需要视频流shear数据
-        "shear_field_direction": 0.0,  # 需要视频流数据
+        "shear_field_magnitude": round(sf_mag, 4),
+        "shear_field_direction": round(sf_dir, 2),
         "delta_force_normal": round(delta_fn, 4),
         "delta_force_shear": round(delta_fs, 4),
         "friction_cone_ratio": round(min(friction_ratio, 10.0), 4),
@@ -477,26 +875,25 @@ class DaimonAdapter(BaseAdapter):
     def get_capabilities(self) -> Dict[str, bool]:
         return {
             "contact": True,
-            "deformation_magnitude": True,   # finger数据
-            "force_magnitude": True,          # gripper/finger推算
+            "deformation_magnitude": True,
+            "force_magnitude": True,
             "force_peak": True,
-            "force_direction": True,          # IMU推算
+            "force_direction": True,
             "slip_entropy": True,
-            "slip_event": True,              # IMU加速度突变检测
-            "texture_energy": False,          # 需视频流
-            "edge_density": False,            # 需视频流
+            "slip_event": True,
+            "texture_energy": True,   # 从deformation视频算
+            "edge_density": True,     # 从deformation视频算
             "contact_area": True,
             "centroid_x": True,
             "normal_field_magnitude": True,
             "normal_field_variance": True,
-            "shear_field_magnitude": False,    # 需视频流shear
-            "shear_field_direction": False,   # 需视频流shear
+            "shear_field_magnitude": True,  # 从shear视频算
+            "shear_field_direction": True,  # 从shear视频算
             "delta_force_normal": True,
             "delta_force_shear": True,
             "friction_cone_ratio": True,
-            # --- 时序4维: 视频可用时全True，否则2维False ---
-            "optical_flow_magnitude": HAS_CV2,
-            "optical_flow_direction": HAS_CV2,
+            "optical_flow_magnitude": True,   # 从deformation视频算
+            "optical_flow_direction": True,   # 从deformation视频算
             "temporal_deformation_rate": True,
             "contact_transition": True,
         }
@@ -518,7 +915,7 @@ class DaimonAdapter(BaseAdapter):
         参数:
             file_path: parquet文件路径或episode目录路径
             episode_index: 指定episode (默认加载第一个)
-            max_frames: 最大帧数 (懒加载, 默认全部)
+            max_frames: 最大帧数
         """
         if not HAS_PYARROW:
             raise ImportError("戴盟适配器需要pyarrow: pip install pyarrow")
@@ -548,37 +945,72 @@ class DaimonAdapter(BaseAdapter):
         if episode_index is not None and "episode_index" in df.columns:
             df = df[df["episode_index"] == episode_index]
         elif "episode_index" in df.columns:
-            # 默认取第一个episode
             first_ep = df["episode_index"].iloc[0]
             df = df[df["episode_index"] == first_ep]
             episode_index = int(first_ep)
 
-        # 限制帧数 (懒加载)
         if max_frames is not None and len(df) > max_frames:
             df = df.head(max_frames)
 
         num_frames = len(df)
 
-        # 提取任务描述
+        # 任务描述
         task_idx = int(df["task_index"].iloc[0]) if "task_index" in df.columns else 0
         task_desc = tasks.get(task_idx, "unknown task")
 
-        # === 尝试加载触觉视频 ===
-        video_frames = []
-        if episode_index is None and "episode_index" in df.columns:
-            episode_index = int(df["episode_index"].iloc[0])
-        
+        # === 加载触觉视频（全链路修复） ===
+        video_paths = _find_tactile_videos(parquet_path)
+        deform_frames = []
+        shear_frames = []
+        cam_frames = []  # 普通相机fallback
         video_available = False
-        if HAS_CV2:
-            tactile_video = _find_tactile_video(parquet_path, episode_index or 0)
-            if tactile_video is not None:
-                video_frames = _extract_video_frames(tactile_video, max_frames=num_frames)
-                if len(video_frames) > 0:
+        video_type = "none"
+
+        # 优先加载deformation视频
+        if "deformation" in video_paths:
+            probe = _probe_video(video_paths["deformation"])
+            if probe.get("pix_fmt") in ("gbrp16le", "gray16le"):
+                # FFV1编码 → 用ffmpeg rawvideo提取
+                deform_frames = _extract_ffv1_frames_streaming(
+                    video_paths["deformation"],
+                    probe["pix_fmt"],
+                    probe["width"], probe["height"],
+                    max_frames=num_frames,
+                )
+                if len(deform_frames) > 0:
                     video_available = True
-                    # 帧对齐: 如果视频帧数≠parquet帧数，用最近邻插值
-                    if len(video_frames) != num_frames:
-                        # HACK: 简单最近邻，video_frames将按需索引
-                        pass
+                    video_type = "deformation_ffv1"
+            elif probe.get("codec") in ("h264", "mpeg4", "vp9"):
+                # 常规编码 → cv2解码
+                if HAS_CV2:
+                    deform_frames = _extract_video_frames(
+                        video_paths["deformation"], max_frames=num_frames
+                    )
+                    if len(deform_frames) > 0:
+                        video_available = True
+                        video_type = "deformation_h264"
+
+        # 加载shear视频
+        if "shear" in video_paths:
+            probe = _probe_video(video_paths["shear"])
+            if probe.get("pix_fmt") in ("gbrp16le", "gray16le"):
+                shear_frames = _extract_ffv1_frames_streaming(
+                    video_paths["shear"],
+                    probe["pix_fmt"],
+                    probe["width"], probe["height"],
+                    max_frames=num_frames,
+                )
+            elif probe.get("codec") in ("h264", "mpeg4", "vp9") and HAS_CV2:
+                shear_frames = _extract_video_frames(
+                    video_paths["shear"], max_frames=num_frames
+                )
+
+        # fallback: 普通相机做光流
+        if not video_available and "cam" in video_paths and HAS_CV2:
+            cam_frames = _extract_video_frames(video_paths["cam"], max_frames=num_frames)
+            if len(cam_frames) > 0:
+                video_available = True
+                video_type = "cam_h264"
 
         # 逐帧处理
         tlabel_frames = []
@@ -591,7 +1023,7 @@ class DaimonAdapter(BaseAdapter):
         frame_indices = df["frame_index"].values if "frame_index" in df.columns else np.arange(num_frames)
 
         prev_tlabel_v2 = None
-        prev_video_frame = None
+        prev_deform_frame = None
         dt = 1.0 / fps if fps > 0 else 1.0 / 30.0
 
         for i in range(num_frames):
@@ -599,43 +1031,75 @@ class DaimonAdapter(BaseAdapter):
             action = np.array(actions[i]) if actions is not None else np.zeros(111)
             prev_state = np.array(states[i - 1]) if i > 0 else None
 
-            # --- 时序4维计算 ---
+            # --- 视频特征计算 ---
+            video_features = {}
             optical_flow_mag = 0.0
             optical_flow_dir = 0.0
             temp_deform_rate = 0.0
             contact_trans = 0.0
 
-            if video_available and len(video_frames) > 0:
-                # 帧对齐: 用最近邻
-                frame_idx = min(i, len(video_frames) - 1)
-                curr_video_frame = video_frames[frame_idx]
+            # 帧对齐: 视频帧和parquet帧可能不对齐，用最近邻
+            if len(deform_frames) > 0:
+                fidx = min(i, len(deform_frames) - 1)
+                curr_deform = deform_frames[fidx]
+                curr_shear = shear_frames[fidx] if fidx < len(shear_frames) else None
 
-                if prev_video_frame is not None:
-                    optical_flow_mag, optical_flow_dir = _compute_optical_flow(
-                        prev_video_frame, curr_video_frame
+                # 从视频帧计算触觉特征
+                video_features = _compute_tactile_features_from_video(
+                    curr_deform, curr_shear, prev_deform_frame
+                )
+
+                # 光流: 从deformation帧计算触觉光流
+                if prev_deform_frame is not None:
+                    optical_flow_mag, optical_flow_dir = _compute_optical_flow_from_tactile(
+                        prev_deform_frame, curr_deform
                     )
-                
-                prev_video_frame = curr_video_frame
 
-            # temporal_deformation_rate: 帧间deformation差分
+                prev_deform_frame = curr_deform
+
+            elif len(cam_frames) > 0:
+                # fallback: 用普通相机做光流
+                fidx = min(i, len(cam_frames) - 1)
+                curr_cam = cam_frames[fidx]
+                if i > 0 and fidx > 0:
+                    prev_cam = cam_frames[fidx - 1]
+                    if HAS_CV2:
+                        try:
+                            prev_gray = cv2.cvtColor(prev_cam, cv2.COLOR_BGR2GRAY)
+                            curr_gray = cv2.cvtColor(curr_cam, cv2.COLOR_BGR2GRAY)
+                            flow = cv2.calcOpticalFlowFarneback(
+                                prev_gray, curr_gray, None,
+                                0.5, 3, 15, 3, 5, 1.2, 0
+                            )
+                            mag, ang = cv2.cartToPolar(flow[..., 0], flow[..., 1])
+                            optical_flow_mag = float(np.mean(mag))
+                            optical_flow_dir = float(np.degrees(np.mean(ang)))
+                        except Exception:
+                            pass
+
+            # temporal_deformation_rate
             if prev_tlabel_v2 is not None and dt > 0:
-                # 从当前state估算deformation
-                state_m = _mask_placeholder(state)
-                finger_data = state_m[67:103]
-                finger_valid = finger_data[~np.isnan(finger_data)]
-                curr_deform = float(np.std(finger_valid)) if len(finger_valid) > 1 else 0.0
                 prev_deform = prev_tlabel_v2.get("deformation_magnitude", 0.0)
-                temp_deform_rate = abs(curr_deform - prev_deform) / dt
+                curr_deform_val = video_features.get("deformation_magnitude", 0.0)
+                if curr_deform_val == 0.0:
+                    # fallback到state估算
+                    state_m = _mask_placeholder(state)
+                    finger_data = state_m[67:103]
+                    finger_valid = finger_data[~np.isnan(finger_data)]
+                    curr_deform_val = float(np.std(finger_valid)) if len(finger_valid) > 1 else 0.0
+                temp_deform_rate = abs(curr_deform_val - prev_deform) / dt
 
-            tlabel_v2 = _extract_tlabel_v2(
+            # 构建22维特征
+            tlabel_v2 = _extract_tlabel_v2_from_state(
                 state, action, prev_state, robot_type,
+                video_features=video_features,
                 optical_flow_magnitude=optical_flow_mag,
                 optical_flow_direction=optical_flow_dir,
                 temporal_deformation_rate=temp_deform_rate,
-                contact_transition=contact_trans,
+                contact_transition=0.0,  # 后面补算
             )
 
-            # contact_transition: 帧间contact + contact_area变化
+            # contact_transition
             if prev_tlabel_v2 is not None:
                 curr_contact = tlabel_v2["contact"]
                 prev_contact = prev_tlabel_v2.get("contact", 0.0)
@@ -660,15 +1124,16 @@ class DaimonAdapter(BaseAdapter):
                 "right_gyro": [float(v) for v in state_m[111:114]] if not np.any(np.isnan(state_m[111:114])) else None,
                 "robot_type": robot_type,
                 "video_available": video_available,
+                "video_type": video_type,
             }
 
-            confidence = self._compute_confidence(tlabel_v2)
+            confidence = self._compute_confidence(tlabel_v2, video_available)
 
             frame = TLabelFrame(
                 frame_idx=int(frame_indices[i]),
                 timestamp_s=round(float(timestamps[i]) if timestamps is not None else i / fps, 4),
                 tlabel_v2=tlabel_v2,
-                manipulation_phase="idle",  # 后面统一推断
+                manipulation_phase="idle",
                 confidence=confidence,
                 sensor_specific=sensor_specific,
             )
@@ -692,7 +1157,10 @@ class DaimonAdapter(BaseAdapter):
                 "fps": fps,
                 "total_episodes": total_episodes,
                 "placeholder_value": PLACEHOLDER,
-                "note": "触觉RGB/deformation/shear/depth在视频流中，数值维度finger0-35多为占位",
+                "video_available": video_available,
+                "video_type": video_type,
+                "videos_found": list(video_paths.keys()),
+                "note": "v0.2.0a3: 视频全链路修复（FFV1解码+chunk路径+16位保留）",
             }
         }
 
@@ -705,10 +1173,15 @@ class DaimonAdapter(BaseAdapter):
             "fps": fps,
         }
 
-        # 构建capabilities（视频可用性影响光流维度）
         caps = self.get_capabilities()
-        caps["optical_flow_magnitude"] = video_available
-        caps["optical_flow_direction"] = video_available
+        # 无视频时部分维度降级
+        if not video_available:
+            caps["texture_energy"] = False
+            caps["edge_density"] = False
+            caps["shear_field_magnitude"] = False
+            caps["shear_field_direction"] = False
+            caps["optical_flow_magnitude"] = False
+            caps["optical_flow_direction"] = False
 
         return TLabelData(
             frames=tlabel_frames,
@@ -720,7 +1193,6 @@ class DaimonAdapter(BaseAdapter):
     @staticmethod
     def _find_parquet(directory: Path) -> Path:
         """在目录中查找parquet数据文件"""
-        # 优先找 data/chunk-000/file-000.parquet
         for pattern in ["data/chunk-*/file-*.parquet", "**/*.parquet"]:
             matches = list(directory.glob(pattern))
             if matches:
@@ -728,12 +1200,21 @@ class DaimonAdapter(BaseAdapter):
         raise FileNotFoundError(f"目录中没有找到parquet文件: {directory}")
 
     @staticmethod
-    def _compute_confidence(tlabel_v2: Dict) -> float:
+    def _compute_confidence(tlabel_v2: Dict, video_available: bool = False) -> float:
         """计算标注置信度"""
-        if tlabel_v2["contact"] < 0.5 and tlabel_v2["slip_event"] < 0.5:
-            return 0.95
-        if tlabel_v2["contact"] > 0.5 and tlabel_v2["slip_event"] < 0.5:
-            return 0.7  # 戴盟数值触觉精度较低，置信度略低
-        if tlabel_v2["slip_event"] > 0.5:
-            return 0.4  # IMU推断滑移，不太确定
-        return 0.6
+        if not video_available:
+            # 无视频时，数值触觉精度较低
+            if tlabel_v2["contact"] < 0.5 and tlabel_v2["slip_event"] < 0.5:
+                return 0.95
+            if tlabel_v2["contact"] > 0.5:
+                return 0.6  # gripper推断接触，不太确定
+            return 0.5
+        else:
+            # 有视频时，特征更可靠
+            if tlabel_v2["contact"] < 0.5 and tlabel_v2["slip_event"] < 0.5:
+                return 0.98
+            if tlabel_v2["contact"] > 0.5 and tlabel_v2["slip_event"] < 0.5:
+                return 0.85
+            if tlabel_v2["slip_event"] > 0.5:
+                return 0.6
+            return 0.75
