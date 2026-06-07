@@ -67,7 +67,7 @@ def generate_panel_html(data_dict: dict, lang: str = "auto", instance_id: str = 
   <!-- Radar Chart -->
   <div style="flex:1;background:#fff;border-radius:10px;padding:12px;border:1px solid #e9ecef;">
     <div style="font-size:12px;color:#868e96;margin-bottom:4px;" data-i18n="chart.radar">22维特征</div>
-    <canvas id="{instance_id}-radar" width="300" height="280" style="width:100%;"></canvas>
+    <canvas id="{instance_id}-radar" width="360" height="340" style="width:100%;"></canvas>
   </div>
   <!-- Frame Detail -->
   <div style="flex:1;background:#fff;border-radius:10px;padding:12px;border:1px solid #e9ecef;" id="{instance_id}-detail-panel">
@@ -330,7 +330,7 @@ def generate_panel_html(data_dict: dict, lang: str = "auto", instance_id: str = 
       ctx.stroke();
     }}
 
-    // Axes + labels
+    // Axes + labels (smart alignment to avoid overlap)
     ctx.font = '9px sans-serif';
     ctx.fillStyle = '#868e96';
     for (let i = 0; i < n; i++) {{
@@ -342,9 +342,20 @@ def generate_panel_html(data_dict: dict, lang: str = "auto", instance_id: str = 
       ctx.lineTo(x, y);
       ctx.strokeStyle = 'rgba(0,0,0,0.04)';
       ctx.stroke();
-      const lx = cx + (R + 14) * Math.cos(angle);
-      const ly = cy + (R + 14) * Math.sin(angle);
-      ctx.fillText(labels[i], lx - 12, ly + 3);
+      const labelR = R + 18;
+      const lx = cx + labelR * Math.cos(angle);
+      const ly = cy + labelR * Math.sin(angle);
+      // Smart text alignment based on angle
+      const deg = ((angle * 180 / Math.PI) + 360) % 360;
+      ctx.textBaseline = 'middle';
+      if (deg > 5 && deg < 175) {{
+        ctx.textAlign = 'left';
+      }} else if (deg > 185 && deg < 355) {{
+        ctx.textAlign = 'right';
+      }} else {{
+        ctx.textAlign = 'center';
+      }}
+      ctx.fillText(labels[i], lx, ly);
     }}
 
     // Data polygon
