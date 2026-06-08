@@ -217,6 +217,15 @@ tlabel/
 
 ---
 
+## 💬 Feedback
+
+Your feedback helps shape tlabel's roadmap!
+
+- 🐛 **Found a bug?** → [Open an Issue](https://github.com/liesliy/tlabel/issues)
+- 💡 **Feature request?** → [GitHub Discussions](https://github.com/liesliy/tlabel/discussions)
+- ❓ **General questions?** → [Ask in Discussions](https://github.com/liesliy/tlabel/discussions)
+- 🌟 **Using tlabel in your research?** → We'd love to hear about it! Drop us a star or open a discussion.
+
 ## 🤝 Contributing
 
 We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
