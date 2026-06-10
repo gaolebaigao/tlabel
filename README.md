@@ -21,7 +21,9 @@
 
 ## ⚡ 30-Second Demo
 
-No data? No problem. Fire this up in Jupyter:
+**👉 [Try it live in your browser](https://www.coze.cn/s/f-KJdzphlHs/)** — no install needed, see the panel in action right now.
+
+Or fire it up in Jupyter:
 
 ```python
 import tlabel
