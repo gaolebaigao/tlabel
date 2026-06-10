@@ -21,7 +21,9 @@
 
 ## ⚡ 30秒体验
 
-没有数据？无所谓。Jupyter里跑这几行：
+**👉 [浏览器直接体验](https://www.coze.cn/s/f-KJdzphlHs/)** — 不用装任何东西，现在就能看面板效果。
+
+或者Jupyter里跑：
 
 ```python
 import tlabel
