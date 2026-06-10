@@ -12,13 +12,34 @@
   <a href="README_CN.md">中文文档</a>
 </p>
 
-![TouchLabel AI Panel Demo](docs/demo_panel.gif)
+---
+
+> 🎯 **Got tactile data from different sensors that refuse to talk to each other?**
+> TLabel makes them speak the same language — load any format, annotate in a visual panel, export a unified schema.
 
 ---
 
-<p align="center">
-  <b>If TouchLabel helps your research, please consider giving us a ⭐ on GitHub — it means a lot!</b>
-</p>
+## ⚡ 30-Second Demo
+
+No data? No problem. Fire this up in Jupyter:
+
+```python
+import tlabel
+data = tlabel.demo()    # ← built-in GelSight demo
+data.review()           # ← interactive panel pops up
+```
+
+Or try other sensors:
+
+```python
+tlabel.demo('digit').review()    # DIGIT sensor
+tlabel.demo('paxini').review()   # PaXini force sensor
+tlabel.demo('daimon').review()   # Daimon DM-TacClaw
+```
+
+**What you'll see:** a color-coded timeline (🟢 contact / 🔴 slip / ⬜ idle), 22-dim radar chart, frame detail editor, and batch patching — all in one panel.
+
+![TouchLabel AI Panel Demo](docs/demo_panel.gif)
 
 ---
 
@@ -31,38 +52,33 @@ pip install tlabel
 ```python
 import tlabel
 
-# 1️⃣ Load — auto-detect sensor format
+# Load — auto-detect sensor format, no config needed
 data = tlabel.load("gelsight_force.pkl")     # GelSight / DIGIT
 data = tlabel.load("paxini_episode.h5")      # PaXini
 data = tlabel.load("daimon_data/")           # Daimon (directory or .parquet)
 
-# 2️⃣ Annotate — interactive Jupyter panel
+# Annotate — interactive Jupyter panel
 data.review()          # Chinese UI
 data.review(lang="en") # English UI
 
-# 3️⃣ Export
+# Export — unified TLabel Format
 data.export("output.json")   # TLabel Format v2 JSON
-data.export("output.csv")    # CSV flat table
+data.export("output.csv")    # flat CSV
 ```
 
-<details>
-<summary>📥 Try with demo data</summary>
+That's it. Three lines, full loop. 🔁
 
-```bash
-pip install tlabel
-python -c "
-import json, urllib.request
-from tlabel.core.types import TLabelFrame, TLabelData
+---
 
-url = 'https://raw.githubusercontent.com/liesliy/tlabel/main/examples/data/demo_gelsight.json'
-raw = json.loads(urllib.request.urlopen(url).read())
-frames = [TLabelFrame(f['frame_idx'], f['timestamp_s'], f['tlabel_v2'], f.get('manipulation_phase','idle'), f.get('confidence',1.0)) for f in raw['frames']]
-data = TLabelData(frames, raw['sensor'], raw['episode'], raw['capabilities'])
-data.review()
-"
-```
+## 🤔 Why TLabel?
 
-</details>
+| Pain | TLabel's Answer |
+|------|-----------------|
+| Every sensor spits out a different format | **One `load()` call, auto-detected** |
+| Raw tactile data is unreadable numbers | **Visual panel: timeline + radar + details** |
+| Fixing labels frame-by-frame is soul-crushing | **Batch patch + cascade rules, fix ranges in one click** |
+| Your lab mate exported... something... | **Unified TLabel Format v2, 22 dimensions, no ambiguity** |
+| "But we use DIGIT and they use PaXini" | **Sensor-agnostic. Load both, same schema, same tool.** |
 
 ---
 
@@ -75,22 +91,22 @@ data.review()
 | **Daimon DM-TacClaw** | `.parquet` / dir | 22 (video) / 20 (no video) | ✅ / — | ✅ Stable |
 | **PaXini PXCap** | `.h5` / `.hdf5` | 20 | — | ✅ Stable |
 
-> Force-type sensors (PaXini) lack optical images and don't support optical flow features, yielding 20 dimensions. Image-type sensors output all 22 dimensions. Daimon gracefully degrades to 20 dims when no video file is present.
+> Force-type sensors (PaXini) lack optical images → 20 dims. Image-type → full 22. Daimon gracefully degrades when no video is present. No errors, no surprises.
 
 ---
 
 ## 📦 Installation
 
 ```bash
-# Minimal (numpy only)
+# Just the core (numpy only, ~2s install)
 pip install tlabel
 
-# Per-sensor optional dependencies
+# Per-sensor extras
 pip install tlabel[gelsight]   # GelSight / DIGIT → opencv-python
 pip install tlabel[paxini]     # PaXini → h5py
 pip install tlabel[daimon]     # Daimon → pyarrow + opencv-python
 
-# Everything
+# I want it all
 pip install tlabel[all]
 ```
 
@@ -98,11 +114,11 @@ pip install tlabel[all]
 
 ## 🎨 Panel Features
 
-- 🎨 **Color-coded timeline**: green = contact · red = slip · gray = no contact
-- 🕸 **22-dim radar chart**: full TLabel Format v2 visualization with bilingual labels
-- ✏️ **Frame & batch patching**: select a range, modify in one click
-- 🔗 **Cascade rules**: setting `contact=0` auto-zeroes 7 related fields + resets `manipulation_phase→idle`
-- 🌐 **Bilingual toggle**: Chinese / English, one click in the top-right corner
+- 🎨 **Color-coded timeline**: green = contact · red = slip · gray = idle — patterns jump out instantly
+- 🕸 **22-dim radar chart**: see the full feature vector at a glance, bilingual labels
+- ✏️ **Frame & batch patching**: fix one frame or a range, your call
+- 🔗 **Cascade rules**: set `contact=0` → 7 related fields auto-zero + phase resets to `idle`
+- 🌐 **Bilingual toggle**: 中文 / English, one click top-right
 - 📤 **Export**: JSON / CSV, auto-detected by file extension
 
 ---
@@ -152,11 +168,15 @@ import tlabel
 data = tlabel.load(path)                     # Auto-detect sensor format
 data = tlabel.load(path, format="gelsight")  # Force specific adapter
 
+# ── Demo ──
+data = tlabel.demo()                         # Built-in demo data
+tlabel.list_demos()                          # See available sensors
+
 # ── Properties ──
 data.num_frames        # int — total frame count
 data.duration_s        # float — episode duration
 data.sensor_type       # str — sensor identifier
-data.dimension_keys    # list — all dimension keys for this sensor
+data.dimension_keys    # list — all dimension keys
 data.modified_count    # int — frames with manual patches
 
 # ── Frame Access ──
@@ -211,6 +231,7 @@ tlabel/
 ├── viewer/
 │   ├── panel.py          # Jupyter _repr_html_ renderer
 │   └── templates.py      # HTML + JS + CSS template engine
+├── demo.py               # Built-in demo data loader
 └── export/
     └── writer.py         # JSON / CSV export + NumpyEncoder
 ```
@@ -219,19 +240,18 @@ tlabel/
 
 ## 💬 Feedback
 
-Your feedback helps shape tlabel's roadmap!
+Found a bug? Have an idea? Just want to say hi?
 
-- 🐛 **Found a bug?** → [Open an Issue](https://github.com/liesliy/tlabel/issues)
-- 💡 **Feature request?** → [GitHub Discussions](https://github.com/liesliy/tlabel/discussions)
-- ❓ **General questions?** → [Ask in Discussions](https://github.com/liesliy/tlabel/discussions)
-- 🌟 **Using tlabel in your research?** → We'd love to hear about it! Drop us a star or open a discussion.
+- 🐛 **Bug report** → [Open an Issue](https://github.com/liesliy/tlabel/issues)
+- 💡 **Feature request** → [GitHub Discussions](https://github.com/liesliy/tlabel/discussions)
+- 🌟 **Using tlabel in your research?** → We'd love to hear about it! Drop us a star ⭐
 
 ## 🤝 Contributing
 
 We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 **Good first issues:**
-- 🔌 Add a new sensor adapter (e.g., SynTouch, XELA)
+- 🔌 Add a new sensor adapter (SynTouch? XELA? Your call.)
 - 📊 Improve radar chart UI (dark mode, interactive hover)
 - 🌐 Add more language support (日本語, 한국어)
 - 🧪 Add integration tests for edge cases
@@ -245,6 +265,5 @@ We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 ---
 
 <p align="center">
-  <strong>Star us ⭐ if it helps your research!</strong>
+  <strong>If this saved you from manually labeling tactile data, a ⭐ would make our day!</strong>
 </p>
-
