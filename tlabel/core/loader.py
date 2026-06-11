@@ -60,11 +60,12 @@ def load(file_path: Union[str, Path],
 
     adapter_cls = get_adapter(fmt)
     if adapter_cls is None:
-        available = list(k for k in ["gelsight", "paxini", "daimon"] if get_adapter(k))
+        available = list(k for k in ["gelsight", "paxini", "daimon", "tlabel"] if get_adapter(k))
         missing_deps = {
             "gelsight": "pip install tlabel[gelsight]  # 安装 opencv-python",
             "paxini": "pip install tlabel[paxini]      # 安装 h5py",
             "daimon": "pip install tlabel[daimon]      # 安装 pyarrow + opencv-python",
+            "tlabel": "无需额外依赖（TLabel Format JSON）",
         }
         raise ImportError(
             f"适配器 '{fmt}' 不可用，可能缺少依赖包\n"

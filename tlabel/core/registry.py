@@ -44,17 +44,15 @@ def auto_detect_format(file_path: str) -> Optional[str]:
                 return None  # 文件不存在时无法判断内容格式
             with open(file_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            if "schema_version" in data and "sensor" in data:
-                sensor_type = data.get("sensor", {}).get("type", "")
-                if "taxel" in sensor_type or "paxini" in str(data.get("sensor", {})):
-                    return "paxini"
+            # 优先检测 TLabel Format（有 schema_version + frames）
+            if "schema_version" in data and "frames" in data:
                 return "tlabel"
-            if "frames" in data and "channels" in data:
-                return "daimon"
             if "episodes" in data:
                 return "tlabel"
             # Daimon info.json
             if "robot_type" in data and "codebase_version" in data:
+                return "daimon"
+            if "frames" in data and "channels" in data:
                 return "daimon"
         except (json.JSONDecodeError, UnicodeDecodeError, OSError):
             pass
@@ -88,5 +86,11 @@ def _ensure_adapters():
         try:
             from tlabel.adapters.daimon import DaimonAdapter
             register_adapter("daimon", DaimonAdapter)
+        except ImportError:
+            pass
+    if "tlabel" not in _ADAPTERS:
+        try:
+            from tlabel.adapters.tlabel_format import TLabelAdapter
+            register_adapter("tlabel", TLabelAdapter)
         except ImportError:
             pass
