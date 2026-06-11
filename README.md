@@ -65,7 +65,7 @@ A colorful panel pops up right in your notebook:
 - **Radar chart** displays all 22 dimensions for the current frame
 - **Detail panel** lets you inspect and edit individual values
 
-![TLabel Panel Screenshot](docs/demo_panel_zh.png)
+![TLabel Panel with Export Buttons](docs/demo_panel_with_export_zh.png)
 
 **Try this:** Click on different frames in the timeline. Notice how the radar chart updates. Spot any frames that look wrong (e.g., `contact=0` but `force_magnitude > 0`).
 
