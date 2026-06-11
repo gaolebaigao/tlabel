@@ -402,3 +402,88 @@ class TestAutoLabel:
         data.auto_label(min_confidence=0.9)
         # 修改数应该>=1（至少有我们手动改的1个）
         assert data.modified_count >= 1
+
+
+class TestTLabelAdapter:
+    """TLabel Format JSON 适配器测试"""
+    
+    def test_adapter_import(self):
+        """测试 TLabelAdapter 可以导入"""
+        from tlabel.adapters.tlabel_format import TLabelAdapter
+        assert TLabelAdapter is not None
+    
+    def test_adapter_registration(self):
+        """测试适配器注册机制"""
+        from tlabel.core.registry import _ensure_adapters, get_adapter
+        
+        # 确保适配器已注册
+        _ensure_adapters()
+        
+        # 检查 tlabel 适配器是否已注册
+        adapter_cls = get_adapter("tlabel")
+        assert adapter_cls is not None
+        assert adapter_cls.__name__ == "TLabelAdapter"
+    
+    def test_json_format_detection(self):
+        """测试 JSON 格式自动检测"""
+        from tlabel.core.registry import auto_detect_format
+        
+        # 创建测试 JSON 文件
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False, mode='w') as f:
+            json.dump({
+                "schema_version": "0.4.0",
+                "frames": [],
+                "sensor": {"type": "test"}
+            }, f)
+            path = f.name
+        
+        try:
+            fmt = auto_detect_format(path)
+            assert fmt == "tlabel"
+        finally:
+            os.unlink(path)
+    
+    def test_load_demo_json(self):
+        """测试加载 demo JSON 文件"""
+        import tlabel
+        import os
+        
+        # 获取 demo 数据路径
+        demo_path = os.path.join(
+            os.path.dirname(tlabel.__file__),
+            "demo_data",
+            "demo_gelsight.json"
+        )
+        
+        if os.path.exists(demo_path):
+            data = tlabel.load(demo_path)
+            assert isinstance(data, tlabel.TLabelData)
+            assert data.num_frames > 0
+            assert len(data.dimension_keys) == 22
+    
+    def test_all_adapters_registered(self):
+        """测试所有适配器都已注册"""
+        from tlabel.core.registry import _ensure_adapters, list_adapters
+        
+        _ensure_adapters()
+        adapters = list_adapters()
+        
+        expected = ["gelsight", "paxini", "daimon", "tlabel"]
+        for name in expected:
+            assert name in adapters, f"Adapter '{name}' not registered"
+    
+    def test_loader_error_message_includes_tlabel(self):
+        """测试 loader 错误消息包含 tlabel 适配器"""
+        import tlabel
+        
+        # 创建一个无效的 JSON 文件
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False, mode='w') as f:
+            json.dump({"invalid": "data"}, f)
+            path = f.name
+        
+        try:
+            # 应该抛出 ValueError，提示无法识别格式
+            with pytest.raises(ValueError, match="无法识别文件格式"):
+                tlabel.load(path)
+        finally:
+            os.unlink(path)
