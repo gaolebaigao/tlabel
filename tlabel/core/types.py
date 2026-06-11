@@ -89,10 +89,12 @@ class TLabelFrame:
                     cascades.append({"field": "manipulation_phase", "old_value": old_phase, "new_value": "idle"})
         return cascades
 
-    def to_dict(self) -> Dict:
+    def to_dict(self, is_first: bool = False, is_last: bool = False) -> Dict:
         d = {
             "frame_idx": self.frame_idx,
             "timestamp_s": round(self.timestamp_s, 4),
+            "is_first": is_first,
+            "is_last": is_last,
             "tlabel_v2": {k: round(v, 4) if isinstance(v, float) else v for k, v in self.tlabel_v2.items()},
             "manipulation_phase": self.manipulation_phase,
             "confidence": round(self.confidence, 2),
@@ -118,12 +120,16 @@ class TLabelData:
                  sensor_info: Dict,
                  episode_info: Dict,
                  capabilities: Dict,
-                 schema_version: str = "0.4.0"):
+                 schema_version: str = "0.4.0",
+                 sensor_id: Optional[str] = None,
+                 calibration_params: Optional[Dict] = None):
         self.frames = frames
         self.sensor_info = sensor_info
         self.episode_info = episode_info
         self.capabilities = capabilities
         self.schema_version = schema_version
+        self.sensor_id = sensor_id  # 新增：传感器标识（如 "left_gripper"）
+        self.calibration_params = calibration_params or {}  # 新增：标定参数
 
     @property
     def num_frames(self) -> int:
@@ -217,11 +223,26 @@ class TLabelData:
         contact_count = sum(1 for f in self.frames if f.contact > 0.5)
         slip_count = sum(1 for f in self.frames if f.slip_event > 0.5)
 
+        # 22维特征名称列表
+        FEATURE_NAMES = [
+            "contact", "deformation_magnitude", "force_magnitude", "force_peak",
+            "force_direction", "slip_entropy", "slip_event", "texture_energy",
+            "edge_density", "contact_area", "centroid_x",
+            "normal_field_magnitude", "normal_field_variance",
+            "shear_field_magnitude", "shear_field_direction",
+            "delta_force_normal", "delta_force_shear", "friction_cone_ratio",
+            "optical_flow_magnitude", "optical_flow_direction",
+            "temporal_deformation_rate", "contact_transition",
+        ]
+
         return {
             "schema_version": self.schema_version,
             "format": "tlabel_v2",
             "tlabel_dimensions": 22,
+            "feature_names": FEATURE_NAMES,
             "sensor": self.sensor_info,
+            "sensor_id": self.sensor_id,
+            "calibration": self.calibration_params if self.calibration_params else None,
             "episode": {
                 **self.episode_info,
                 "num_frames": self.num_frames,
@@ -235,7 +256,8 @@ class TLabelData:
                 }
             },
             "capabilities": self.capabilities,
-            "frames": [f.to_dict() for f in self.frames],
+            "frames": [f.to_dict(is_first=(i == 0), is_last=(i == len(self.frames) - 1)) 
+                      for i, f in enumerate(self.frames)],
         }
 
     def _repr_html_(self):

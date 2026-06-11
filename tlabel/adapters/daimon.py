@@ -1188,6 +1188,7 @@ class DaimonAdapter(BaseAdapter):
             sensor_info=sensor_info,
             episode_info=episode_info,
             capabilities=caps,
+            sensor_id="daimon_taclaw",
         )
 
     @staticmethod

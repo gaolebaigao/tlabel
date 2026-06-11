@@ -453,6 +453,7 @@ class GelSightAdapter(BaseAdapter):
             sensor_info=sensor_info,
             episode_info=episode_info,
             capabilities=self.get_capabilities(),
+            sensor_id="gelsight_main",  # 默认传感器ID，用户可覆盖
         )
 
     def _compute_confidence(self, frame_info, tlabel_v2):

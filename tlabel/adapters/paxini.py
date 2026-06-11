@@ -217,6 +217,7 @@ class PaxiniAdapter(BaseAdapter):
             sensor_info=sensor_info,
             episode_info=episode_info,
             capabilities=self.get_capabilities(),
+            sensor_id="paxini_pxcap",
         )
 
     @staticmethod
