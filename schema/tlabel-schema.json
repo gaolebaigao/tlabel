@@ -8,7 +8,7 @@
   "properties": {
     "schema_version": {
       "type": "string",
-      "pattern": "^0\\.2\\.0$",
+      "pattern": "^0\\.[0-9]+\\.[0-9]+$",
       "description": "TLabel schema version"
     },
     "sensor_info": {
@@ -111,7 +111,7 @@
                 },
                 "manipulation_phase": {
                   "type": "string",
-                  "enum": ["approach", "contact", "lift", "hold", "place", "release"]
+                  "enum": ["idle", "initial_contact", "stable_contact", "slip", "release", "re_contact", "approach", "retract", "grasp", "transport", "hold"]
                 },
                 "texture": { "type": "string" },
                 "whole_hand_coordination": {

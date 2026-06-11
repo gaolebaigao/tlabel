@@ -32,8 +32,8 @@ dependencies = [
 [project.optional-dependencies]
 gelsight = ["opencv-python>=4.0"]
 paxini = ["h5py>=3.0"]
-daimon = ["pyarrow>=10.0", "opencv-python>=4.0"]
-all = ["opencv-python>=4.0", "h5py>=3.0", "pyarrow>=10.0"]
+daimon = ["pyarrow>=10.0", "opencv-python>=4.0", "scipy>=1.7"]
+all = ["opencv-python>=4.0", "h5py>=3.0", "pyarrow>=10.0", "scipy>=1.7", "pillow>=9.0"]
 dev = ["pytest", "jupyter"]
 
 [project.urls]

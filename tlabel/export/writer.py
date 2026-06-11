@@ -66,7 +66,7 @@ def _export_json(data: TLabelData, output_path: str):
 
 
 def _export_csv(data: TLabelData, output_path: str):
-    """导出为CSV平面表（每帧一行，18维展开）"""
+    """导出为CSV平面表（每帧一行，22维展开）"""
     path = Path(output_path)
     if not path.suffix:
         path = path.with_suffix(".csv")

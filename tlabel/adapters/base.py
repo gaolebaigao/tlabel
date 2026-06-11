@@ -45,7 +45,7 @@ class BaseAdapter(ABC):
 
     @abstractmethod
     def get_capabilities(self) -> Dict[str, bool]:
-        """返回该传感器的18维能力声明"""
+        """返回该传感器的22维能力声明"""
         pass
 
     @abstractmethod
