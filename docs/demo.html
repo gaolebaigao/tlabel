@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TLabel - Tactile Data Annotation Tool</title>
+  <style>
+    :root {
+      --bg-primary: #f8fafc;
+      --bg-secondary: #ffffff;
+      --bg-card: #ffffff;
+      --text-primary: #1e293b;
+      --text-secondary: #64748b;
+      --text-muted: #94a3b8;
+      --border-color: #e2e8f0;
+      --accent: #0ea5e9;
+      --accent-hover: #0284c7;
+      --contact: #22c55e;
+      --slip: #ef4444;
+      --idle: #cbd5e1;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+      --shadow-lg: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.06);
+    }
+    
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+    
+    /* Header */
+    header {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      padding: 16px 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    
+    .header-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    
+    .logo-section {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    
+    .logo {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      box-shadow: var(--shadow);
+    }
+    
+    .brand {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .brand-name {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.5px;
+    }
+    
+    .brand-tagline {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+    
+    .demo-badge {
+      background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+      color: var(--accent);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      border: 1px solid #bae6fd;
+    }
+    
+    .lang-toggle {
+      display: flex;
+      background: var(--bg-primary);
+      border-radius: 8px;
+      padding: 4px;
+      border: 1px solid var(--border-color);
+    }
+    
+    .lang-btn {
+      padding: 8px 16px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    
+    .lang-btn.active {
+      background: var(--bg-secondary);
+      color: var(--accent);
+      box-shadow: var(--shadow);
+    }
+    
+    /* Main Content */
+    main {
+      padding: 32px 0;
+    }
+    
+    .panel-container {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 24px;
+    }
+    
+    @media (max-width: 1024px) {
+      .panel-container {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .card {
+      background: var(--bg-card);
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    
+    .card-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    .card-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    
+    .card-body {
+      padding: 20px;
+    }
+    
+    /* Timeline */
+    .timeline-section {
+      grid-column: 1 / -1;
+    }
+    
+    .timeline-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .frame-counter {
+      font-size: 14px;
+      color: var(--text-secondary);
+      font-variant-numeric: tabular-nums;
+    }
+    
+    .timeline-wrapper {
+      padding: 24px 20px;
+    }
+    
+    .timeline-track {
+      position: relative;
+      height: 60px;
+      background: var(--bg-primary);
+      border-radius: 8px;
+      cursor: pointer;
+      overflow: hidden;
+    }
+    
+    .timeline-segments {
+      display: flex;
+      height: 100%;
+      gap: 1px;
+    }
+    
+    .timeline-segment {
+      flex: 1;
+      min-width: 2px;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    
+    .timeline-segment:hover {
+      opacity: 0.7;
+      transform: scaleY(1.05);
+    }
+    
+    .timeline-segment.contact { background: var(--contact); }
+    .timeline-segment.slip { background: var(--slip); }
+    .timeline-segment.idle { background: var(--idle); }
+    
+    .timeline-playhead {
+      position: absolute;
+      top: 0;
+      width: 3px;
+      height: 100%;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+      transition: left 0.1s;
+      pointer-events: none;
+    }
+    
+    .timeline-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    
+    /* Radar Chart */
+    .radar-section .card-body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .radar-chart {
+      width: 320px;
+      height: 320px;
+    }
+    
+    /* Frame Details */
+    .details-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    
+    .detail-item {
+      background: var(--bg-primary);
+      border-radius: 8px;
+      padding: 12px;
+    }
+    
+    .detail-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    
+    .detail-value {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
+    }
+    
+    .detail-value.contact-1 { color: var(--contact); }
+    .detail-value.contact-0 { color: var(--text-muted); }
+    .detail-value.slip-1 { color: var(--slip); }
+    
+    .meta-info {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-color);
+    }
+    
+    .meta-item {
+      flex: 1;
+      background: var(--bg-primary);
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+    
+    .meta-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    
+    .meta-value {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    
+    /* Batch Correction */
+    .batch-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    
+    .batch-range {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-primary);
+      padding: 8px 12px;
+      border-radius: 8px;
+    }
+    
+    .batch-range label {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    
+    .batch-range input {
+      width: 60px;
+      padding: 6px 8px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 14px;
+      text-align: center;
+      background: var(--bg-secondary);
+    }
+    
+    .batch-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    
+    .btn {
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+    }
+    
+    .btn-secondary {
+      background: var(--bg-primary);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-color);
+    }
+    
+    .btn-secondary:hover {
+      background: var(--border-color);
+    }
+    
+    .btn-success {
+      background: var(--contact);
+      color: white;
+    }
+    
+    .btn-danger {
+      background: var(--slip);
+      color: white;
+    }
+    
+    .btn-warning {
+      background: #f59e0b;
+      color: white;
+    }
+    
+    /* Legend */
+    .legend {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      margin-top: 12px;
+    }
+    
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+    }
+    
+    .legend-dot.contact { background: var(--contact); }
+    .legend-dot.slip { background: var(--slip); }
+    .legend-dot.idle { background: var(--idle); }
+    
+    /* Footer CTA */
+    .cta-section {
+      margin-top: 32px;
+      padding: 32px;
+      background: var(--bg-secondary);
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      text-align: center;
+    }
+    
+    .cta-title {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    
+    .cta-subtitle {
+      color: var(--text-secondary);
+      margin-bottom: 24px;
+    }
+    
+    .cta-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    
+    .btn-large {
+      padding: 14px 28px;
+      font-size: 16px;
+    }
+    
+    .btn-install {
+      background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+      color: white;
+      box-shadow: 0 4px 14px rgba(14, 165, 233, 0.35);
+    }
+    
+    .btn-install:hover {
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(14, 165, 233, 0.4);
+    }
+    
+    .btn-github {
+      background: #1e293b;
+      color: white;
+    }
+    
+    .btn-github:hover {
+      background: #334155;
+      transform: translateY(-2px);
+    }
+    
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: var(--text-primary);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 1000;
+    }
+    
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+    
+    /* Features Section */
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 24px;
+    }
+    
+    .feature-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px;
+      background: var(--bg-primary);
+      border-radius: 12px;
+    }
+    
+    .feature-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+    
+    .feature-text {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <div class="header-content">
+        <div class="logo-section">
+          <div class="logo">🦞</div>
+          <div class="brand">
+            <span class="brand-name">TLabel</span>
+            <span class="brand-tagline" data-en="Sensor-Agnostic Tactile Data Annotation Toolkit" data-cn="传感器无关的触觉数据标注工具包">Sensor-Agnostic Tactile Data Annotation Toolkit</span>
+          </div>
+          <span class="demo-badge" data-en="Online Demo" data-cn="在线体验">Online Demo</span>
+        </div>
+        <div class="lang-toggle">
+          <button class="lang-btn active" data-lang="en">EN</button>
+          <button class="lang-btn" data-lang="cn">中文</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="container">
+      <div class="panel-container">
+        <!-- Timeline -->
+        <div class="card timeline-section">
+          <div class="card-header">
+            <span class="card-title" data-en="Timeline" data-cn="时间轴">Timeline</span>
+            <div class="timeline-controls">
+              <span class="frame-counter">
+                <span id="currentFrame">1</span> / <span id="totalFrames">25</span>
+              </span>
+            </div>
+          </div>
+          <div class="timeline-wrapper">
+            <div class="timeline-track" id="timelineTrack">
+              <div class="timeline-segments" id="timelineSegments"></div>
+              <div class="timeline-playhead" id="playhead"></div>
+            </div>
+            <div class="timeline-labels">
+              <span data-en="0.0s" data-cn="0.0秒">0.0s</span>
+              <span data-en="2.5s" data-cn="2.5秒">2.5s</span>
+              <span data-en="5.0s" data-cn="5.0秒">5.0s</span>
+            </div>
+          </div>
+          <div class="legend">
+            <div class="legend-item">
+              <div class="legend-dot contact"></div>
+              <span data-en="Contact" data-cn="接触">Contact</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot slip"></div>
+              <span data-en="Slip" data-cn="滑移">Slip</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot idle"></div>
+              <span data-en="No Contact" data-cn="无接触">No Contact</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Radar Chart -->
+        <div class="card radar-section">
+          <div class="card-header">
+            <span class="card-title" data-en="22-Dim Radar Chart" data-cn="22维雷达图">22-Dim Radar Chart</span>
+          </div>
+          <div class="card-body">
+            <canvas id="radarCanvas" class="radar-chart" width="320" height="320"></canvas>
+            <div style="margin-top: 12px; font-size: 13px; color: var(--text-muted);" data-en="Static 18 + Temporal 4 = 22 dimensions" data-cn="静态18维 + 时序4维 = 22维">Static 18 + Temporal 4 = 22 dimensions</div>
+          </div>
+        </div>
+
+        <!-- Frame Details -->
+        <div class="card details-section">
+          <div class="card-header">
+            <span class="card-title" data-en="Frame Details" data-cn="帧详情">Frame Details</span>
+          </div>
+          <div class="card-body">
+            <div class="details-grid" id="detailsGrid"></div>
+            <div class="meta-info">
+              <div class="meta-item">
+                <div class="meta-label" data-en="Timestamp" data-cn="时间戳">Timestamp</div>
+                <div class="meta-value" id="timestamp">0.000s</div>
+              </div>
+              <div class="meta-item">
+                <div class="meta-label" data-en="Phase" data-cn="阶段">Phase</div>
+                <div class="meta-value" id="phase">idle</div>
+              </div>
+              <div class="meta-item">
+                <div class="meta-label" data-en="Confidence" data-cn="置信度">Confidence</div>
+                <div class="meta-value" id="confidence">0.00</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Batch Correction -->
+        <div class="card batch-section">
+          <div class="card-header">
+            <span class="card-title" data-en="Batch Correction" data-cn="批量修正">Batch Correction</span>
+          </div>
+          <div class="card-body">
+            <div class="batch-controls">
+              <div class="batch-range">
+                <label data-en="From" data-cn="从">From</label>
+                <input type="number" id="batchStart" value="1" min="1">
+              </div>
+              <div class="batch-range">
+                <label data-en="To" data-cn="到">To</label>
+                <input type="number" id="batchEnd" value="25" min="1">
+              </div>
+            </div>
+            <div class="batch-actions">
+              <button class="btn btn-success" onclick="setContact(1)" data-en="Set Contact=1" data-cn="设为接触=1">Set Contact=1</button>
+              <button class="btn btn-danger" onclick="setContact(0)" data-en="Set Contact=0" data-cn="设为无接触=0">Set Contact=0</button>
+              <button class="btn btn-warning" onclick="setSlip(1)" data-en="Set Slip=1" data-cn="设为滑移=1">Set Slip=1</button>
+              <button class="btn btn-secondary" onclick="resetAll()" data-en="Reset All" data-cn="重置全部">Reset All</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Features -->
+      <div class="features">
+        <div class="feature-item">
+          <div class="feature-icon">🎨</div>
+          <div class="feature-text" data-en="Color-coded timeline" data-cn="彩色时间轴">Color-coded timeline</div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">🕸</div>
+          <div class="feature-text" data-en="22-dim radar chart" data-cn="22维雷达图">22-dim radar chart</div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">✏️</div>
+          <div class="feature-text" data-en="Frame & batch patching" data-cn="帧/批量修正">Frame & batch patching</div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">🌐</div>
+          <div class="feature-text" data-en="Bilingual toggle" data-cn="中英文切换">Bilingual toggle</div>
+        </div>
+      </div>
+
+      <!-- CTA -->
+      <div class="cta-section">
+        <h2 class="cta-title" data-en="Ready to use TLabel?" data-cn="准备好使用 TLabel 了吗？">Ready to use TLabel?</h2>
+        <p class="cta-subtitle" data-en="Install with pip and start annotating tactile data in minutes" data-cn="通过 pip 安装，几分钟内开始标注触觉数据">Install with pip and start annotating tactile data in minutes</p>
+        <div class="cta-buttons">
+          <button class="btn btn-large btn-install" onclick="copyInstall()">
+            <span>📦</span>
+            <span data-en="pip install tlabel" data-cn="pip install tlabel">pip install tlabel</span>
+          </button>
+          <a href="https://github.com/liesliy/tlabel" target="_blank" class="btn btn-large btn-github">
+            <span>⭐</span>
+            <span data-en="View on GitHub" data-cn="GitHub">View on GitHub</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // Demo data (25 frames sampled from GelSight demo)
+    const DEMO_DATA = {
+      sensor: { type: "gelsight_mini", model: "GelSight Mini (Demo)", resolution: "240x320" },
+      episode: { description: "Synthetic grasp-hold-release demo (GelSight Mini)", duration_s: 5.0, fps: 30 },
+      frames: [
+        { frame_idx: 0, timestamp_s: 0.0, contact: 0, slip_event: 0, phase: "idle", confidence: 0.89, data: [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] },
+        { frame_idx: 1, timestamp_s: 0.2, contact: 0, slip_event: 0, phase: "idle", confidence: 0.95, data: [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] },
+        { frame_idx: 2, timestamp_s: 0.4, contact: 0, slip_event: 0, phase: "idle", confidence: 0.91, data: [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] },
+        { frame_idx: 3, timestamp_s: 0.6, contact: 0, slip_event: 0, phase: "idle", confidence: 0.87, data: [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] },
+        { frame_idx: 4, timestamp_s: 0.8, contact: 0, slip_event: 0, phase: "initial_contact", confidence: 0.87, data: [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0] },
+        { frame_idx: 5, timestamp_s: 1.0, contact: 0.2, slip_event: 0, phase: "initial_contact", confidence: 0.88, data: [0.2,0.08,0.12,0.15,8.5,0,0,0.09,0.06,0.10,0.07,0.11,0.02,0,16.2,0.01,0,0.12,0.08,6.2,0.03,0] },
+        { frame_idx: 6, timestamp_s: 1.2, contact: 0.4, slip_event: 0, phase: "approach", confidence: 0.89, data: [0.4,0.15,0.22,0.28,15.3,0,0,0.18,0.12,0.19,0.13,0.21,0.04,0.02,32.5,0.02,0.01,0.22,0.15,12.4,0.05,0] },
+        { frame_idx: 7, timestamp_s: 1.4, contact: 0.6, slip_event: 0, phase: "approach", confidence: 0.91, data: [0.6,0.25,0.35,0.42,23.1,0,0,0.28,0.18,0.30,0.22,0.33,0.07,0.05,45.8,0.04,0.02,0.35,0.24,18.6,0.08,0] },
+        { frame_idx: 8, timestamp_s: 1.6, contact: 0.8, slip_event: 0, phase: "stable_contact", confidence: 0.93, data: [0.8,0.35,0.45,0.55,32.4,0.02,0,0.38,0.24,0.40,0.30,0.42,0.10,0.08,58.2,0.06,0.04,0.45,0.32,25.3,0.10,0] },
+        { frame_idx: 9, timestamp_s: 1.8, contact: 0.9, slip_event: 0, phase: "stable_contact", confidence: 0.95, data: [0.9,0.42,0.52,0.65,38.7,0.05,0,0.45,0.30,0.48,0.38,0.50,0.12,0.10,65.5,0.08,0.05,0.52,0.40,30.2,0.12,0] },
+        { frame_idx: 10, timestamp_s: 2.0, contact: 1.0, slip_event: 0, phase: "stable_contact", confidence: 0.96, data: [1.0,0.50,0.60,0.75,45.2,0.08,0,0.52,0.35,0.55,0.45,0.58,0.15,0.12,72.3,0.10,0.06,0.58,0.48,35.8,0.15,0] },
+        { frame_idx: 11, timestamp_s: 2.2, contact: 1.0, slip_event: 0, phase: "stable_contact", confidence: 0.95, data: [1.0,0.55,0.65,0.80,48.5,0.10,0,0.58,0.40,0.60,0.50,0.62,0.16,0.14,78.6,0.11,0.07,0.60,0.52,38.4,0.14,0] },
+        { frame_idx: 12, timestamp_s: 2.4, contact: 1.0, slip_event: 1, phase: "slip", confidence: 0.92, data: [1.0,0.58,0.70,0.85,125.3,0.35,1,0.62,0.45,0.65,0.55,0.68,0.18,0.20,145.8,0.15,0.12,0.68,0.65,120.5,0.22,0.8] },
+        { frame_idx: 13, timestamp_s: 2.6, contact: 0.9, slip_event: 1, phase: "slip", confidence: 0.88, data: [0.9,0.52,0.62,0.78,132.7,0.42,1,0.55,0.40,0.58,0.48,0.60,0.15,0.18,155.2,0.12,0.10,0.62,0.58,128.3,0.18,0.9] },
+        { frame_idx: 14, timestamp_s: 2.8, contact: 0.7, slip_event: 0, phase: "recovery", confidence: 0.90, data: [0.7,0.40,0.48,0.60,52.3,0.12,0,0.45,0.28,0.45,0.38,0.48,0.10,0.08,85.6,0.08,0.05,0.48,0.38,48.7,0.10,0] },
+        { frame_idx: 15, timestamp_s: 3.0, contact: 0.85, slip_event: 0, phase: "stable_contact", confidence: 0.94, data: [0.85,0.45,0.55,0.68,46.8,0.06,0,0.50,0.32,0.52,0.42,0.54,0.12,0.10,74.2,0.09,0.05,0.54,0.44,42.5,0.12,0] },
+        { frame_idx: 16, timestamp_s: 3.2, contact: 0.95, slip_event: 0, phase: "stable_contact", confidence: 0.95, data: [0.95,0.50,0.60,0.72,44.2,0.05,0,0.54,0.35,0.56,0.46,0.56,0.14,0.11,70.5,0.10,0.06,0.56,0.48,40.2,0.14,0] },
+        { frame_idx: 17, timestamp_s: 3.4, contact: 1.0, slip_event: 0, phase: "stable_contact", confidence: 0.96, data: [1.0,0.52,0.62,0.75,42.5,0.04,0,0.56,0.38,0.58,0.48,0.58,0.15,0.12,68.8,0.11,0.06,0.58,0.50,38.5,0.15,0] },
+        { frame_idx: 18, timestamp_s: 3.6, contact: 0.8, slip_event: 1, phase: "slip", confidence: 0.89, data: [0.8,0.42,0.52,0.65,138.5,0.38,1,0.48,0.32,0.50,0.40,0.52,0.12,0.16,152.8,0.10,0.08,0.52,0.55,135.2,0.18,0.85] },
+        { frame_idx: 19, timestamp_s: 3.8, contact: 0.5, slip_event: 0, phase: "release", confidence: 0.87, data: [0.5,0.28,0.35,0.42,35.6,0.02,0,0.30,0.18,0.32,0.25,0.35,0.08,0.05,55.2,0.05,0.03,0.35,0.28,32.5,0.06,0] },
+        { frame_idx: 20, timestamp_s: 4.0, contact: 0.3, slip_event: 0, phase: "release", confidence: 0.85, data: [0.3,0.15,0.20,0.25,22.4,0,0,0.16,0.10,0.18,0.14,0.18,0.04,0.02,35.8,0.02,0.01,0.20,0.15,20.2,0.03,0] },
+        { frame_idx: 21, timestamp_s: 4.2, contact: 0.15, slip_event: 0, phase: "release", confidence: 0.83, data: [0.15,0.08,0.10,0.12,15.2,0,0,0.08,0.05,0.09,0.07,0.09,0.02,0,25.4,0.01,0,0.10,0.08,12.5,0.01,0] },
+        { frame_idx: 22, timestamp_s: 4.4, contact: 0, slip_event: 0, phase: "idle", confidence: 0.85, data: [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] },
+        { frame_idx: 23, timestamp_s: 4.6, contact: 0, slip_event: 0, phase: "idle", confidence: 0.90, data: [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] },
+        { frame_idx: 24, timestamp_s: 4.8, contact: 0, slip_event: 0, phase: "idle", confidence: 0.92, data: [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] }
+      ]
+    };
+
+    const LABELS_EN = [
+      'Contact', 'Deformation', 'Force', 'Force Peak', 'Force Dir',
+      'Slip Entropy', 'Slip Event', 'Texture', 'Edge', 'Contact Area',
+      'Centroid X', 'Normal Field', 'Normal Var', 'Shear', 'Shear Dir',
+      'ΔF Normal', 'ΔF Shear', 'Friction', 'Flow Mag', 'Flow Dir',
+      'Deform Rate', 'Contact Trans'
+    ];
+
+    const LABELS_CN = [
+      '接触', '变形', '力大小', '峰值力', '力方向',
+      '滑移熵', '滑移事件', '纹理', '边缘', '接触面积',
+      '质心X', '法向场', '法向方差', '剪切', '剪切方向',
+      'ΔF法向', 'ΔF剪切', '摩擦锥', '光流幅', '光流方向',
+      '变形率', '接触过渡'
+    ];
+
+    const PHASE_EN = { idle: 'Idle', initial_contact: 'Initial Contact', approach: 'Approach', stable_contact: 'Stable Contact', slip: 'Slip', recovery: 'Recovery', release: 'Release' };
+    const PHASE_CN = { idle: '空闲', initial_contact: '初始接触', approach: '接近', stable_contact: '稳定接触', slip: '滑移', recovery: '恢复', release: '释放' };
+
+    let currentLang = 'en';
+    let currentFrame = 0;
+    let frames = DEMO_DATA.frames.map(f => ({ ...f }));
+
+    // Initialize
+    function init() {
+      renderTimeline();
+      updateFrame(0);
+      setupLangToggle();
+      setupBatchInputs();
+    }
+
+    function renderTimeline() {
+      const container = document.getElementById('timelineSegments');
+      container.innerHTML = '';
+      frames.forEach((frame, i) => {
+        const seg = document.createElement('div');
+        seg.className = 'timeline-segment';
+        if (frame.slip_event === 1) seg.classList.add('slip');
+        else if (frame.contact > 0.1) seg.classList.add('contact');
+        else seg.classList.add('idle');
+        seg.onclick = () => updateFrame(i);
+        container.appendChild(seg);
+      });
+      document.getElementById('totalFrames').textContent = frames.length;
+    }
+
+    function updateFrame(idx) {
+      currentFrame = idx;
+      const frame = frames[idx];
+      document.getElementById('currentFrame').textContent = idx + 1;
+      document.getElementById('playhead').style.left = `${(idx / (frames.length - 1)) * 100}%`;
+      
+      // Update details grid
+      const grid = document.getElementById('detailsGrid');
+      const labels = currentLang === 'en' ? LABELS_EN : LABELS_CN;
+      grid.innerHTML = frame.data.slice(0, 8).map((val, i) => {
+        let valClass = '';
+        if (i === 0) valClass = val > 0.5 ? 'contact-1' : 'contact-0';
+        if (i === 6 && val > 0) valClass = 'slip-1';
+        return `<div class="detail-item">
+          <div class="detail-label">${labels[i]}</div>
+          <div class="detail-value ${valClass}">${val.toFixed(2)}</div>
+        </div>`;
+      }).join('');
+      
+      // Update meta
+      const phaseMap = currentLang === 'en' ? PHASE_EN : PHASE_CN;
+      document.getElementById('timestamp').textContent = frame.timestamp_s.toFixed(2) + 's';
+      document.getElementById('phase').textContent = phaseMap[frame.phase] || frame.phase;
+      document.getElementById('confidence').textContent = frame.confidence.toFixed(2);
+      
+      drawRadar(frame);
+    }
+
+    function drawRadar(frame) {
+      const canvas = document.getElementById('radarCanvas');
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width, h = canvas.height;
+      const cx = w / 2, cy = h / 2;
+      const maxR = Math.min(w, h) / 2 - 30;
+      
+      ctx.clearRect(0, 0, w, h);
+      
+      // Draw grid circles
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 1;
+      for (let r = 1; r <= 5; r++) {
+        ctx.beginPath();
+        ctx.arc(cx, cy, (r / 5) * maxR, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      
+      // Draw spokes
+      const n = 22;
+      for (let i = 0; i < n; i++) {
+        const angle = (i * 2 * Math.PI / n) - Math.PI / 2;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + maxR * Math.cos(angle), cy + maxR * Math.sin(angle));
+        ctx.stroke();
+      }
+      
+      // Draw data polygon
+      ctx.beginPath();
+      const values = frame.data;
+      const maxVal = 1.0;
+      for (let i = 0; i < n; i++) {
+        const angle = (i * 2 * Math.PI / n) - Math.PI / 2;
+        const r = (values[i] / maxVal) * maxR;
+        const x = cx + r * Math.cos(angle);
+        const y = cy + r * Math.sin(angle);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      
+      // Fill gradient
+      const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxR);
+      gradient.addColorStop(0, 'rgba(14, 165, 233, 0.3)');
+      gradient.addColorStop(1, 'rgba(14, 165, 233, 0.1)');
+      ctx.fillStyle = gradient;
+      ctx.fill();
+      
+      // Stroke
+      ctx.strokeStyle = '#0ea5e9';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      
+      // Draw labels
+      ctx.fillStyle = '#64748b';
+      ctx.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const labels = currentLang === 'en' ? LABELS_EN : LABELS_CN;
+      for (let i = 0; i < n; i++) {
+        const angle = (i * 2 * Math.PI / n) - Math.PI / 2;
+        const labelR = maxR + 18;
+        const x = cx + labelR * Math.cos(angle);
+        const y = cy + labelR * Math.sin(angle);
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(angle + Math.PI / 2);
+        ctx.fillText(labels[i], 0, 0);
+        ctx.restore();
+      }
+    }
+
+    function setupLangToggle() {
+      document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.onclick = () => {
+          document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentLang = btn.dataset.lang;
+          updateLang();
+          updateFrame(currentFrame);
+        };
+      });
+    }
+
+    function updateLang() {
+      document.querySelectorAll('[data-' + currentLang + ']').forEach(el => {
+        el.textContent = el.dataset[currentLang];
+      });
+    }
+
+    function setupBatchInputs() {
+      const updateBatchEnd = () => {
+        document.getElementById('batchEnd').max = frames.length;
+        document.getElementById('batchStart').max = frames.length;
+      };
+      updateBatchEnd();
+    }
+
+    function getBatchRange() {
+      const start = parseInt(document.getElementById('batchStart').value) - 1;
+      const end = parseInt(document.getElementById('batchEnd').value);
+      return [Math.max(0, start), Math.min(frames.length, end)];
+    }
+
+    function setContact(val) {
+      const [start, end] = getBatchRange();
+      for (let i = start; i < end; i++) {
+        frames[i].contact = val;
+        frames[i].data[0] = val;
+        if (val === 0) {
+          // Cascade: zero related fields
+          frames[i].data[2] = 0; // force_magnitude
+          frames[i].data[3] = 0; // force_peak
+          frames[i].data[6] = 0; // slip_event
+          frames[i].data[15] = 0; // delta_force_normal
+          frames[i].data[16] = 0; // delta_force_shear
+          frames[i].data[9] = 0; // contact_area
+          frames[i].slip_event = 0;
+          frames[i].phase = 'idle';
+        }
+      }
+      renderTimeline();
+      updateFrame(currentFrame);
+      showToast(currentLang === 'en' ? `Set Contact=${val} for frames ${start+1}-${end}` : `已将 ${start+1}-${end} 帧设为接触=${val}`);
+    }
+
+    function setSlip(val) {
+      const [start, end] = getBatchRange();
+      for (let i = start; i < end; i++) {
+        frames[i].slip_event = val;
+        frames[i].data[6] = val;
+        frames[i].data[5] = val ? 0.3 : 0;
+      }
+      renderTimeline();
+      updateFrame(currentFrame);
+      showToast(currentLang === 'en' ? `Set Slip=${val} for frames ${start+1}-${end}` : `已将 ${start+1}-${end} 帧设为滑移=${val}`);
+    }
+
+    function resetAll() {
+      frames = DEMO_DATA.frames.map(f => ({ ...f, data: [...f.data] }));
+      renderTimeline();
+      updateFrame(currentFrame);
+      showToast(currentLang === 'en' ? 'All frames reset' : '已重置全部帧');
+    }
+
+    function copyInstall() {
+      navigator.clipboard.writeText('pip install tlabel');
+      showToast(currentLang === 'en' ? 'Command copied!' : '命令已复制！');
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+
+    init();
+  </script>
+</body>
+</html>

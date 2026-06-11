@@ -19,6 +19,139 @@
 
 ---
 
+## 🎯 5-Minute Quick Start
+
+New to TLabel? Start here. This tutorial gets you from zero to annotated data in 5 minutes — no sensor data needed.
+
+### Step 1: Install (30 seconds)
+
+```bash
+pip install tlabel
+```
+
+That's it. The core package installs in seconds with just numpy as a dependency.
+
+### Step 2: Try the Built-in Demo (1 minute)
+
+Open a Python terminal or Jupyter notebook:
+
+```python
+import tlabel
+
+# Load built-in GelSight demo data (no files needed!)
+data = tlabel.demo()
+
+# Open the interactive annotation panel
+data.review()
+```
+
+A colorful panel pops up right in your notebook:
+- **Timeline** at the top shows contact (green), slip (red), and idle (gray) frames
+- **Radar chart** displays all 22 dimensions for the current frame
+- **Detail panel** lets you inspect and edit individual values
+
+![Panel Screenshot](docs/demo_panel.gif)
+
+**Try this:** Click on different frames in the timeline. Notice how the radar chart updates. Spot any frames that look wrong (e.g., `contact=0` but `force_magnitude > 0`).
+
+### Step 3: Make Your First Correction (2 minutes)
+
+Found a mislabeled frame? Fix it:
+
+```python
+# In the panel, use the batch correction tool:
+# 1. Select a range of frames (drag on timeline)
+# 2. Set contact=0 in the correction panel
+# 3. Click "Apply" — cascade rules auto-zero 7 related fields
+
+# Or do it programmatically:
+data.batch_patch(10, 20, "contact", 0)  # Frames 10-20: no contact
+```
+
+The cascade system ensures physical consistency: setting `contact=0` automatically zeroes `force_magnitude`, `slip_event`, and resets `manipulation_phase` to `"idle"`.
+
+### Step 4: Export Your Annotations (30 seconds)
+
+```python
+# Export to JSON (full TLabel Format v2 schema)
+data.export("my_annotations.json")
+
+# Or export to CSV for quick analysis in Excel/pandas
+data.export("my_annotations.csv")
+```
+
+**Done!** You've just completed the full annotation loop: load → review → correct → export.
+
+### What's Next?
+
+- **Have real sensor data?** See the step-by-step tutorials:
+  - [GelSight / DIGIT Tutorial](docs/tutorial-gelsight.md)
+  - [PaXini PXCap Tutorial](docs/tutorial-paxini.md)
+  - [Daimon DM-TacClaw Tutorial](docs/tutorial-daimon.md)
+- **Want to understand the 22 dimensions?** Check out [TLabel Format v2](#tlabel-format-v2--22-dimensions)
+- **Need a web-based tool for your team?** Try [tlabel-web](https://github.com/liesliy/tlabel/tree/main/tlabel-web)
+- **Try the interactive demo in your browser:** [Live Demo](https://liesliy.github.io/tlabel/demo.html)
+
+---
+
+## 📥 Loading Your Own Data
+
+Once you're comfortable with the demo, load your real sensor data:
+
+### GelSight / DIGIT (vision-based tactile sensors)
+
+```python
+# Install extra dependencies
+pip install tlabel[gelsight]
+
+# Load your .pkl file (from gelsight-force-estimation or similar)
+data = tlabel.load("my_gelsight_episode.pkl")
+data.review()
+```
+
+**What happens:** The adapter extracts 22 dimensions from background-subtracted tactile images, including force magnitude, slip detection, optical flow, and manipulation phase inference.
+
+### PaXini PXCap (distributed force array)
+
+```python
+pip install tlabel[paxini]
+
+# Load your .h5 or .hdf5 file
+data = tlabel.load("my_paxini_episode.h5")
+data.review()
+```
+
+**What happens:** The adapter reads 6D force/torque vectors from each taxel region, detects contact and slip events, and maps them to 20 TLabel dimensions (no optical flow for force-only sensors).
+
+### Daimon DM-TacClaw (multimodal robot arm + tactile)
+
+```python
+pip install tlabel[daimon]
+
+# Load from LeRobot-style directory structure
+data = tlabel.load("path/to/daimon_episode/")
+data.review()
+```
+
+**Requirements:** The directory should contain:
+- `meta/info.json` — episode metadata
+- `data/chunk-*.parquet` — observation data (114-dim state vector)
+- `videos/` — FFV1-encoded tactile video files (optional, degrades gracefully if missing)
+
+**What happens:** The adapter decodes FFV1 video frames, extracts tactile features (deformation, contact area, texture), and fuses them with robot state data.
+
+### Troubleshooting Common Issues
+
+| Error | Solution |
+|-------|----------|
+| `ImportError: No module named 'cv2'` | Run `pip install tlabel[gelsight]` or `pip install opencv-python` |
+| `ImportError: No module named 'h5py'` | Run `pip install tlabel[paxini]` or `pip install h5py` |
+| `ImportError: No module named 'pyarrow'` | Run `pip install tlabel[daimon]` or `pip install pyarrow` |
+| `ValueError: Unknown format` | Check file extension (.pkl, .h5, .hdf5, .parquet) or pass `format="gelsight"` explicitly |
+| `FileNotFoundError` | Double-check the path; use absolute paths if unsure |
+
+---
+
 ## ⚡ 30-Second Demo
 
 **👉 [Try it live in your browser](https://www.coze.cn/s/f-KJdzphlHs/)** — no install needed, see the panel in action right now.
