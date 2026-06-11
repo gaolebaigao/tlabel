@@ -19,6 +19,21 @@
 
 ---
 
+## 🔥 v0.2.0b1 更新亮点
+
+**下游兼容性和用户体验大幅提升：**
+
+- ✨ **元数据增强**：新增 sensor_id、calibration_params、feature_names、is_first/is_last 字段
+-  **LeRobot 集成**：双向转换器，无缝对接 Hugging Face LeRobot 框架
+-  **HDF5 导出**：科研标准格式，支持 MATLAB/SciPy
+- 📚 **完整教程**：GelSight/PaXini/Daimon 三种传感器分步指南
+- 🎯 **错误提示优化**：提供具体解决方案和 pip install 命令
+- 🖼️ **UI 导出增强**：面板底部三个醒目按钮（JSON/CSV/HDF5）一键导出
+
+详见 [CHANGELOG.md](CHANGELOG.md)。
+
+---
+
 ## ⚡ 30秒体验
 
 **👉 [浏览器直接体验](https://www.coze.cn/s/f-KJdzphlHs/)** — 不用装任何东西，现在就能看面板效果。
@@ -41,7 +56,7 @@ tlabel.demo('daimon').review()   # 戴盟DM-TacClaw
 
 **你会看到：** 彩色时间轴（🟢接触 / 🔴滑移 / ⬜空闲）、22维雷达图、帧详情编辑器、批量修正——一个面板全搞定。
 
-![TouchLabel AI 面板演示](docs/demo_panel.gif)
+![TouchLabel AI 面板演示（含导出按钮）](docs/demo_panel_with_export_zh.png)
 
 ---
 
@@ -63,12 +78,15 @@ data = tlabel.load("daimon_data/")           # 戴盟（目录或 .parquet）
 data.review()          # 中文界面
 data.review(lang="en") # 英文界面
 
-# 导出 — 统一TLabel格式
-data.export("output.json")   # TLabel Format v2 JSON
-data.export("output.csv")    # CSV平面表
+# 导出 — 统一TLabel格式（面板底部三个醒目按钮一键导出）
+data.export("output.json")   # TLabel Format v2 JSON（完整元数据）
+data.export("output.csv")    # CSV平面表（Excel/pandas友好）
+data.export("output.hdf5")   # HDF5科学格式（MATLAB/SciPy兼容）
+
+# 或者直接在交互面板中点击底部的"💾 导出 JSON"、"📊 导出 CSV"、"🔬 导出 HDF5"按钮
 ```
 
-就这样。三行代码，完整闭环。🔁
+就这样。三行代码或三次点击，完整闭环。🔁
 
 ---
 
@@ -121,7 +139,7 @@ pip install tlabel[all]
 - ✏️ **帧修正 & 批量修正**：改一帧还是改一串，你说了算
 - 🔗 **联动规则**：`contact`设为0 → 7个关联字段自动归零 + 阶段重置为`idle`
 - 🌐 **中英文切换**：右上角一键切换
-- 📤 **导出**：JSON / CSV，后缀名自动识别
+- 📤 **导出**：JSON / CSV / HDF5，面板底部三个醒目按钮一键导出（HDF5需Python API）
 
 ---
 

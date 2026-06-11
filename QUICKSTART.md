@@ -97,14 +97,28 @@ data.batch_patch(10, 50, "slip_event", 1)  # 第10-50帧滑移改1
 
 ## 6. 导出
 
+### 方式一：面板按钮（推荐）
+
+在交互面板底部，有三个醒目的导出按钮：
+- **💾 导出 JSON**（粉红色主按钮）：完整 TLabel Format v2
+- **📊 导出 CSV**（粉色边框按钮）：扁平表格格式
+- **🔬 导出 HDF5**（灰色边框按钮）：科研标准格式（需 Python API）
+
+直接点击对应按钮即可下载！
+
+### 方式二：Python 代码
+
 ```python
 # 后缀自动判断格式
 data.export("output.json")   # JSON（TLabel Format v2）
 data.export("output.csv")    # CSV 平面表
+data.export("output.hdf5")   # HDF5 科学格式
 
 # 显式指定格式
 data.export("output", format="json")
 ```
+
+> 💡 **提示**：HDF5 格式由于浏览器限制，需要通过 Python API 导出。JSON 和 CSV 可以直接在面板中点击下载。
 
 ## 7. 常见问题
 

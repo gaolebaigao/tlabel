@@ -62,13 +62,29 @@ data.review()
 
 ## 步骤 4: 导出标注
 
+### 方式一：使用面板导出按钮（推荐）
+
+在交互面板底部，有三个醒目的导出按钮：
+- **💾 导出 JSON**（粉红色主按钮）：完整 TLabel Format v2
+- **📊 导出 CSV**（粉色边框按钮）：扁平表格格式
+- **🔬 导出 HDF5**（灰色边框按钮）：科研标准格式（需 Python API）
+
+直接点击对应按钮即可下载！
+
+### 方式二：使用 Python 代码
+
 ```python
 # 导出为 JSON
 data.export("paxini_annotated.json")
 
 # 导出为 CSV
 data.export("paxini_annotated.csv")
+
+# 导出为 HDF5
+data.export("paxini_annotated.hdf5")
 ```
+
+> 💡 **提示**：HDF5 格式由于浏览器限制，需要通过 Python API 导出。JSON 和 CSV 可以直接在面板中点击下载。
 
 JSON 输出示例（注意 capabilities 中光学相关字段为 false）：
 ```json
