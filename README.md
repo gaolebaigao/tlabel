@@ -65,7 +65,7 @@ A colorful panel pops up right in your notebook:
 - **Radar chart** displays all 22 dimensions for the current frame
 - **Detail panel** lets you inspect and edit individual values
 
-![Panel Screenshot](docs/demo_panel.gif)
+![TLabel Panel Screenshot](docs/demo_panel_zh.png)
 
 **Try this:** Click on different frames in the timeline. Notice how the radar chart updates. Spot any frames that look wrong (e.g., `contact=0` but `force_magnitude > 0`).
 
@@ -189,7 +189,7 @@ tlabel.demo('daimon').review()   # Daimon DM-TacClaw
 
 **What you'll see:** a color-coded timeline (🟢 contact / 🔴 slip / ⬜ idle), 22-dim radar chart, frame detail editor, and batch patching — all in one panel.
 
-![TouchLabel AI Panel Demo](docs/demo_panel.gif)
+![TLabel Panel Demo](docs/demo_panel_zh.png)
 
 ---
 
