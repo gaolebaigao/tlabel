@@ -239,8 +239,8 @@ def tlabel_to_lerobot(
     with open(info_path, "w") as f:
         json.dump(meta, f, indent=2)
     
-    print(f"✓ Tactile annotations written to {output_parquet}")
-    print(f"✓ Updated meta/info.json with '{tactile_field}' schema")
+    print(f"[OK] Tactile annotations written to {output_parquet}")
+    print(f"[OK] Updated meta/info.json with '{tactile_field}' schema")
 
 
 # 导出公共 API
