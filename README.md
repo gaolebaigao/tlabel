@@ -14,6 +14,21 @@
 
 ---
 
+## 🔥 What's New in v0.2.0b1
+
+**Major improvements for downstream compatibility and user experience:**
+
+- ✨ **Enhanced metadata**: Added `sensor_id`, `calibration_params`, `feature_names`, and episode boundary markers (`is_first`/`is_last`)
+- 🔄 **LeRobot integration**: Bidirectional converters for seamless data exchange with Hugging Face LeRobot framework
+- 💾 **HDF5 export**: Scientific computing standard format for research workflows
+- 📚 **Comprehensive tutorials**: Step-by-step guides for GelSight, PaXini, and Daimon sensors
+- 🎯 **Better error messages**: Clear guidance with exact `pip install` commands and format descriptions
+- 📖 **Improved docs**: 5-Minute Quick Start, sensor-specific loading instructions, troubleshooting table
+
+See [CHANGELOG.md](CHANGELOG.md) for full details.
+
+---
+
 > 🎯 **Got tactile data from different sensors that refuse to talk to each other?**
 > TLabel makes them speak the same language — load any format, annotate in a visual panel, export a unified schema.
 
