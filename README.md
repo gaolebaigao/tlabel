@@ -68,7 +68,15 @@ data.export("output.json")   # TLabel Format v2 JSON
 data.export("output.csv")    # flat CSV
 ```
 
-That's it. Three lines, full loop. 🔁
+# Pre-annotate — AI-assisted, review & correct
+from tlabel.predict import PredictEngine
+engine = PredictEngine()
+results = engine.predict(data)          # predict contact, slip, phase...
+engine.apply(data, results, min_confidence=0.7)  # apply only high-confidence
+data.review()                           # review & correct in panel
+```
+
+That's it. Full loop. 🔁
 
 ---
 
@@ -81,6 +89,7 @@ That's it. Three lines, full loop. 🔁
 | Fixing labels frame-by-frame is soul-crushing | **Batch patch + cascade rules, fix ranges in one click** |
 | Your lab mate exported... something... | **Unified TLabel Format v2, 22 dimensions, no ambiguity** |
 | "But we use DIGIT and they use PaXini" | **Sensor-agnostic. Load both, same schema, same tool.** |
+| "Manually labeling thousands of frames is tedious" | **AI pre-annotation: predict contact, slip, phase — review & correct** |
 
 ---
 
@@ -215,6 +224,45 @@ When `contact` is set to `0`, these fields are automatically zeroed:
 | `contact_transition` | only if value > 0.5 |
 | `manipulation_phase` | → `"idle"` (if not already) |
 
+### 🤖 AI-Assisted Pre-Annotation
+
+Let the engine suggest labels, then you review and correct — **human-in-the-loop, not black-box**.
+
+```python
+from tlabel.predict import PredictEngine
+
+engine = PredictEngine()
+
+# Option 1: cold start — no prior labels
+results = engine.predict(data)
+
+# Option 2: warm start — learn from partially labeled data first
+engine.fit(data)        # extract statistics from existing annotations
+results = engine.predict(data)
+
+# Apply only high-confidence predictions (≥0.7)
+applied = engine.apply(data, results, min_confidence=0.7)
+print(f"Auto-filled {applied} fields")
+
+# Review the summary
+stats = engine.summary(results)
+print(stats)
+# → {total_frames, predicted_fields, avg_confidence, method_distribution, ...}
+
+data.review()  # check predictions in the panel, correct as needed
+```
+
+**What it predicts:**
+
+| Dimension | Method | Confidence Range |
+|-----------|--------|:----------------:|
+| `contact` | Rule (force + deformation + area) | 0.4 – 0.9 |
+| `slip_event` | Rule (shear + delta + entropy) | 0.55 – 0.8 |
+| `manipulation_phase` | Rule (contact + slip + force cascade) | 0.55 – 0.65 |
+| Missing dims (with `fit()`) | Statistics (mean from labeled frames) | ~0.4 |
+
+> 💡 **Tip**: Use `fit()` on partially labeled data first — even 10–20% labeled frames significantly improve statistical predictions. Predictions below your confidence threshold are simply skipped, so you stay in control.
+
 ---
 
 ## 🗂 Project Structure
@@ -233,6 +281,8 @@ tlabel/
 ├── viewer/
 │   ├── panel.py          # Jupyter _repr_html_ renderer
 │   └── templates.py      # HTML + JS + CSS template engine
+├── predict/
+│   └── engine.py         # AI-assisted pre-annotation engine
 ├── demo.py               # Built-in demo data loader
 └── export/
     └── writer.py         # JSON / CSV export + NumpyEncoder
