@@ -104,14 +104,31 @@ def generate_panel_html(data_dict: dict, lang: str = "auto", instance_id: str = 
   </div>
 </div>
 
-<!-- Export -->
-<div style="padding:10px 20px;display:flex;justify-content:flex-end;gap:8px;">
-  <button id="{instance_id}-btn-export-json"
-          style="padding:6px 14px;border-radius:8px;border:none;background:linear-gradient(135deg,#e85d75,#d1495b);
-                 color:#fff;cursor:pointer;font-size:12px;" data-i18n="actions.exportFull">导出JSON</button>
-  <button id="{instance_id}-btn-export-csv"
-          style="padding:6px 14px;border-radius:8px;border:1px solid #e85d75;background:transparent;
-                 color:#e85d75;cursor:pointer;font-size:12px;" data-i18n="actions.exportCSV">导出CSV</button>
+<!-- Export Section -->
+<div style="padding:16px 20px;background:#fff;border-top:2px solid #e9ecef;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+    <span style="font-size:14px;font-weight:600;color:#343a40;" data-i18n="export.title"> 导出数据</span>
+    <span style="font-size:11px;color:#868e96;" data-i18n="export.hint">选择格式并点击对应按钮</span>
+  </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;">
+    <button id="{instance_id}-btn-export-json"
+            style="flex:1;min-width:120px;padding:10px 16px;border-radius:8px;border:none;
+                   background:linear-gradient(135deg,#e85d75,#d1495b);color:#fff;
+                   cursor:pointer;font-size:13px;font-weight:600;
+                   box-shadow:0 2px 6px rgba(232,93,117,0.3);" 
+            data-i18n="actions.exportFull">💾 导出 JSON</button>
+    <button id="{instance_id}-btn-export-csv"
+            style="flex:1;min-width:120px;padding:10px 16px;border-radius:8px;
+                   border:2px solid #e85d75;background:#fff;color:#e85d75;
+                   cursor:pointer;font-size:13px;font-weight:600;" 
+            data-i18n="actions.exportCSV">📊 导出 CSV</button>
+    <button id="{instance_id}-btn-export-hdf5"
+            style="flex:1;min-width:120px;padding:10px 16px;border-radius:8px;
+                   border:2px solid #495057;background:#fff;color:#495057;
+                   cursor:pointer;font-size:13px;font-weight:600;" 
+            data-i18n="actions.exportHDF5">🔬 导出 HDF5</button>
+  </div>
+  <div id="{instance_id}-export-status" style="margin-top:8px;font-size:11px;color:#868e96;display:none;"></div>
 </div>
 </div>
 
@@ -127,7 +144,10 @@ def generate_panel_html(data_dict: dict, lang: str = "auto", instance_id: str = 
       'chart.radar': '22维特征',
       'detail.title': '帧详情',
       'batch.title': '区间批量修正', 'batch.frameRange': '帧范围：', 'batch.apply': '应用',
-      'actions.exportFull': '导出JSON', 'actions.exportCSV': '导出CSV',
+      'export.title': '📤 导出数据', 'export.hint': '选择格式并点击对应按钮',
+      'actions.exportFull': '💾 导出 JSON', 'actions.exportCSV': '📊 导出 CSV', 
+      'actions.exportHDF5': '🔬 导出 HDF5',
+      'export.success': '✓ 导出成功', 'export.error': '✗ 导出失败',
       'contact.yes': '有接触', 'contact.no': '无接触',
       'slip.yes': '滑移', 'slip.no': '无滑移',
       'phase': '操作阶段', 'confidence': '置信度',
@@ -154,7 +174,10 @@ def generate_panel_html(data_dict: dict, lang: str = "auto", instance_id: str = 
       'chart.radar': '22-Dim Features',
       'detail.title': 'Frame Detail',
       'batch.title': 'Range Batch Patch', 'batch.frameRange': 'Range: ', 'batch.apply': 'Apply',
-      'actions.exportFull': 'Export JSON', 'actions.exportCSV': 'Export CSV',
+      'export.title': '📤 Export Data', 'export.hint': 'Select format and click button',
+      'actions.exportFull': '💾 Export JSON', 'actions.exportCSV': '📊 Export CSV', 
+      'actions.exportHDF5': '🔬 Export HDF5',
+      'export.success': '✓ Exported', 'export.error': '✗ Failed',
       'contact.yes': 'Contact', 'contact.no': 'No Contact',
       'slip.yes': 'Slip', 'slip.no': 'No Slip',
       'phase': 'Phase', 'confidence': 'Confidence',
@@ -500,6 +523,24 @@ def generate_panel_html(data_dict: dict, lang: str = "auto", instance_id: str = 
     a.href = URL.createObjectURL(blob);
     a.download = 'tlabel_export.csv';
     a.click();
+    showExportStatus(t('export.success') + ' CSV');
+  }}
+
+  function exportHDF5() {{
+    // Note: Browser cannot directly create HDF5 files
+    // Show message to use Python API instead
+    const msg = currentLang === 'zh-CN' 
+      ? 'HDF5 导出需要使用 Python API:\\n\\ndata.export("output.hdf5")'
+      : 'HDF5 export requires Python API:\\n\\ndata.export("output.hdf5")';
+    alert(msg);
+    showExportStatus(currentLang === 'zh-CN' ? '请使用 Python API 导出 HDF5' : 'Use Python API for HDF5');
+  }}
+
+  function showExportStatus(msg) {{
+    const el = document.getElementById(tid + '-export-status');
+    el.textContent = msg;
+    el.style.display = 'block';
+    setTimeout(() => {{ el.style.display = 'none'; }}, 3000);
   }}
 
   // ===== Lang Toggle =====
@@ -518,6 +559,7 @@ def generate_panel_html(data_dict: dict, lang: str = "auto", instance_id: str = 
   document.getElementById(tid + '-btn-undo').addEventListener('click', undo);
   document.getElementById(tid + '-btn-export-json').addEventListener('click', exportJSON);
   document.getElementById(tid + '-btn-export-csv').addEventListener('click', exportCSV);
+  document.getElementById(tid + '-btn-export-hdf5').addEventListener('click', exportHDF5);
 
   // ===== Init =====
   updateStats();
@@ -526,7 +568,7 @@ def generate_panel_html(data_dict: dict, lang: str = "auto", instance_id: str = 
 
   window['_tlabel_' + tid] = {{
     prevFrame, nextFrame, jumpTo, batchPatch, undo,
-    exportJSON, exportCSV, toggleLang
+    exportJSON, exportCSV, exportHDF5, toggleLang
   }};
 }})();
 </script>"""
