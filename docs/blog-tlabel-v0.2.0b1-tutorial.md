@@ -1,4 +1,4 @@
-# TLabel v0.2.0b1 发布：跨传感器触觉数据标注框架全面升级，支持 LeRobot 和 HDF5 导出
+﻿# TLabel v0.2.0b1 发布：跨传感器触觉数据标注框架全面升级，支持 LeRobot 和 HDF5 导出
 
 > **摘要**：TLabel v0.2.0b1 正式发布！本次更新聚焦下游兼容性和用户体验提升，新增 LeRobot 双向转换器、HDF5 科学数据格式导出、元数据增强（sensor_id、episode 边界标记），并为 GelSight、PaXini、Daimon 三种主流触觉传感器提供完整教程。本文将带你从零开始，5 分钟快速上手 TLabel 触觉数据标注流程。
 
@@ -152,13 +152,14 @@ data.review()
 
 会弹出一个彩色面板：
 
-![TLabel 标注面板（中文界面）](demo_panel_zh.png)
+![TLabel 标注面板（含导出按钮）](demo_panel_with_export_zh.png)
 
 - **顶部时间线**：绿色=接触、红色=滑动、灰色=空闲
 - **雷达图**：显示当前帧的 22 维特征
 - **详情面板**：可以逐个修改数值
+- **底部导出区**：三个醒目按钮，一键导出 JSON/CSV/HDF5
 
-**试试这个**：点击时间线上的不同帧，观察雷达图的变化。找到标注错误的帧（比如 `contact=0` 但 `force_magnitude > 0`）。
+**试试这个**：点击时间线上的不同帧，观察雷达图的变化。找到标注错误的帧（比如 `contact=0` 但 `force_magnitude > 0`），然后在底部导出区点击"💾 导出 JSON"保存结果。
 
 ### 步骤 3：第一次修正（2 分钟）
 
@@ -178,6 +179,18 @@ data.batch_patch(10, 20, "contact", 0)  # 第 10-20 帧：无接触
 
 ### 步骤 4：导出标注结果（30 秒）
 
+**方式一：使用面板导出按钮（推荐）**
+
+在交互面板底部，有三个醒目的导出按钮：
+
+- **💾 导出 JSON**（粉红色主按钮）：完整 TLabel Format v2 schema，包含元数据
+- ** 导出 CSV**（粉色边框按钮）：扁平表格格式，适合 Excel/pandas 分析
+- **🔬 导出 HDF5**（灰色边框按钮）：科研标准格式，点击后提示使用 Python API
+
+直接点击对应按钮即可下载文件！
+
+**方式二：使用 Python 代码**
+
 ```python
 # 导出为 JSON（完整 TLabel Format v2 schema）
 data.export("my_annotations.json")
@@ -188,6 +201,8 @@ data.export("my_annotations.csv")
 # 或导出为 HDF5，适合科研计算
 data.export("my_annotations.hdf5")
 ```
+
+> 💡 **提示**：HDF5 格式由于浏览器限制，需要通过 Python API 导出。JSON 和 CSV 可以直接在面板中点击下载。
 
 **完成！** 你已经走完了完整的标注流程：加载 → 审查 → 修正 → 导出。
 
@@ -239,7 +254,54 @@ data.review()
 
 ---
 
-## 五、与 LeRobot 框架对接
+## 五、UI 交互功能详解
+
+v0.2.0b1 版本对交互面板进行了重大改进，特别是**导出功能**的可视化增强。
+
+### 5.1 底部导出区域
+
+在面板底部新增了一个独立的导出区域，包含三个醒目的按钮：
+
+![导出按钮特写](demo_panel_with_export_zh.png)
+
+#### 💾 导出 JSON（主按钮）
+- **样式**：渐变粉红色背景 (#e85d75 → #d1495b)，白色文字，带阴影
+- **功能**：下载完整的 TLabel Format v2 JSON 文件
+- **包含内容**：
+  - `schema_version`：格式版本号
+  - `feature_names`：22 维特征名称列表
+  - `sensor_id`：传感器唯一标识
+  - `calibration`：标定参数
+  - `frames`：所有帧数据（含 is_first/is_last 标记）
+- **适用场景**：完整备份、与其他工具交换数据
+
+#### 📊 导出 CSV（次要按钮）
+- **样式**：白色背景 + 粗粉色边框，粉色文字
+- **功能**：下载扁平表格格式的 CSV 文件
+- **包含列**：frame_idx, timestamp_s, manipulation_phase, confidence, 以及 22 个特征字段
+- **适用场景**：Excel 分析、pandas 数据处理、快速查看
+
+####  导出 HDF5（第三按钮）
+- **样式**：白色背景 + 灰色边框，灰色文字
+- **功能**：点击后弹出提示，告知需要使用 Python API
+- **原因**：浏览器无法直接创建 HDF5 文件（需要 h5py 库）
+- **正确用法**：在 Python 中执行 `data.export("output.hdf5")`
+- **适用场景**：MATLAB/SciPy 科学计算、大规模数据集存储
+
+### 5.2 导出状态反馈
+
+点击导出按钮后，按钮下方会显示绿色成功消息（如 "✓ 导出成功"），3 秒后自动消失。如果导出失败，会显示红色错误消息。
+
+### 5.3 其他 UI 特性
+
+- **中英文切换**：右上角 "EN/中" 按钮一键切换界面语言
+- **批量修正**：选择帧范围 + 字段 + 值，一键应用级联规则
+- **撤销功能**：点击 ↩ 按钮撤销上一次修正操作
+- **实时统计**：顶部显示帧数、时长、接触率、滑移率、已修正数量
+
+---
+
+## 六、与 LeRobot 框架对接
 
 如果你的下游训练流程使用 Hugging Face LeRobot，可以这样转换：
 
@@ -278,7 +340,7 @@ tlabel_to_lerobot(
 
 ---
 
-## 六、TLabel Format v2：22 维特征详解
+## 七、TLabel Format v2：22 维特征详解
 
 ### 静态特征（18 维）
 
@@ -316,7 +378,7 @@ tlabel_to_lerobot(
 
 ---
 
-## 七、常见问题
+## 八、常见问题
 
 ### Q1: 导入时出现 `ImportError: No module named 'cv2'`
 
@@ -351,7 +413,7 @@ for pkl_file in glob.glob("episodes/*.pkl"):
 
 ---
 
-## 八、项目地址与资源
+## 九、项目地址与资源
 
 - **GitHub**: https://github.com/liesliy/tlabel
 - **PyPI**: https://pypi.org/project/tlabel/
@@ -361,7 +423,7 @@ for pkl_file in glob.glob("episodes/*.pkl"):
 
 ---
 
-## 九、结语
+## 十、结语
 
 TLabel v0.2.0b1 是一个重要的里程碑版本，标志着项目从 alpha 探索阶段进入 beta 稳定阶段。本次更新重点解决了**下游兼容性**问题，让 TLabel 输出的数据能够无缝对接 LeRobot、RLDS 等主流训练框架。
 
