@@ -1,0 +1,46 @@
+{
+  "dataset": "TacQuad",
+  "force_ablation": {
+    "model": "Ridge + StandardScaler",
+    "baseline_r2": 0.2081,
+    "top_features_by_loo": [
+      {"feature": "centroid_x", "drop": 0.032},
+      {"feature": "contact", "drop": 0.030},
+      {"feature": "edge_density", "drop": 0.025}
+    ],
+    "top_groups": [
+      {"group": "contact", "drop": 0.099},
+      {"group": "texture", "drop": 0.032},
+      {"group": "normal_field", "drop": 0.008}
+    ],
+    "rf_permutation_importance": [
+      {"feature": "deformation_magnitude", "importance": 0.791},
+      {"feature": "temporal_deformation_rate", "importance": 0.371},
+      {"feature": "texture_energy", "importance": 0.327},
+      {"feature": "centroid_x", "importance": 0.225},
+      {"feature": "friction_cone_ratio", "importance": 0.209}
+    ]
+  },
+  "phase_ablation": {
+    "model": "LR + StandardScaler",
+    "baseline_f1": 0.9770,
+    "top_features_by_loo": [
+      {"feature": "slip_entropy", "drop": 0.098},
+      {"feature": "deformation_magnitude", "drop": 0.042},
+      {"feature": "contact", "drop": 0.015}
+    ],
+    "top_groups": [
+      {"group": "slip", "drop": 0.097},
+      {"group": "contact", "drop": 0.067},
+      {"group": "deformation", "drop": 0.042}
+    ]
+  },
+  "slip_ablation": {
+    "model": "RF Permutation Importance",
+    "top_features": [
+      {"feature": "slip_entropy", "importance": 0.200}
+    ],
+    "note": "slip_entropy is the ONLY effective feature for slip detection; all others ~0.000"
+  },
+  "conclusion": "TLabel features have clear task-specificity: slip_entropy specializes in slip/phase detection, deformation_magnitude in force prediction."
+}
