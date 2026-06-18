@@ -66,8 +66,9 @@ class TLabelFrame:
         return patch_record
 
     def _apply_cascade(self, field: str, new_value: Any) -> List[Dict]:
-        """联动规则 — 从tlabel-web移植"""
+        """联动规则 — 物理一致性约束"""
         cascades = []
+
         if field == "contact":
             if new_value == 0:
                 # 接触归零 → 力度/滑移/力变化/面积/接触过渡全部归零
@@ -87,6 +88,26 @@ class TLabelFrame:
                     old_phase = self.manipulation_phase
                     self.manipulation_phase = "idle"
                     cascades.append({"field": "manipulation_phase", "old_value": old_phase, "new_value": "idle"})
+
+        elif field == "slip_event":
+            if new_value > 0.5 and self.tlabel_v2.get("contact", 0) < 0.5:
+                # 滑移必须发生在接触状态 → 联动设置contact
+                old_contact = self.tlabel_v2.get("contact", 0)
+                cascades.append({"field": "contact", "old_value": old_contact, "new_value": 1.0})
+                self.tlabel_v2["contact"] = 1.0
+                # 如果当前phase是idle，升级为slip
+                if self.manipulation_phase == "idle":
+                    old_phase = self.manipulation_phase
+                    self.manipulation_phase = "slip"
+                    cascades.append({"field": "manipulation_phase", "old_value": old_phase, "new_value": "slip"})
+
+        elif field == "force_magnitude":
+            if new_value > 0 and self.tlabel_v2.get("contact", 0) < 0.5:
+                # 有力必须有接触 → 联动设置contact
+                old_contact = self.tlabel_v2.get("contact", 0)
+                cascades.append({"field": "contact", "old_value": old_contact, "new_value": 1.0})
+                self.tlabel_v2["contact"] = 1.0
+
         return cascades
 
     def to_dict(self, is_first: bool = False, is_last: bool = False) -> Dict:
@@ -191,26 +212,55 @@ class TLabelData:
 
     def auto_label(self, min_confidence: float = 0.6,
                    target_fields: Optional[List[str]] = None,
-                   fit_first: bool = True) -> Dict:
+                   fit_first: bool = True,
+                   engine: str = "auto",
+                   enabled_fields: Optional[List[str]] = None) -> Dict:
         """
         AI辅助预标注 — 自动推断未标注/低置信帧的关键维度
-        
+
         Args:
             min_confidence: 最低置信度阈值，低于此值的预测不应用
             target_fields: 只预测指定维度（如["contact", "slip_event"]）
             fit_first: 是否先用当前数据做统计拟合
-        
+            engine: 引擎选择 "auto"(优先ML,回退规则) / "ml" / "rule"
+            enabled_fields: ML引擎启用的字段列表（如["contact", "slip_event"]）
+
         Returns:
             预标注统计摘要
         """
-        from tlabel.predict.engine import PredictEngine
-        engine = PredictEngine()
-        if fit_first:
-            engine.fit(self)
-        results = engine.predict(self, target_fields=target_fields)
-        applied = engine.apply(self, results, min_confidence=min_confidence)
-        summary = engine.summary(results)
-        summary["applied_count"] = applied
+        use_ml = False
+
+        if engine in ("auto", "ml"):
+            try:
+                from tlabel.predict.ml_engine import MLEngine, MLEngineConfig
+                config = MLEngineConfig(enabled_fields=enabled_fields)
+                ml_engine = MLEngine(config)
+                if fit_first:
+                    ml_engine.fit(self)
+                if ml_engine._is_fitted:
+                    results = ml_engine.predict(self, target_fields=target_fields)
+                    applied = ml_engine.apply(self, results, min_confidence=min_confidence)
+                    summary = ml_engine.summary(results)
+                    summary["applied_count"] = applied
+                    summary["engine"] = "ml"
+                    use_ml = True
+                elif engine == "ml":
+                    return {"error": "ML engine failed to fit", "fit_report": ml_engine.fit_report(), "engine": "ml"}
+            except ImportError:
+                if engine == "ml":
+                    return {"error": "ML engine requires: pip install tlabel[ml]", "engine": "ml"}
+
+        if not use_ml:
+            from tlabel.predict.engine import PredictEngine
+            rule_engine = PredictEngine()
+            if fit_first:
+                rule_engine.fit(self)
+            results = rule_engine.predict(self, target_fields=target_fields)
+            applied = rule_engine.apply(self, results, min_confidence=min_confidence)
+            summary = rule_engine.summary(results)
+            summary["applied_count"] = applied
+            summary["engine"] = "rule"
+
         return summary
 
     def export(self, output_path: str, format: str = "auto"):

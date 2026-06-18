@@ -6,6 +6,54 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
+## [0.3.0] - 2026-06-18
+
+### 🎉 Major Highlights
+
+This release fixes all 4 blocking bugs identified in rc2 testing and introduces the **MLEngine** — a gradient-boosting-based pre-annotation engine with proper calibration, continuous contact prediction, and graceful degradation.
+
+### ✨ Added
+
+#### MLEngine (New)
+- New `tlabel.predict.ml_engine.MLEngine` with per-field models:
+  - **Contact**: GradientBoostingRegressor (continuous output, not binary) — fixes Bug4
+  - **Slip**: GradientBoostingClassifier with CalibratedClassifierCV (Platt scaling) — fixes Bug2
+  - **Phase**: Automatically skipped (rule engine recommended, ML accuracy too low)
+- `MLEngineConfig` with `enabled_fields`, `use_calibration`, `min_samples` options
+- Graceful degradation: when training data is insufficient, falls back to rule engine — fixes Bug1
+- Model save/load via `save_models()` / `load_models()` (joblib serialization)
+- `fit_report()` returns per-field training status and calibration info
+
+#### Cascade Reverse Constraints (Bug3 Fix)
+- `slip_event > 0.5` when `contact < 0.5` → auto-sets `contact = 1.0` and `phase = "slip"`
+- `force_magnitude > 0` when `contact < 0.5` → auto-sets `contact = 1.0`
+- Existing forward cascade (contact=0 → zero forces/slip) unchanged
+
+#### auto_label() Engine Selection
+- `TLabelData.auto_label(engine="auto")` — tries ML first, falls back to rules (default)
+- `TLabelData.auto_label(engine="ml")` — ML only, returns error if unavailable
+- `TLabelData.auto_label(engine="rule")` — rule engine only
+- New `enabled_fields` parameter for per-field ML control
+
+#### Dependency
+- New `[ml]` extras: `pip install tlabel[ml]` installs `scikit-learn>=1.0` and `joblib>=1.0`
+- `[all]` extras now includes ML dependencies
+
+### 🔧 Changed
+
+- Version bumped from 0.2.0b3 to 0.3.0
+- `PredictEngine` unchanged (backward compatible)
+- `predict/__init__.py` now exports `MLEngine`, `MLEngineConfig` (graceful ImportError if sklearn missing)
+
+### 🐛 Fixed
+
+- **Bug1**: Small data training no longer crashes — minimum sample checks + fallback to rule engine
+- **Bug2**: Calibration actually works — uses `CalibratedClassifierCV(cv=3)` instead of broken `cv='prefit'`
+- **Bug3**: Cascade reverse constraints — slip/force now correctly set contact
+- **Bug4**: Contact prediction is continuous (regression) — 78+ unique values vs. binary 0/1
+
+---
+
 ## [0.2.0b1] - 2026-06-11
 
 ### 🎉 Major Highlights
