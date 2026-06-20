@@ -8,9 +8,10 @@ from tlabel.demo import demo, list_demos
 from tlabel.predict.engine import PredictEngine
 from tlabel.quality.scorer import QualityScorer
 from tlabel.batch.processor import BatchProcessor
+from tlabel.viewer.batch_panel import TLabelBatchPanel
 
 __all__ = [
     "load", "TLabelData", "TLabelFrame", "EpisodeLabel",
     "demo", "list_demos", "PredictEngine",
-    "QualityScorer", "BatchProcessor", "__version__",
+    "QualityScorer", "BatchProcessor", "TLabelBatchPanel", "__version__",
 ]

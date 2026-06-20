@@ -9,10 +9,12 @@ BatchProcessor — 多Episode批处理引擎
 
 用法:
     bp = tlabel.BatchProcessor("episodes_dir/")
+    bp.load_all()
     bp.auto_label(min_confidence=0.7)
     bp.quality_check()
     bp.export_all("output/")
     bp.summary()
+    bp.review()  # v0.4.1: Jupyter批处理仪表盘
 """
 
 import os
@@ -217,6 +219,21 @@ class BatchProcessor:
             "label_stats": self._label_summaries,
             "episodes": episodes,
         }
+
+    def review(self, lang: str = "auto"):
+        """
+        渲染Jupyter批处理仪表盘（v0.4.1新增）
+
+        在Jupyter中自动显示所有Episode的质量评分、帧数、
+        传感器类型等信息，一目了然。
+
+        用法:
+            bp = tlabel.BatchProcessor("episodes/")
+            bp.load_all().quality_check()
+            bp.review()  # 自动渲染仪表盘
+        """
+        from tlabel.viewer.batch_panel import TLabelBatchPanel
+        return TLabelBatchPanel(self, lang=lang)
 
     def get(self, key: str) -> Optional[TLabelData]:
         """按key获取单个TLabelData"""
