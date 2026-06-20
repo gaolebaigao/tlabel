@@ -6,9 +6,9 @@ TLabel面板模板生成器 — 生成Jupyter嵌入的HTML+JS+CSS
 - Canvas雷达图+彩色时间轴
 - 中英文切换
 - 帧详情编辑器+批量修正
-- Episode级标注表单（v0.4.1）
-- 数据质量评分仪表盘（v0.4.1）
-- 统计摘要 describe 表格（v0.4.1）
+- Episode级标注表单（v0.4.2）
+- 数据质量评分仪表盘（v0.4.2）
+- 统计摘要 describe 表格（v0.4.2）
 """
 
 import json
@@ -41,7 +41,7 @@ def generate_panel_html(
   <div style="display:flex;align-items:center;gap:10px;">
     <span style="font-size:20px;">🦞</span>
     <span style="font-size:16px;font-weight:700;color:#e85d75;" data-i18n="app.title">TLabel 触觉标注工具</span>
-    <span style="font-size:10px;color:#868e96;background:#e9ecef;padding:1px 6px;border-radius:4px;">v0.4.1</span>
+    <span style="font-size:10px;color:#868e96;background:#e9ecef;padding:1px 6px;border-radius:4px;">v0.4.2</span>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span style="font-size:12px;color:#868e96;" id="{tid}-sensor-info"></span>
@@ -124,10 +124,10 @@ def generate_panel_html(
            background:#fff;color:#343a40;padding:3px 6px;font-size:12px;">
     <select id="{tid}-batch-field" style="border-radius:6px;border:1px solid #ced4da;background:#fff;
             color:#343a40;padding:3px 6px;font-size:12px;">
-      <option value="contact">接触 (0/1)</option>
-      <option value="slip_event">滑移事件 (0/1)</option>
-      <option value="force_magnitude">力度</option>
-      <option value="manipulation_phase">操作阶段</option>
+      <option value="contact" data-i18n="batch.optContact">接触 (0/1)</option>
+      <option value="slip_event" data-i18n="batch.optSlip">滑移事件 (0/1)</option>
+      <option value="force_magnitude" data-i18n="batch.optForce">力度</option>
+      <option value="manipulation_phase" data-i18n="batch.optPhase">操作阶段</option>
     </select>
     <input type="text" id="{tid}-batch-value" style="width:80px;border-radius:6px;border:1px solid #ced4da;
            background:#fff;color:#343a40;padding:3px 6px;font-size:12px;" placeholder="0">
@@ -188,10 +188,10 @@ def generate_panel_html(
         <select id="{tid}-ep-outcome" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #ced4da;
                 background:#fff;color:#343a40;font-size:13px;">
           <option value="" data-i18n="episode.outcomeDefault">— 未标注 —</option>
-          <option value="success">✅ 成功 (success)</option>
-          <option value="failure">❌ 失败 (failure)</option>
-          <option value="aborted">⏹️ 中止 (aborted)</option>
-          <option value="partial">⚠️ 部分 (partial)</option>
+          <option value="success" data-i18n="episode.outSuccess">✅ 成功 (success)</option>
+          <option value="failure" data-i18n="episode.outFailure">❌ 失败 (failure)</option>
+          <option value="aborted" data-i18n="episode.outAborted">⏹️ 中止 (aborted)</option>
+          <option value="partial" data-i18n="episode.outPartial">⚠️ 部分 (partial)</option>
         </select>
       </div>
 
@@ -201,14 +201,14 @@ def generate_panel_html(
         <select id="{tid}-ep-manip-type" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #ced4da;
                 background:#fff;color:#343a40;font-size:13px;">
           <option value="" data-i18n="episode.manipTypeDefault">— 未标注 —</option>
-          <option value="grasp">🤏 抓取 (grasp)</option>
-          <option value="push">👆 推 (push)</option>
-          <option value="pull">👇 拉 (pull)</option>
-          <option value="tap">👆 轻触 (tap)</option>
-          <option value="lift">⬆️ 提起 (lift)</option>
-          <option value="place">⬇️ 放置 (place)</option>
-          <option value="rotate">🔄 旋转 (rotate)</option>
-          <option value="insert">🔩 插入 (insert)</option>
+          <option value="grasp" data-i18n="episode.mGrasp">🤏 抓取 (grasp)</option>
+          <option value="push" data-i18n="episode.mPush">👆 推 (push)</option>
+          <option value="pull" data-i18n="episode.mPull">👇 拉 (pull)</option>
+          <option value="tap" data-i18n="episode.mTap">👆 轻触 (tap)</option>
+          <option value="lift" data-i18n="episode.mLift">⬆️ 提起 (lift)</option>
+          <option value="place" data-i18n="episode.mPlace">⬇️ 放置 (place)</option>
+          <option value="rotate" data-i18n="episode.mRotate">🔄 旋转 (rotate)</option>
+          <option value="insert" data-i18n="episode.mInsert">🔩 插入 (insert)</option>
         </select>
       </div>
 
@@ -218,16 +218,16 @@ def generate_panel_html(
         <select id="{tid}-ep-difficulty" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #ced4da;
                 background:#fff;color:#343a40;font-size:13px;">
           <option value="" data-i18n="episode.difficultyDefault">— 未标注 —</option>
-          <option value="easy">🟢 简单 (easy)</option>
-          <option value="medium">🟡 中等 (medium)</option>
-          <option value="hard">🔴 困难 (hard)</option>
+          <option value="easy" data-i18n="episode.dEasy">🟢 简单 (easy)</option>
+          <option value="medium" data-i18n="episode.dMedium">🟡 中等 (medium)</option>
+          <option value="hard" data-i18n="episode.dHard">🔴 困难 (hard)</option>
         </select>
       </div>
 
       <!-- Operator (optional) -->
       <div>
         <label style="font-size:12px;color:#495057;font-weight:600;display:block;margin-bottom:4px;" data-i18n="episode.operator">标注人</label>
-        <input type="text" id="{tid}-ep-operator" placeholder="可选" style="width:100%;padding:8px 10px;border-radius:8px;
+        <input type="text" id="{tid}-ep-operator" data-i18n-placeholder="episode.operatorPh" placeholder="可选" style="width:100%;padding:8px 10px;border-radius:8px;
                border:1px solid #ced4da;background:#fff;color:#343a40;font-size:13px;">
       </div>
     </div>
@@ -235,7 +235,7 @@ def generate_panel_html(
     <!-- Notes -->
     <div style="margin-top:16px;">
       <label style="font-size:12px;color:#495057;font-weight:600;display:block;margin-bottom:4px;" data-i18n="episode.notes">备注</label>
-      <textarea id="{tid}-ep-notes" rows="3" placeholder="记录操作细节、失败原因等..." 
+      <textarea id="{tid}-ep-notes" rows="3" data-i18n-placeholder="episode.notesPh" placeholder="记录操作细节、失败原因等..." 
                 style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #ced4da;
                        background:#fff;color:#343a40;font-size:13px;resize:vertical;font-family:inherit;"></textarea>
     </div>
@@ -409,6 +409,23 @@ def generate_panel_html(
       'quality.coverage': '覆盖率', 'quality.coverageDesc': '权重 20% · 有意义标注占比',
       'quality.warnings': '质量警告',
       'stats.title': '统计摘要 (describe)', 'stats.desc': '类 pandas.DataFrame.describe() 统计，由 Python 引擎预计算。',
+      'stats.noData': '暂无统计数据',
+      'batch.optContact': '接触 (0/1)', 'batch.optSlip': '滑移事件 (0/1)',
+      'batch.optForce': '力度', 'batch.optPhase': '操作阶段',
+      'episode.outSuccess': '✅ 成功 (success)', 'episode.outFailure': '❌ 失败 (failure)',
+      'episode.outAborted': '⏹️ 中止 (aborted)', 'episode.outPartial': '⚠️ 部分 (partial)',
+      'episode.mGrasp': '🤏 抓取 (grasp)', 'episode.mPush': '👆 推 (push)',
+      'episode.mPull': '👇 拉 (pull)', 'episode.mTap': '👆 轻触 (tap)',
+      'episode.mLift': '⬆️ 提起 (lift)', 'episode.mPlace': '⬇️ 放置 (place)',
+      'episode.mRotate': '🔄 旋转 (rotate)', 'episode.mInsert': '🔩 插入 (insert)',
+      'episode.dEasy': '🟢 简单 (easy)', 'episode.dMedium': '🟡 中等 (medium)',
+      'episode.dHard': '🔴 困难 (hard)',
+      'episode.operatorPh': '可选', 'episode.notesPh': '记录操作细节、失败原因等...',
+      'detail.contact': '接触', 'detail.slip': '滑移', 'detail.force': '力度',
+      'detail.deformation': '形变', 'detail.area': '面积', 'detail.entropy': '熵',
+      'detail.normal': '法向', 'detail.shear': '剪切',
+      'quality.noWarnings': '无质量警告',
+      'episode.saved': '已保存', 'episode.noLabels': '暂无Episode标注',
     }},
     'en': {{
       'app.title': 'TLabel Tactile Annotation',
@@ -440,6 +457,23 @@ def generate_panel_html(
       'quality.coverage': 'Coverage', 'quality.coverageDesc': '20% · Meaningful annotation ratio',
       'quality.warnings': 'Quality Warnings',
       'stats.title': 'Statistics (describe)', 'stats.desc': 'pandas-like describe() stats, pre-computed by Python engine.',
+      'stats.noData': 'No stats available',
+      'batch.optContact': 'Contact (0/1)', 'batch.optSlip': 'Slip event (0/1)',
+      'batch.optForce': 'Force', 'batch.optPhase': 'Phase',
+      'episode.outSuccess': '✅ Success', 'episode.outFailure': '❌ Failure',
+      'episode.outAborted': '⏹️ Aborted', 'episode.outPartial': '⚠️ Partial',
+      'episode.mGrasp': '🤏 Grasp', 'episode.mPush': '👆 Push',
+      'episode.mPull': '👇 Pull', 'episode.mTap': '👆 Tap',
+      'episode.mLift': '⬆️ Lift', 'episode.mPlace': '⬇️ Place',
+      'episode.mRotate': '🔄 Rotate', 'episode.mInsert': '🔩 Insert',
+      'episode.dEasy': '🟢 Easy', 'episode.dMedium': '🟡 Medium',
+      'episode.dHard': '🔴 Hard',
+      'episode.operatorPh': 'Optional', 'episode.notesPh': 'Operation details, failure reasons...',
+      'detail.contact': 'Contact', 'detail.slip': 'Slip', 'detail.force': 'Force',
+      'detail.deformation': 'Deform', 'detail.area': 'Area', 'detail.entropy': 'Entropy',
+      'detail.normal': 'Normal', 'detail.shear': 'Shear',
+      'quality.noWarnings': 'No quality warnings',
+      'episode.saved': 'Saved', 'episode.noLabels': 'No episode labels yet',
     }}
   }};
 
@@ -450,6 +484,11 @@ def generate_panel_html(
     document.querySelectorAll('[data-i18n]').forEach(el => {{
       const key = el.getAttribute('data-i18n');
       if (I18N[lang] && I18N[lang][key]) el.textContent = I18N[lang][key];
+    }});
+    // Also update placeholders
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {{
+      const key = el.getAttribute('data-i18n-placeholder');
+      if (I18N[lang] && I18N[lang][key]) el.placeholder = I18N[lang][key];
     }});
   }}
 
@@ -515,14 +554,14 @@ def generate_panel_html(
         <span style="font-size:11px;color:#868e96;">conf: ${{(f.confidence * 100).toFixed(0)}}%</span>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;">
-        <span>🟢 接触: <b>${{tv2.contact !== undefined ? tv2.contact.toFixed(2) : '-'}}</b></span>
-        <span>🔴 滑移: <b>${{tv2.slip_event !== undefined ? tv2.slip_event.toFixed(2) : '-'}}</b></span>
-        <span>💪 力度: <b>${{tv2.force_magnitude !== undefined ? tv2.force_magnitude.toFixed(3) : '-'}}</b></span>
-        <span>📐 形变: <b>${{tv2.deformation_magnitude !== undefined ? tv2.deformation_magnitude.toFixed(3) : '-'}}</b></span>
-        <span>🧲 面积: <b>${{tv2.contact_area !== undefined ? tv2.contact_area.toFixed(3) : '-'}}</b></span>
-        <span>🌀 熵: <b>${{tv2.slip_entropy !== undefined ? tv2.slip_entropy.toFixed(3) : '-'}}</b></span>
-        <span>📊 法向: <b>${{tv2.normal_field_magnitude !== undefined ? tv2.normal_field_magnitude.toFixed(3) : '-'}}</b></span>
-        <span>↗️ 剪切: <b>${{tv2.shear_field_magnitude !== undefined ? tv2.shear_field_magnitude.toFixed(3) : '-'}}</b></span>
+        <span>🟢 ${{t('detail.contact')}}: <b>${{tv2.contact !== undefined ? tv2.contact.toFixed(2) : '-'}}</b></span>
+        <span>🔴 ${{t('detail.slip')}}: <b>${{tv2.slip_event !== undefined ? tv2.slip_event.toFixed(2) : '-'}}</b></span>
+        <span>💪 ${{t('detail.force')}}: <b>${{tv2.force_magnitude !== undefined ? tv2.force_magnitude.toFixed(3) : '-'}}</b></span>
+        <span>📐 ${{t('detail.deformation')}}: <b>${{tv2.deformation_magnitude !== undefined ? tv2.deformation_magnitude.toFixed(3) : '-'}}</b></span>
+        <span>🧲 ${{t('detail.area')}}: <b>${{tv2.contact_area !== undefined ? tv2.contact_area.toFixed(3) : '-'}}</b></span>
+        <span>🌀 ${{t('detail.entropy')}}: <b>${{tv2.slip_entropy !== undefined ? tv2.slip_entropy.toFixed(3) : '-'}}</b></span>
+        <span>📊 ${{t('detail.normal')}}: <b>${{tv2.normal_field_magnitude !== undefined ? tv2.normal_field_magnitude.toFixed(3) : '-'}}</b></span>
+        <span>↗️ ${{t('detail.shear')}}: <b>${{tv2.shear_field_magnitude !== undefined ? tv2.shear_field_magnitude.toFixed(3) : '-'}}</b></span>
       </div>
     `;
 
@@ -820,7 +859,7 @@ def generate_panel_html(
 
     // Show status
     const statusEl = document.getElementById(tid + '-episode-status');
-    statusEl.textContent = currentLang === 'zh-CN' ? '✅ 已保存' : '✅ Saved';
+    statusEl.textContent = '✅ ' + t('episode.saved');
     statusEl.style.color = '#51cf66';
     statusEl.style.display = 'inline';
     setTimeout(() => {{ statusEl.style.display = 'none'; }}, 2000);
@@ -834,7 +873,7 @@ def generate_panel_html(
     const info = data.episode_info || episodeInfo;
     const keys = Object.keys(info);
     if (keys.length === 0) {{
-      display.innerHTML = `<span style="color:#adb5bd;">${{currentLang === 'zh-CN' ? '暂无Episode标注' : 'No episode labels yet'}}</span>`;
+      display.innerHTML = `<span style="color:#adb5bd;">${{t('episode.noLabels')}}</span>`;
       return;
     }}
     const outcomeEmoji = {{ 'success': '✅', 'failure': '❌', 'aborted': '⏹️', 'partial': '⚠️' }};
@@ -893,7 +932,7 @@ def generate_panel_html(
     if (q.warnings && q.warnings.length > 0) {{
       warnEl.innerHTML = q.warnings.map(w => `<div style="padding:4px 0;border-bottom:1px solid #f1f3f5;">⚠️ ${{w}}</div>`).join('');
     }} else {{
-      warnEl.innerHTML = `<span style="color:#51cf66;">✅ ${{currentLang === 'zh-CN' ? '无质量警告' : 'No quality warnings'}}</span>`;
+      warnEl.innerHTML = `<span style="color:#51cf66;">✅ ${{t('quality.noWarnings')}}</span>`;
     }}
   }}
 
@@ -903,7 +942,7 @@ def generate_panel_html(
     if (!container) return;
     const dd = describeData;
     if (!dd || Object.keys(dd).length === 0) {{
-      container.innerHTML = `<span style="color:#adb5bd;">${{currentLang === 'zh-CN' ? '暂无统计数据' : 'No stats available'}}</span>`;
+      container.innerHTML = `<span style="color:#adb5bd;">${{t('stats.noData')}}</span>`;
       return;
     }}
 

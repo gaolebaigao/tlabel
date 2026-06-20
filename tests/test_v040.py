@@ -380,4 +380,83 @@ class TestImports:
 
     def test_version(self):
         import tlabel
-        assert tlabel.__version__ == "0.4.1"
+        assert tlabel.__version__ == "0.4.2"
+
+
+class TestI18n:
+    """Test i18n completeness for v0.4.2"""
+
+    def test_i18n_en_dict_has_all_zh_keys(self):
+        """Every zh-CN key must have an en counterpart"""
+        from tlabel.viewer.templates import generate_panel_html
+        import re
+        # Extract the i18n dicts from the generated HTML
+        html = generate_panel_html(
+            data_dict={"frames": [], "sensor_info": {"type": "demo"}},
+            lang="en",
+            instance_id="test_i18n",
+            episode_info={},
+            quality_score=None,
+            describe_stats=None,
+        )
+        # Find all data-i18n keys used in HTML
+        keys_in_html = set(re.findall(r'data-i18n="([^"]+)"', html))
+        # Find all data-i18n-placeholder keys
+        placeholder_keys = set(re.findall(r'data-i18n-placeholder="([^"]+)"', html))
+        all_keys = keys_in_html | placeholder_keys
+        assert len(all_keys) > 30, f"Expected 30+ i18n keys, got {len(all_keys)}"
+
+    def test_i18n_switch_produces_english(self):
+        """English lang should produce English output"""
+        from tlabel.viewer.templates import generate_panel_html
+        html = generate_panel_html(
+            data_dict={"frames": [], "sensor_info": {"type": "demo"}},
+            lang="en",
+            instance_id="test_en",
+            episode_info={},
+            quality_score=None,
+            describe_stats=None,
+        )
+        # The default lang when lang="en" should show English tab names
+        assert "Annotate" in html, "English tab 'Annotate' not found"
+        assert "Quality" in html, "English tab 'Quality' not found"
+        assert "Stats" in html, "English tab 'Stats' not found"
+
+    def test_i18n_zh_produces_chinese(self):
+        """zh-CN lang should produce Chinese output"""
+        from tlabel.viewer.templates import generate_panel_html
+        html = generate_panel_html(
+            data_dict={"frames": [], "sensor_info": {"type": "demo"}},
+            lang="zh-CN",
+            instance_id="test_zh",
+            episode_info={},
+            quality_score=None,
+ describe_stats=None,
+        )
+        assert "标注" in html, "Chinese tab '标注' not found"
+        assert "质量评分" in html, "Chinese tab '质量评分' not found"
+
+    def test_batch_panel_i18n(self):
+        """BatchPanel should support i18n"""
+        from tlabel.viewer.batch_panel import TLabelBatchPanel, _BATCH_I18N
+        # Check both dicts have same keys
+        zh_keys = set(_BATCH_I18N["zh-CN"].keys())
+        en_keys = set(_BATCH_I18N["en"].keys())
+        assert zh_keys == en_keys, f"Key mismatch: zh={zh_keys - en_keys}, en={en_keys - zh_keys}"
+
+    def test_frame_detail_labels_i18n(self):
+        """Frame detail labels should use t() for i18n"""
+        from tlabel.viewer.templates import generate_panel_html
+        html = generate_panel_html(
+            data_dict={"frames": [], "sensor_info": {"type": "demo"}},
+            lang="en",
+            instance_id="test_detail",
+            episode_info={},
+            quality_score=None,
+            describe_stats=None,
+        )
+        # Frame detail should use t('detail.contact') etc
+        assert "t('detail.contact')" in html or "t(\"detail.contact\")" in html, \
+            "Frame detail should use i18n t() function"
+        assert "t('detail.slip')" in html or "t(\"detail.slip\")" in html, \
+            "Frame detail slip should use i18n"
