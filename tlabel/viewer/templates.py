@@ -566,6 +566,124 @@ def generate_panel_html(data_dict: dict, lang: str = "auto", instance_id: str = 
   applyI18n();
   showFrame(0);
 
+
+  // ===== Dark Mode =====
+  let isDark = false;
+  const rootEl = document.getElementById(tid + '-root');
+
+  function toggleDark() {{
+    isDark = !isDark;
+    const btn = document.getElementById(tid + '-dark-btn');
+    if (isDark) {{
+      rootEl.style.background = '#1a1b26';
+      rootEl.style.color = '#c0caf5';
+      btn.textContent = '☀️';
+      // Apply dark to all sub-elements
+      rootEl.querySelectorAll('div[style*="background: #fff"], div[style*="background:#fff"]').forEach(el => {{
+        el.style.background = '#24283b';
+        el.style.borderColor = '#3b4261';
+        el.style.color = '#c0caf5';
+      }});
+      rootEl.querySelectorAll('div[style*="background: #f1f3f5"], div[style*="background:#f1f3f5"]').forEach(el => {{
+        el.style.background = '#1f2335';
+      }});
+      rootEl.querySelectorAll('div[style*="background: #e9ecef"], div[style*="background:#e9ecef"]').forEach(el => {{
+        el.style.background = '#1f2335';
+      }});
+      rootEl.querySelectorAll('span[style*="color: #868e96"]').forEach(el => {{
+        el.style.color = '#565f89';
+      }});
+      rootEl.querySelectorAll('span[style*="color: #343a40"]').forEach(el => {{
+        el.style.color = '#c0caf5';
+      }});
+      rootEl.querySelectorAll('input, select').forEach(el => {{
+        el.style.background = '#24283b';
+        el.style.color = '#c0caf5';
+        el.style.borderColor = '#3b4261';
+      }});
+      rootEl.querySelectorAll('canvas').forEach(el => {{
+        el.style.background = '#24283b';
+      }});
+      rootEl.querySelectorAll('button').forEach(el => {{
+        if (!el.style.background.includes('gradient') && !el.style.background.includes('#e85d75')) {{
+          el.style.background = '#24283b';
+          el.style.color = '#c0caf5';
+          el.style.borderColor = '#3b4261';
+        }}
+      }});
+    }} else {{
+      // Reset - simplest approach: re-render
+      btn.textContent = '🌙';
+      rootEl.style.background = '#f8f9fa';
+      rootEl.style.color = '#343a40';
+      // Force full re-render by re-calling init
+      updateStats();
+      showFrame(currentFrameIdx);
+    }}
+  }}
+
+  document.getElementById(tid + '-dark-btn').addEventListener('click', toggleDark);
+
+  // ===== Keyboard Shortcuts =====
+  document.addEventListener('keydown', function(e) {{
+    // Only handle when this panel is focused/visible
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+
+    switch(e.key) {{
+      case 'ArrowLeft':
+        e.preventDefault();
+        prevFrame();
+        break;
+      case 'ArrowRight':
+        e.preventDefault();
+        nextFrame();
+        break;
+      case ' ':
+        e.preventDefault();
+        // Toggle contact on current frame
+        const frame = data.frames[currentFrameIdx];
+        if (frame) {{
+          const newContact = frame.tlabel_v2.contact > 0.5 ? 0.0 : 1.0;
+          frame.tlabel_v2.contact = newContact;
+          if (newContact === 0.0) {{
+            frame.tlabel_v2.slip_event = 0.0;
+            frame.tlabel_v2.force_magnitude = 0.0;
+            frame.manipulation_phase = 'idle';
+          }}
+          modifiedCount++;
+          updateStats();
+          showFrame(currentFrameIdx);
+        }}
+        break;
+      case 's':
+      case 'S':
+        // Toggle slip event
+        const f2 = data.frames[currentFrameIdx];
+        if (f2 && f2.tlabel_v2.contact > 0.5) {{
+          f2.tlabel_v2.slip_event = f2.tlabel_v2.slip_event > 0.5 ? 0.0 : 1.0;
+          if (f2.tlabel_v2.slip_event > 0.5) {{
+            f2.manipulation_phase = 'slip';
+          }}
+          modifiedCount++;
+          updateStats();
+          showFrame(currentFrameIdx);
+        }}
+        break;
+      case 'd':
+      case 'D':
+        // Toggle dark mode
+        toggleDark();
+        break;
+      case '?':
+        // Show shortcuts help
+        const helpMsg = currentLang === 'zh-CN'
+          ? '快捷键:\n← → 切帧\n空格 标记/取消接触\nS 标记/取消滑移\nD 切换暗色模式\n? 显示帮助'
+          : 'Shortcuts:\n← → Navigate frames\nSpace Toggle contact\nS Toggle slip\nD Dark mode\n? Help';
+        alert(helpMsg);
+        break;
+    }}
+  }});
+
   window['_tlabel_' + tid] = {{
     prevFrame, nextFrame, jumpTo, batchPatch, undo,
     exportJSON, exportCSV, exportHDF5, toggleLang

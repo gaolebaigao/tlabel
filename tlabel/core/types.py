@@ -268,6 +268,161 @@ class TLabelData:
         from tlabel.export.writer import export_data
         return export_data(self, output_path, format=format)
 
+
+    # ============================================================
+    # v0.4.0: Episode级标注
+    # ============================================================
+
+    def label_episode(self,
+                      outcome: str = "inconclusive",
+                      manipulation_type: str = "other",
+                      difficulty: str = "medium",
+                      notes: str = "",
+                      annotator: str = "",
+                      verified: bool = False) -> "EpisodeLabel":
+        """
+        Episode级标注 — 从帧级提升到任务级
+
+        对整个Episode打上任务级标签：操作结果、操作类型、难度等。
+
+        Args:
+            outcome: 操作结果 (success/partial/failure/inconclusive)
+            manipulation_type: 操作类型 (grasp/pinch/poke/slide/push/pull/tap/lift/place/other)
+            difficulty: 难度 (easy/medium/hard)
+            notes: 标注备注
+            annotator: 标注人
+            verified: 是否已审核
+
+        Returns:
+            EpisodeLabel实例
+
+        用法:
+            data.label_episode(outcome="success", manipulation_type="grasp", difficulty="medium")
+            data.label_episode(outcome="failure", notes="物体滑落")
+        """
+        valid_outcomes = {"success", "partial", "failure", "inconclusive"}
+        valid_types = {"grasp", "pinch", "poke", "slide", "push", "pull", "tap", "lift", "place", "other"}
+        valid_diffs = {"easy", "medium", "hard"}
+
+        if outcome not in valid_outcomes:
+            raise ValueError(f"Invalid outcome '{outcome}', must be one of {valid_outcomes}")
+        if manipulation_type not in valid_types:
+            raise ValueError(f"Invalid manipulation_type '{manipulation_type}', must be one of {valid_types}")
+        if difficulty not in valid_diffs:
+            raise ValueError(f"Invalid difficulty '{difficulty}', must be one of {valid_diffs}")
+
+        label = EpisodeLabel(
+            outcome=outcome,
+            manipulation_type=manipulation_type,
+            difficulty=difficulty,
+            notes=notes,
+            annotator=annotator,
+            verified=verified,
+        )
+        self.episode_info["episode_label"] = label.to_dict()
+        return label
+
+    @property
+    def episode_label(self) -> Optional["EpisodeLabel"]:
+        """获取当前Episode级标注"""
+        raw = self.episode_info.get("episode_label")
+        if raw is None:
+            return None
+        if isinstance(raw, EpisodeLabel):
+            return raw
+        return EpisodeLabel.from_dict(raw)
+
+    # ============================================================
+    # v0.4.0: 数据质量评分
+    # ============================================================
+
+    def quality_score(self, verbose: bool = False) -> Dict:
+        """
+        数据质量评分 — 对标国标《具身智能数据质量规范》
+
+        从4个维度评估标注数据质量：
+        1. physical_consistency: 物理一致性（联动规则是否满足）
+        2. temporal_smoothness: 时序平滑度（相邻帧是否突变）
+        3. completeness: 完整性（字段缺失/全零比例）
+        4. coverage: 标注覆盖率（有意义的标注占比）
+
+        Args:
+            verbose: 是否输出详细warnings
+
+        Returns:
+            {
+                "overall": float,          # 综合评分 0-100
+                "physical_consistency": float,
+                "temporal_smoothness": float,
+                "completeness": float,
+                "coverage": float,
+                "warnings": List[str],
+                "grade": str,              # A/B/C/D/F
+            }
+
+        用法:
+            score = data.quality_score()
+            print(f"质量评分: {score['overall']}/100 ({score['grade']})")
+        """
+        from tlabel.quality.scorer import QualityScorer
+        scorer = QualityScorer(verbose=verbose)
+        return scorer.score(self)
+
+    # ============================================================
+    # v0.4.0: describe统计摘要
+    # ============================================================
+
+    def describe(self, fields: Optional[List[str]] = None) -> Dict:
+        """
+        统计摘要 — 类pandas describe
+
+        对每个标注维度计算统计量：count, mean, std, min, 25%, 50%, 75%, max
+
+        Args:
+            fields: 只统计指定维度，None则统计全部22维
+
+        Returns:
+            Dict[str, Dict[str, float]] — 每个维度的统计摘要
+
+        用法:
+            stats = data.describe()
+            stats = data.describe(fields=["contact", "force_magnitude", "slip_event"])
+        """
+        import math
+
+        if not self.frames:
+            return {}
+
+        keys = fields if fields else self.dimension_keys
+        result = {}
+
+        for key in keys:
+            values = [f.tlabel_v2.get(key, 0.0) for f in self.frames]
+            if not values:
+                continue
+
+            n = len(values)
+            mean = sum(values) / n
+            var = sum((v - mean) ** 2 for v in values) / n
+            std = math.sqrt(var)
+            sorted_vals = sorted(values)
+            q25 = sorted_vals[n // 4] if n >= 4 else sorted_vals[0]
+            q50 = sorted_vals[n // 2]
+            q75 = sorted_vals[3 * n // 4] if n >= 4 else sorted_vals[-1]
+
+            result[key] = {
+                "count": n,
+                "mean": round(mean, 4),
+                "std": round(std, 4),
+                "min": round(min(values), 4),
+                "25%": round(q25, 4),
+                "50%": round(q50, 4),
+                "75%": round(q75, 4),
+                "max": round(max(values), 4),
+            }
+
+        return result
+
     def to_dict(self) -> Dict:
         """转换为字典"""
         contact_count = sum(1 for f in self.frames if f.contact > 0.5)
@@ -295,6 +450,7 @@ class TLabelData:
             "calibration": self.calibration_params if self.calibration_params else None,
             "episode": {
                 **self.episode_info,
+                "episode_label": self.episode_label.to_dict() if self.episode_label else None,
                 "num_frames": self.num_frames,
                 "duration_s": round(self.duration_s, 2),
                 "stats": {
@@ -327,3 +483,226 @@ class TLabelData:
                 f"frames={self.num_frames}, "
                 f"duration={self.duration_s:.1f}s, "
                 f"modified={self.modified_count})")
+
+# ============================================================
+# v0.4.0 新增：Episode级标注
+# ============================================================
+
+from dataclasses import dataclass, field as dc_field
+from enum import Enum
+
+
+class ManipulationType(str, Enum):
+    """操作类型枚举"""
+    GRASP = "grasp"
+    PINCH = "pinch"
+    POKE = "poke"
+    SLIDE = "slide"
+    PUSH = "push"
+    PULL = "pull"
+    TAP = "tap"
+    LIFT = "lift"
+    PLACE = "place"
+    OTHER = "other"
+
+
+class EpisodeOutcome(str, Enum):
+    """Episode结果枚举"""
+    SUCCESS = "success"
+    PARTIAL = "partial"
+    FAILURE = "failure"
+    INCONCLUSIVE = "inconclusive"
+
+
+class Difficulty(str, Enum):
+    """难度等级"""
+    EASY = "easy"
+    MEDIUM = "medium"
+    HARD = "hard"
+
+
+@dataclass
+class EpisodeLabel:
+    """Episode级标注 — 从帧级提升到任务级"""
+    outcome: str = "inconclusive"
+    manipulation_type: str = "other"
+    difficulty: str = "medium"
+    notes: str = ""
+    annotator: str = ""
+    verified: bool = False
+
+
+    # ============================================================
+    # v0.4.0: Episode级标注
+    # ============================================================
+
+    def label_episode(self,
+                      outcome: str = "inconclusive",
+                      manipulation_type: str = "other",
+                      difficulty: str = "medium",
+                      notes: str = "",
+                      annotator: str = "",
+                      verified: bool = False) -> "EpisodeLabel":
+        """
+        Episode级标注 — 从帧级提升到任务级
+
+        对整个Episode打上任务级标签：操作结果、操作类型、难度等。
+
+        Args:
+            outcome: 操作结果 (success/partial/failure/inconclusive)
+            manipulation_type: 操作类型 (grasp/pinch/poke/slide/push/pull/tap/lift/place/other)
+            difficulty: 难度 (easy/medium/hard)
+            notes: 标注备注
+            annotator: 标注人
+            verified: 是否已审核
+
+        Returns:
+            EpisodeLabel实例
+
+        用法:
+            data.label_episode(outcome="success", manipulation_type="grasp", difficulty="medium")
+            data.label_episode(outcome="failure", notes="物体滑落")
+        """
+        valid_outcomes = {"success", "partial", "failure", "inconclusive"}
+        valid_types = {"grasp", "pinch", "poke", "slide", "push", "pull", "tap", "lift", "place", "other"}
+        valid_diffs = {"easy", "medium", "hard"}
+
+        if outcome not in valid_outcomes:
+            raise ValueError(f"Invalid outcome '{outcome}', must be one of {valid_outcomes}")
+        if manipulation_type not in valid_types:
+            raise ValueError(f"Invalid manipulation_type '{manipulation_type}', must be one of {valid_types}")
+        if difficulty not in valid_diffs:
+            raise ValueError(f"Invalid difficulty '{difficulty}', must be one of {valid_diffs}")
+
+        label = EpisodeLabel(
+            outcome=outcome,
+            manipulation_type=manipulation_type,
+            difficulty=difficulty,
+            notes=notes,
+            annotator=annotator,
+            verified=verified,
+        )
+        self.episode_info["episode_label"] = label.to_dict()
+        return label
+
+    @property
+    def episode_label(self) -> Optional["EpisodeLabel"]:
+        """获取当前Episode级标注"""
+        raw = self.episode_info.get("episode_label")
+        if raw is None:
+            return None
+        if isinstance(raw, EpisodeLabel):
+            return raw
+        return EpisodeLabel.from_dict(raw)
+
+    # ============================================================
+    # v0.4.0: 数据质量评分
+    # ============================================================
+
+    def quality_score(self, verbose: bool = False) -> Dict:
+        """
+        数据质量评分 — 对标国标《具身智能数据质量规范》
+
+        从4个维度评估标注数据质量：
+        1. physical_consistency: 物理一致性（联动规则是否满足）
+        2. temporal_smoothness: 时序平滑度（相邻帧是否突变）
+        3. completeness: 完整性（字段缺失/全零比例）
+        4. coverage: 标注覆盖率（有意义的标注占比）
+
+        Args:
+            verbose: 是否输出详细warnings
+
+        Returns:
+            {
+                "overall": float,          # 综合评分 0-100
+                "physical_consistency": float,
+                "temporal_smoothness": float,
+                "completeness": float,
+                "coverage": float,
+                "warnings": List[str],
+                "grade": str,              # A/B/C/D/F
+            }
+
+        用法:
+            score = data.quality_score()
+            print(f"质量评分: {score['overall']}/100 ({score['grade']})")
+        """
+        from tlabel.quality.scorer import QualityScorer
+        scorer = QualityScorer(verbose=verbose)
+        return scorer.score(self)
+
+    # ============================================================
+    # v0.4.0: describe统计摘要
+    # ============================================================
+
+    def describe(self, fields: Optional[List[str]] = None) -> Dict:
+        """
+        统计摘要 — 类pandas describe
+
+        对每个标注维度计算统计量：count, mean, std, min, 25%, 50%, 75%, max
+
+        Args:
+            fields: 只统计指定维度，None则统计全部22维
+
+        Returns:
+            Dict[str, Dict[str, float]] — 每个维度的统计摘要
+
+        用法:
+            stats = data.describe()
+            stats = data.describe(fields=["contact", "force_magnitude", "slip_event"])
+        """
+        import math
+
+        if not self.frames:
+            return {}
+
+        keys = fields if fields else self.dimension_keys
+        result = {}
+
+        for key in keys:
+            values = [f.tlabel_v2.get(key, 0.0) for f in self.frames]
+            if not values:
+                continue
+
+            n = len(values)
+            mean = sum(values) / n
+            var = sum((v - mean) ** 2 for v in values) / n
+            std = math.sqrt(var)
+            sorted_vals = sorted(values)
+            q25 = sorted_vals[n // 4] if n >= 4 else sorted_vals[0]
+            q50 = sorted_vals[n // 2]
+            q75 = sorted_vals[3 * n // 4] if n >= 4 else sorted_vals[-1]
+
+            result[key] = {
+                "count": n,
+                "mean": round(mean, 4),
+                "std": round(std, 4),
+                "min": round(min(values), 4),
+                "25%": round(q25, 4),
+                "50%": round(q50, 4),
+                "75%": round(q75, 4),
+                "max": round(max(values), 4),
+            }
+
+        return result
+
+    def to_dict(self) -> Dict:
+        return {
+            "outcome": self.outcome,
+            "manipulation_type": self.manipulation_type,
+            "difficulty": self.difficulty,
+            "notes": self.notes,
+            "annotator": self.annotator,
+            "verified": self.verified,
+        }
+
+    @classmethod
+    def from_dict(cls, d: Dict) -> "EpisodeLabel":
+        return cls(
+            outcome=d.get("outcome", "inconclusive"),
+            manipulation_type=d.get("manipulation_type", "other"),
+            difficulty=d.get("difficulty", "medium"),
+            notes=d.get("notes", ""),
+            annotator=d.get("annotator", ""),
+            verified=d.get("verified", False),
+        )
