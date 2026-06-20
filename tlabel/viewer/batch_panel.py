@@ -5,6 +5,7 @@ TLabelBatchPanel — 批处理仪表盘
 - 批量Episode列表（含质量评分+等级）
 - 平均质量评分仪表
 - 每个Episode的快速预览
+- 中英文切换
 
 用法:
     bp = tlabel.BatchProcessor("episodes_dir/")
@@ -19,6 +20,43 @@ from typing import Optional, Dict
 from tlabel.batch.processor import BatchProcessor
 
 
+# i18n dictionaries for batch panel
+_BATCH_I18N = {
+    "zh-CN": {
+        "title": "TLabel 批处理仪表盘",
+        "episodes": "Episodes",
+        "totalFrames": "总帧数",
+        "avgQuality": "平均质量",
+        "gradeDist": "等级分布",
+        "episodeList": "📁 Episode 列表",
+        "colFile": "文件",
+        "colFrames": "帧数",
+        "colDuration": "时长(s)",
+        "colSensor": "传感器",
+        "colQuality": "质量",
+        "colGrade": "等级",
+        "colModified": "已修正",
+        "noData": "暂无Episode数据",
+    },
+    "en": {
+        "title": "TLabel Batch Dashboard",
+        "episodes": "Episodes",
+        "totalFrames": "Total Frames",
+        "avgQuality": "Avg Quality",
+        "gradeDist": "Grade Dist",
+        "episodeList": "📁 Episode List",
+        "colFile": "File",
+        "colFrames": "Frames",
+        "colDuration": "Duration(s)",
+        "colSensor": "Sensor",
+        "colQuality": "Quality",
+        "colGrade": "Grade",
+        "colModified": "Modified",
+        "noData": "No episode data",
+    },
+}
+
+
 class TLabelBatchPanel:
     """批处理仪表盘"""
 
@@ -27,14 +65,18 @@ class TLabelBatchPanel:
         self.lang = lang
         self.instance_id = f"tlabel_batch_{uuid.uuid4().hex[:6]}"
 
+    def _t(self, key: str) -> str:
+        """Get i18n text."""
+        lang = self.lang if self.lang in ("zh-CN", "en") else "en"
+        return _BATCH_I18N.get(lang, _BATCH_I18N["en"]).get(key, key)
+
     def _repr_html_(self):
         """Jupyter自动调用渲染"""
         summary = self.bp.summary()
         summary_json = json.dumps(summary, ensure_ascii=False, default=str)
         tid = self.instance_id
 
-        return f"""<!DOCTYPE html>
-<div id="{tid}-root" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        return f"""<div id="{tid}-root" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
      max-width: 960px; margin: 0 auto; background: #f8f9fa; color: #343a40;
      border-radius: 12px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.08);">
 
@@ -43,51 +85,51 @@ class TLabelBatchPanel:
      background:linear-gradient(135deg,#e9ecef,#f1f3f5);border-bottom:1px solid #dee2e6;">
   <div style="display:flex;align-items:center;gap:10px;">
     <span style="font-size:20px;">🦞</span>
-    <span style="font-size:16px;font-weight:700;color:#e85d75;">TLabel 批处理仪表盘</span>
-    <span style="font-size:10px;color:#868e96;background:#e9ecef;padding:1px 6px;border-radius:4px;">v0.4.1</span>
+    <span style="font-size:16px;font-weight:700;color:#e85d75;">{self._t("title")}</span>
+    <span style="font-size:10px;color:#868e96;background:#e9ecef;padding:1px 6px;border-radius:4px;">v0.4.2</span>
   </div>
 </div>
 
 <!-- Summary Stats -->
-<div style="display:flex;gap:16px;padding:16px 20px;background:#fff;border-bottom:1px solid #e9ecef;">
+<div style="display:flex;gap:16px;padding:16px 20px;background:#fff;border-bottom:1px solid #dee2e6;">
   <div style="text-align:center;flex:1;">
-    <div style="font-size:28px;font-weight:900;color:#e85d75;">{summary.get('total_episodes', 0)}</div>
-    <div style="font-size:11px;color:#868e96;">Episodes</div>
+    <div style="font-size:28px;font-weight:900;color:#e85d75;">{summary.get("total_episodes", 0)}</div>
+    <div style="font-size:11px;color:#868e96;">{self._t("episodes")}</div>
   </div>
   <div style="text-align:center;flex:1;">
-    <div style="font-size:28px;font-weight:900;color:#495057;">{summary.get('total_frames', 0)}</div>
-    <div style="font-size:11px;color:#868e96;">Total Frames</div>
+    <div style="font-size:28px;font-weight:900;color:#495057;">{summary.get("total_frames", 0)}</div>
+    <div style="font-size:11px;color:#868e96;">{self._t("totalFrames")}</div>
   </div>
   <div style="text-align:center;flex:1;">
-    <div style="font-size:28px;font-weight:900;color:#4dabf7;">{summary.get('avg_quality', 0):.1f}</div>
-    <div style="font-size:11px;color:#868e96;">Avg Quality</div>
+    <div style="font-size:28px;font-weight:900;color:#4dabf7;">{summary.get("avg_quality", 0):.1f}</div>
+    <div style="font-size:11px;color:#868e96;">{self._t("avgQuality")}</div>
   </div>
   <div style="text-align:center;flex:1;">
     <div style="font-size:12px;font-weight:700;line-height:1.6;">
-    {self._grade_bar_html(summary.get('quality_grades', {}))}
+    {self._grade_bar_html(summary.get("quality_grades", {}))}
     </div>
-    <div style="font-size:11px;color:#868e96;">Grade分布</div>
+    <div style="font-size:11px;color:#868e96;">{self._t("gradeDist")}</div>
   </div>
 </div>
 
 <!-- Episode Table -->
 <div style="padding:16px 20px;background:#fff;">
-  <div style="font-size:13px;font-weight:600;color:#343a40;margin-bottom:10px;">📁 Episode 列表</div>
+  <div style="font-size:13px;font-weight:600;color:#343a40;margin-bottom:10px;">{self._t("episodeList")}</div>
   <div style="overflow-x:auto;">
     <table style="width:100%;border-collapse:collapse;font-size:12px;">
       <thead>
         <tr style="border-bottom:2px solid #dee2e6;">
-          <th style="padding:8px 10px;text-align:left;color:#868e96;">文件</th>
-          <th style="padding:8px 10px;text-align:right;color:#868e96;">帧数</th>
-          <th style="padding:8px 10px;text-align:right;color:#868e96;">时长(s)</th>
-          <th style="padding:8px 10px;text-align:left;color:#868e96;">传感器</th>
-          <th style="padding:8px 10px;text-align:right;color:#868e96;">质量</th>
-          <th style="padding:8px 10px;text-align:center;color:#868e96;">等级</th>
-          <th style="padding:8px 10px;text-align:right;color:#868e96;">已修正</th>
+          <th style="padding:8px 10px;text-align:left;color:#868e96;">{self._t("colFile")}</th>
+          <th style="padding:8px 10px;text-align:right;color:#868e96;">{self._t("colFrames")}</th>
+          <th style="padding:8px 10px;text-align:right;color:#868e96;">{self._t("colDuration")}</th>
+          <th style="padding:8px 10px;text-align:left;color:#868e96;">{self._t("colSensor")}</th>
+          <th style="padding:8px 10px;text-align:right;color:#868e96;">{self._t("colQuality")}</th>
+          <th style="padding:8px 10px;text-align:center;color:#868e96;">{self._t("colGrade")}</th>
+          <th style="padding:8px 10px;text-align:right;color:#868e96;">{self._t("colModified")}</th>
         </tr>
       </thead>
       <tbody>
-        {self._episode_rows_html(summary.get('episodes', []))}
+        {self._episode_rows_html(summary.get("episodes", []))}
       </tbody>
     </table>
   </div>
@@ -107,7 +149,7 @@ class TLabelBatchPanel:
 
     def _episode_rows_html(self, episodes: list) -> str:
         if not episodes:
-            return '<tr><td colspan="7" style="padding:20px;text-align:center;color:#adb5bd;">暂无Episode数据</td></tr>'
+            return f'<tr><td colspan="7" style="padding:20px;text-align:center;color:#adb5bd;">{self._t("noData")}</td></tr>'
         rows = []
         for ep in episodes:
             grade = ep.get('grade', '-')
