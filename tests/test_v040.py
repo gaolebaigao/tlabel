@@ -380,7 +380,7 @@ class TestImports:
 
     def test_version(self):
         import tlabel
-        assert tlabel.__version__ == "0.4.2"
+        assert tlabel.__version__ == "0.5.0"
 
 
 class TestI18n:

@@ -22,12 +22,17 @@ def generate_panel_html(
     episode_info: Optional[Dict] = None,
     quality_score: Optional[Dict] = None,
     describe_stats: Optional[Dict] = None,
+    predict_highlights: Optional[Dict] = None,
+    auto_label_summary: Optional[Dict] = None,
 ) -> str:
     """生成完整面板HTML"""
     data_json = json.dumps(data_dict, ensure_ascii=False, default=str)
+    # v0.5.0: Inject predict highlight data
     episode_json = json.dumps(episode_info or {}, ensure_ascii=False, default=str)
     quality_json = json.dumps(quality_score or {}, ensure_ascii=False, default=str)
     describe_json = json.dumps(describe_stats or {}, ensure_ascii=False, default=str)
+    predict_json = json.dumps(predict_highlights or {}, ensure_ascii=False, default=str)
+    autolabel_json = json.dumps(auto_label_summary or {}, ensure_ascii=False, default=str)
     tid = instance_id
 
     return f"""<!DOCTYPE html>
@@ -41,12 +46,13 @@ def generate_panel_html(
   <div style="display:flex;align-items:center;gap:10px;">
     <span style="font-size:20px;">🦞</span>
     <span style="font-size:16px;font-weight:700;color:#e85d75;" data-i18n="app.title">TLabel 触觉标注工具</span>
-    <span style="font-size:10px;color:#868e96;background:#e9ecef;padding:1px 6px;border-radius:4px;">v0.4.2</span>
+    <span style="font-size:10px;color:#868e96;background:#e9ecef;padding:1px 6px;border-radius:4px;">v0.5.0</span>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span style="font-size:12px;color:#868e96;" id="{tid}-sensor-info"></span>
     <button style="padding:4px 10px;border-radius:6px;border:1px solid #e85d75;background:transparent;
                    color:#e85d75;cursor:pointer;font-size:12px;" id="{tid}-lang-btn">EN</button>
+    <span id="{tid}-predict-badge" style="display:none;font-size:11px;color:#e67700;background:#fff3bf;padding:2px 8px;border-radius:4px;cursor:help;" data-i18n-title="predict.badge.title">🤖 Predicted</span>
     <button style="padding:4px 10px;border-radius:6px;border:1px solid #ced4da;background:transparent;
                    color:#868e96;cursor:pointer;font-size:14px;" id="{tid}-dark-btn">🌙</button>
   </div>
@@ -371,6 +377,8 @@ def generate_panel_html(
   const episodeInfo = {episode_json};
   const qualityData = {quality_json};
   const describeData = {describe_json};
+  const predictHighlights = {predict_json};
+  const autoLabelSummary = {autolabel_json};
   const tid = '{tid}';
   let currentFrameIdx = 0;
   let currentLang = (data.sensor_info && data.sensor_info.lang) || 'zh-CN';
@@ -426,6 +434,12 @@ def generate_panel_html(
       'detail.normal': '法向', 'detail.shear': '剪切',
       'quality.noWarnings': '无质量警告',
       'episode.saved': '已保存', 'episode.noLabels': '暂无Episode标注',
+      'predict.badge.title': 'AI预标注结果',
+      'predict.lowConf': '低置信度',
+      'predict.method': '方法',
+      'predict.smooth': '时序平滑',
+      'predict.hmm': 'HMM解码',
+      'predict.cascade': '联动修正',
     }},
     'en': {{
       'app.title': 'TLabel Tactile Annotation',
@@ -474,6 +488,12 @@ def generate_panel_html(
       'detail.normal': 'Normal', 'detail.shear': 'Shear',
       'quality.noWarnings': 'No quality warnings',
       'episode.saved': 'Saved', 'episode.noLabels': 'No episode labels yet',
+      'predict.badge.title': 'AI Prediction Results',
+      'predict.lowConf': 'Low Confidence',
+      'predict.method': 'Method',
+      'predict.smooth': 'Temporal Smooth',
+      'predict.hmm': 'HMM Decode',
+      'predict.cascade': 'Cascade Fix',
     }}
   }};
 

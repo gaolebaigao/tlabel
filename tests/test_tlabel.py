@@ -697,4 +697,4 @@ class TestMLEngine:
         engine = MLEngine(config)
         engine.fit(data)
         report = engine.fit_report()
-        assert report["fields"]["manipulation_phase"]["status"] == "skipped"
+        assert report["fields"]["manipulation_phase"]["status"] == "hmm"  # v0.5.0: Phase handled by HMM

@@ -151,6 +151,7 @@ class TLabelData:
         self.schema_version = schema_version
         self.sensor_id = sensor_id  # 新增：传感器标识（如 "left_gripper"）
         self.calibration_params = calibration_params or {}  # 新增：标定参数
+        self._predict_results = None  # v0.5.0: 预标注结果缓存（供UI高亮）
 
     @property
     def num_frames(self) -> int:
@@ -214,31 +215,43 @@ class TLabelData:
                    target_fields: Optional[List[str]] = None,
                    fit_first: bool = True,
                    engine: str = "auto",
-                   enabled_fields: Optional[List[str]] = None) -> Dict:
+                   enabled_fields: Optional[List[str]] = None,
+                   enable_postprocess: bool = True,
+                   enable_hmm_phase: bool = True) -> Dict:
         """
         AI辅助预标注 — 自动推断未标注/低置信帧的关键维度
+
+        v0.5.0: 新增时序后处理（平滑+HMM Phase+联动修正）
 
         Args:
             min_confidence: 最低置信度阈值，低于此值的预测不应用
             target_fields: 只预测指定维度（如["contact", "slip_event"]）
             fit_first: 是否先用当前数据做统计拟合
             engine: 引擎选择 "auto"(优先ML,回退规则) / "ml" / "rule"
-            enabled_fields: ML引擎启用的字段列表（如["contact", "slip_event"]）
+            enabled_fields: ML引擎启用的字段列表
+            enable_postprocess: [v0.5.0] 是否启用时序后处理
+            enable_hmm_phase: [v0.5.0] 是否启用HMM Phase解码
 
         Returns:
-            预标注统计摘要
+            预标注统计摘要（含predict_results供UI高亮）
         """
         use_ml = False
+        predict_results = None
 
         if engine in ("auto", "ml"):
             try:
                 from tlabel.predict.ml_engine import MLEngine, MLEngineConfig
-                config = MLEngineConfig(enabled_fields=enabled_fields)
+                config = MLEngineConfig(
+                    enabled_fields=enabled_fields,
+                    enable_postprocess=enable_postprocess,
+                    enable_hmm_phase=enable_hmm_phase,
+                )
                 ml_engine = MLEngine(config)
                 if fit_first:
                     ml_engine.fit(self)
                 if ml_engine._is_fitted:
                     results = ml_engine.predict(self, target_fields=target_fields)
+                    predict_results = results
                     applied = ml_engine.apply(self, results, min_confidence=min_confidence)
                     summary = ml_engine.summary(results)
                     summary["applied_count"] = applied
@@ -251,15 +264,27 @@ class TLabelData:
                     return {"error": "ML engine requires: pip install tlabel[ml]", "engine": "ml"}
 
         if not use_ml:
-            from tlabel.predict.engine import PredictEngine
-            rule_engine = PredictEngine()
+            from tlabel.predict.engine import PredictEngine, PredictConfig
+            config = PredictConfig(
+                enable_postprocess=enable_postprocess,
+                enable_hmm_phase=enable_hmm_phase,
+            )
+            rule_engine = PredictEngine(config)
             if fit_first:
                 rule_engine.fit(self)
             results = rule_engine.predict(self, target_fields=target_fields)
+            predict_results = results
             applied = rule_engine.apply(self, results, min_confidence=min_confidence)
             summary = rule_engine.summary(results)
             summary["applied_count"] = applied
             summary["engine"] = "rule"
+
+        # v0.5.0: 存储预测结果供UI高亮
+        self._predict_results = predict_results
+        summary["low_confidence_frames"] = [
+            r.frame_idx for r in (predict_results or [])
+            if any(c < min_confidence for c in r.confidence.values())
+        ]
 
         return summary
 
