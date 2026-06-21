@@ -446,6 +446,22 @@ Found a bug? Have an idea? Just want to say hi?
 - 💡 **Feature request** → [GitHub Discussions](https://github.com/liesliy/tlabel/discussions)
 - 🌟 **Using tlabel in your research?** → We'd love to hear about it! Drop us a star ⭐
 
+
+## 🏆 Benchmark
+
+**[TLabel-Bench](https://github.com/liesliy/tlabel-bench)** — The first cross-sensor unified tactile annotation benchmark.
+
+Same objects, different sensors, one format. TLabel-Bench provides cross-sensor annotations (material labels, episode segmentation, quality scores) for objects annotated with GelSight Mini, DIGIT, DMA, and more — all in the unified TLabel format.
+
+```bash
+git clone https://github.com/liesliy/tlabel-bench.git
+cd tlabel-bench
+bash scripts/download_data.sh
+python evaluation/material_classification.py
+```
+
+If you're using TLabel in research, citing the benchmark is a great way to show sensor-agnostic value 👇
+
 ## 🤝 Contributing
 
 We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
