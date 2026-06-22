@@ -14,7 +14,7 @@
 [![Last Commit](https://img.shields.io/github/last-commit/liesliy/tlabel?label=Last%20Commit)](https://github.com/liesliy/tlabel/commits/main)
 [![中文文档](https://img.shields.io/badge/文档-中文-blue)](README_CN.md)
 
-![TLabel Panel Demo](docs/demo_panel.gif)
+![TLabel Panel Demo](docs/demo_panel_v050.png)
 
 **GelSight · DIGIT · PaXini · Daimon — one tool, one format, all sensors**
 
