@@ -1,134 +1,192 @@
-# TouchLabel AI 🦞
+<div align="center">
 
-<h3 align="center">传感器无关的触觉数据标注工具</h3>
-<p align="center"><strong>load → review → export · 三步闭环</strong></p>
+# 🦞 TouchLabel AI
 
-<p align="center">
-  <a href="https://pypi.org/project/tlabel/"><img src="https://img.shields.io/pypi/v/tlabel?color=e85d75" alt="PyPI"></a>
-  <a href="https://pypi.org/project/tlabel/"><img src="https://img.shields.io/pypi/pyversions/tlabel" alt="Python"></a>
-  <a href="https://github.com/liesliy/tlabel/blob/main/LICENSE"><img src="https://img.shields.io/pypi/l/tlabel" alt="License"></a>
-  <a href="https://github.com/liesliy/tlabel/stargazers"><img src="https://img.shields.io/github/stars/liesliy/tlabel?style=social" alt="GitHub Stars"></a>
-  <a href="https://pepy.tech/projects/tlabel"><img src="https://img.shields.io/pepy/dt/tlabel?color=blue" alt="Downloads"></a>
-  <a href="README.md">English</a>
-</p>
+### **全球首个传感器无关的触觉数据标注工具**
 
----
+**加载任意触觉传感器 → 可视化标注 → 导出统一标准**
 
-> 🎯 **不同传感器的触觉数据互相看不懂？**
-> TLabel 让它们说同一种语言——加载任意格式，可视化标注，导出统一标准。
+[![PyPI](https://img.shields.io/pypi/v/tlabel?color=e85d75&label=PyPI)](https://pypi.org/project/tlabel/)
+[![Python](https://img.shields.io/pypi/pyversions/tlabel?label=Python)](https://pypi.org/project/tlabel/)
+[![License](https://img.shields.io/pypi/l/tlabel?label=License)](https://github.com/liesliy/tlabel/blob/main/LICENSE)
+[![Downloads](https://img.shields.io/pepy/dt/tlabel?color=blue&label=Downloads)](https://pepy.tech/projects/tlabel)
+[![GitHub Stars](https://img.shields.io/github/stars/liesliy/tlabel?style=social)](https://github.com/liesliy/tlabel/stargazers)
+[![Last Commit](https://img.shields.io/github/last-commit/liesliy/tlabel?label=Last%20Commit)](https://github.com/liesliy/tlabel/commits/main)
+[![English](https://img.shields.io/badge/Docs-English-blue)](README.md)
 
----
+![TLabel 面板演示](docs/demo_panel.gif)
 
-## 🔥 v0.2.0b1 更新亮点
+**GelSight · DIGIT · 帕西尼 · 戴盟 — 一个工具，一种格式，全部传感器**
 
-**下游兼容性和用户体验大幅提升：**
+[🚀 快速上手](#-快速上手) · [🤖 AI预标注](#-ai预标注) · [📊 基准测试](#-基准测试) · [📖 文档](#-支持的传感器) · [🤝 贡献](#-贡献)
 
-- ✨ **元数据增强**：新增 sensor_id、calibration_params、feature_names、is_first/is_last 字段
--  **LeRobot 集成**：双向转换器，无缝对接 Hugging Face LeRobot 框架
--  **HDF5 导出**：科研标准格式，支持 MATLAB/SciPy
-- 📚 **完整教程**：GelSight/PaXini/Daimon 三种传感器分步指南
-- 🎯 **错误提示优化**：提供具体解决方案和 pip install 命令
-- 🖼️ **UI 导出增强**：面板底部三个醒目按钮（JSON/CSV/HDF5）一键导出
-
-详见 [CHANGELOG.md](CHANGELOG.md)。
+</div>
 
 ---
 
-## ⚡ 30秒体验
+## 🆕 更新亮点
 
-**👉 [浏览器直接体验](https://www.coze.cn/s/f-KJdzphlHs/)** — 不用装任何东西，现在就能看面板效果。
+### v0.5.0 — AI辅助预标注
+**让引擎帮你建议标签，你来审核修正——人在回路，不是黑箱。**
+- 🤖 **PredictEngine**：自动预测接触、滑移和操作阶段
+- 📈 **热启动 `fit()`**：从你已有的部分标注数据学习——即使只标了10%也能显著提升准确率
+- 🎯 **置信度阈值**：只应用高于阈值的预测，始终由你掌控
+- 🔬 **HMM阶段检测**：隐马尔可夫模型 + Viterbi解码推断操作阶段
+- 🧹 **移除黑盒pkl模型**：不再有不透明的预训练权重——每个预测都可解释
 
-或者Jupyter里跑：
+<details>
+<summary><b>历史版本</b></summary>
 
-```python
-import tlabel
-data = tlabel.demo()    # ← 内置GelSight演示数据
-data.review()           # ← 交互面板直接弹出来
-```
+- **v0.4.2** — 完整国际化：双语面板UI（中文/英文）、本地化错误提示和文档
+- **v0.4.1** — 面板UI集成：Tab导航、批量修正工具、面板内一键导出按钮
+- **v0.4.0** — 交互式面板：彩色时间轴、22维雷达图、帧详情编辑器
+- **v0.2.0b1** — LeRobot集成、HDF5导出、元数据增强、完整教程
 
-换个传感器试试：
+</details>
 
-```python
-tlabel.demo('digit').review()    # DIGIT
-tlabel.demo('paxini').review()   # 帕西尼力觉传感器
-tlabel.demo('daimon').review()   # 戴盟DM-TacClaw
-```
+---
 
-**你会看到：** 彩色时间轴（🟢接触 / 🔴滑移 / ⬜空闲）、22维雷达图、帧详情编辑器、批量修正——一个面板全搞定。
+## 🎯 为什么要用TLabel？
 
-![TouchLabel AI 面板演示（含导出按钮）](docs/demo_panel_with_export_zh.png)
+> **每种触觉传感器导出的格式都不一样。以前没有统一的标注工具——现在有了。**
+
+| 痛点 | TLabel怎么解决 |
+|:-----|:---------------|
+| 4种传感器 → 4条不同管道 | **一个 `tlabel.load()` 调用，自动识别** |
+| 原始触觉数据 = 看不懂的数字 | **可视化面板：时间轴 + 雷达图 + 帧编辑器** |
+| 逐帧改标注改到怀疑人生 | **AI预标注 + 批量修正 + 联动规则** |
+| "我们用DIGIT，他们用帕西尼"——数据对不上 | **传感器无关的22维标准，一种格式通用** |
+| 没有标准化的触觉标签体系 | **TLabel Format v2 — 首个统一规范** |
+| 现有标注工具都是为视觉设计的，不是触觉 | **从第一天起就为触觉而生** |
+
+**TLabel是目前唯一同时做到这些的工具：**
+- ✅ 开箱支持4+触觉传感器家族
+- ✅ 提供统一的22维标注规范
+- ✅ 人在回路的AI辅助预标注
+- ✅ Jupyter交互式可视化面板
+- ✅ 配套跨传感器基准测试（[TLabel-Bench](https://github.com/liesliy/tlabel-bench)）
 
 ---
 
 ## 🚀 快速上手
 
+### 安装
+
 ```bash
 pip install tlabel
 ```
 
+就这一步。核心包只要numpy，几秒装好。
+
+### 30秒体验
+
 ```python
 import tlabel
 
-# 加载 — 自动识别传感器格式，不用你操心
+data = tlabel.demo()     # 内置GelSight演示数据——不需要任何文件
+data.review()            # Jupyter里直接弹出交互面板
+```
+
+**你会看到：** 彩色时间轴（🟢接触 / 🔴滑移 / ⬜空闲）、22维雷达图、帧详情编辑器、批量修正——一个面板全搞定。
+
+换个传感器试试：
+```python
+tlabel.demo('digit').review()    # DIGIT传感器
+tlabel.demo('paxini').review()   # 帕西尼力觉传感器
+tlabel.demo('daimon').review()   # 戴盟DM-TacClaw
+```
+
+👉 **[浏览器直接体验](https://liesliy.github.io/tlabel/demo.html)** — 不用装任何东西。
+
+### 加载你自己的数据
+
+```python
+import tlabel
+
+# 自动识别传感器格式——不用你操心
 data = tlabel.load("gelsight_force.pkl")     # GelSight / DIGIT
 data = tlabel.load("paxini_episode.h5")      # 帕西尼
 data = tlabel.load("daimon_data/")           # 戴盟（目录或 .parquet）
-
-# 标注 — Jupyter交互面板
-data.review()          # 中文界面
-data.review(lang="en") # 英文界面
-
-# 导出 — 统一TLabel格式（面板底部三个醒目按钮一键导出）
-data.export("output.json")   # TLabel Format v2 JSON（完整元数据）
-data.export("output.csv")    # CSV平面表（Excel/pandas友好）
-data.export("output.hdf5")   # HDF5科学格式（MATLAB/SciPy兼容）
-
-# 或者直接在交互面板中点击底部的"💾 导出 JSON"、"📊 导出 CSV"、"🔬 导出 HDF5"按钮
 ```
 
-就这样。三行代码或三次点击，完整闭环。🔁
+### 标注与导出
+
+```python
+# Jupyter交互面板（中英双语）
+data.review()           # 中文界面
+data.review(lang="en")  # 英文界面
+
+# 导出——统一TLabel Format v2
+data.export("output.json")   # 完整schema JSON
+data.export("output.csv")    # 平面CSV，pandas/Excel友好
+```
+
+完整闭环：**加载 → 审核 → 修正 → 导出** 🔁
 
 ---
 
-## 🤔 为什么要用TLabel？
+## 🤖 AI预标注
 
-| 痛点 | TLabel怎么解决 |
-|------|---------------|
-| 每个传感器导出的格式都不一样 | **一个`load()`调用，自动识别** |
-| 原始触觉数据就是一堆数字，看不懂 | **可视化面板：时间轴+雷达图+帧详情** |
-| 逐帧改标注改到怀疑人生 | **批量修正+联动规则，一键改一段** |
-| 实验室小伙伴导出的东西……不敢问 | **统一TLabel Format v2，22维标准，没有歧义** |
-| "我们用DIGIT，他们用帕西尼" | **传感器无关。两种都加载，同一套标准，同一工具** |
+**v0.5.0新功能** — 让引擎帮你建议标签，你来审核修正。
+
+```python
+from tlabel.predict import PredictEngine
+
+engine = PredictEngine()
+
+# 方式1：冷启动——不需要任何已有标注
+results = engine.predict(data)
+
+# 方式2：热启动——先从你的部分标注数据中学习
+engine.fit(data)          # 从已标注帧中提取统计特征
+results = engine.predict(data)
+
+# 只应用高置信度预测（≥ 0.7）
+applied = engine.apply(data, results, min_confidence=0.7)
+print(f"自动填充了 {applied} 个字段")
+
+# 在面板中审核——修正任何错误
+data.review()
+```
+
+**预测能力：**
+
+| 维度 | 方法 | 置信度范围 |
+|:-----|:-----|:----------:|
+| `contact` | 规则（力+形变+面积） | 0.4 – 0.9 |
+| `slip_event` | 规则（剪切力+变化率+熵） | 0.55 – 0.8 |
+| `manipulation_phase` | HMM + Viterbi解码 | 0.55 – 0.65 |
+| 缺失维度（需 `fit()`） | 统计（已标注帧均值） | ~0.4 |
+
+> 💡 **提示：** 先用 `fit()` 学习部分标注数据——即使只标了10-20%也能显著提升预测效果。低于置信度阈值的预测会被跳过，始终由你掌控。
 
 ---
 
 ## 📡 支持的传感器
 
-| 传感器 | 格式 | 维度 | 光流 | 状态 |
-|--------|------|:----:|:----:|:----:|
-| **GelSight Mini** | `.pkl` | 22 | ✅ | ✅ 稳定 |
-| **DIGIT** | `.pkl` | 22 | ✅ | ✅ 稳定 |
-| **戴盟 DM-TacClaw** | `.parquet` / 目录 | 22（有视频）/ 20（无视频） | ✅ / — | ✅ 稳定 |
-| **帕西尼 PXCap** | `.h5` / `.hdf5` | 20 | — | ✅ 稳定 |
+| 传感器 | 类型 | 格式 | 维度 | 光流 | 状态 |
+|:-------|:-----|:-----|:----:|:----:|:----:|
+| **GelSight Mini** | 视觉型 | `.pkl` | 22 | ✅ | ✅ 稳定 |
+| **DIGIT** | 视觉型 | `.pkl` | 22 | ✅ | ✅ 稳定 |
+| **戴盟 DM-TacClaw** | 多模态 | `.parquet` / 目录 | 22（有视频）/ 20（无视频） | ✅ / — | ✅ 稳定 |
+| **帕西尼 PXCap** | 力觉阵列 | `.h5` / `.hdf5` | 20 | — | ✅ 稳定 |
 
 > 力觉型传感器（帕西尼）没有光学图像→20维；图像型→完整22维；戴盟在没有视频文件时自动降级到20维。不会报错，不会出幺蛾子。
 
----
-
-## 📦 安装
+### 按传感器安装依赖
 
 ```bash
-# 只要核心（只要numpy，装两秒）
-pip install tlabel
-
-# 按传感器装依赖
 pip install tlabel[gelsight]   # GelSight / DIGIT → opencv-python
 pip install tlabel[paxini]     # 帕西尼 → h5py
 pip install tlabel[daimon]     # 戴盟 → pyarrow + opencv-python
-
-# 我全都要
-pip install tlabel[all]
+pip install tlabel[all]        # 全部安装
 ```
+
+### 传感器教程
+
+- 📖 [GelSight / DIGIT 教程](docs/tutorial-gelsight.md)
+- 📖 [帕西尼 PXCap 教程](docs/tutorial-paxini.md)
+- 📖 [戴盟 DM-TacClaw 教程](docs/tutorial-daimon.md)
 
 ---
 
@@ -138,12 +196,15 @@ pip install tlabel[all]
 - 🕸 **22维雷达图**：完整特征向量一览，中英双语标签
 - ✏️ **帧修正 & 批量修正**：改一帧还是改一串，你说了算
 - 🔗 **联动规则**：`contact`设为0 → 7个关联字段自动归零 + 阶段重置为`idle`
+- 🤖 **预标注集成**：在同一个面板中应用AI预测并审核修正
 - 🌐 **中英文切换**：右上角一键切换
-- 📤 **导出**：JSON / CSV / HDF5，面板底部三个醒目按钮一键导出（HDF5需Python API）
+- 📤 **面板内导出**：JSON / CSV 一键导出
 
 ---
 
-## TLabel Format v2 — 22个维度
+## 📐 TLabel Format v2 — 22个维度
+
+首个统一的触觉标注规范。每一帧、每一种传感器，同样的22个维度。
 
 ### 静态特征（18维）
 
@@ -168,7 +229,7 @@ pip install tlabel[all]
 | 17 | `delta_force_shear` | 帧间ΔF_shear |
 | 18 | `friction_cone_ratio` | 切向/法向力比 |
 
-### 时序特征（4维，v0.2.0新增）
+### 时序特征（4维）
 
 | # | 字段 | 图像型 | 力觉型 | 说明 |
 |---|------|:------:|:------:|------|
@@ -176,6 +237,8 @@ pip install tlabel[all]
 | 20 | `optical_flow_direction` | ✅ | — | 光流方向角（°） |
 | 21 | `temporal_deformation_rate` | ✅ | ✅ | 形变变化率 |
 | 22 | `contact_transition` | ✅ | ✅ | 接触状态转移概率 |
+
+📖 **完整规范：** [annotation-spec.md](docs/annotation-spec.md) | [tlabel-format.md](docs/tlabel-format.md)
 
 ---
 
@@ -211,6 +274,13 @@ frame.patch("contact", 0)                         # 单帧（联动=True）
 frame.patch("contact", 0, cascade=False)           # 不联动
 data.batch_patch(10, 50, "contact", 0)             # 区间批量修正
 
+# ── 预标注 ──
+from tlabel.predict import PredictEngine
+engine = PredictEngine()
+engine.fit(data)                                   # 从部分标注热启动
+results = engine.predict(data)                     # 预测接触、滑移、阶段
+engine.apply(data, results, min_confidence=0.7)    # 只应用高置信度
+
 # ── 标注 & 导出 ──
 data.review()                    # Jupyter面板（中文）
 data.review(lang="en")           # 英文
@@ -223,7 +293,7 @@ data.export("output.csv")        # CSV
 `contact`设为0时，以下字段自动归零：
 
 | 自动归零字段 | 条件 |
-|-------------|------|
+|:-------------|:-----|
 | `force_magnitude` | 始终 |
 | `force_peak` | 始终 |
 | `slip_event` | 始终 |
@@ -232,6 +302,23 @@ data.export("output.csv")        # CSV
 | `contact_area` | 始终 |
 | `contact_transition` | 仅当值 > 0.5 |
 | `manipulation_phase` | → `"idle"`（如果还不是） |
+
+---
+
+## 🏆 基准测试
+
+**[TLabel-Bench](https://github.com/liesliy/tlabel-bench)** — 首个跨传感器统一触觉标注基准测试。
+
+同样物体、不同传感器、一种格式。TLabel-Bench提供跨传感器标注（材质标签、回合分割、质量评分），覆盖GelSight Mini、DIGIT、DMA等多种传感器——全部使用统一的TLabel格式。
+
+```bash
+git clone https://github.com/liesliy/tlabel-bench.git
+cd tlabel-bench
+bash scripts/download_data.sh
+python evaluation/material_classification.py
+```
+
+如果在研究中使用TLabel，引用基准测试有助于展示传感器无关的价值 👇
 
 ---
 
@@ -251,6 +338,8 @@ tlabel/
 ├── viewer/
 │   ├── panel.py          # Jupyter _repr_html_ 渲染
 │   └── templates.py      # HTML + JS + CSS 模板引擎
+├── predict/
+│   └── engine.py         # AI辅助预标注引擎
 ├── demo.py               # 内置演示数据加载器
 └── export/
     └── writer.py         # JSON / CSV 导出 + NumpyEncoder
@@ -258,13 +347,20 @@ tlabel/
 
 ---
 
-## 💬 反馈
+## 📝 引用TLabel
 
-发现问题？有想法？想聊聊天？
+如果你在研究中使用TLabel，请引用：
 
-- 🐛 **Bug** → [提Issue](https://github.com/liesliy/tlabel/issues)
-- 💡 **功能建议** → [GitHub Discussions](https://github.com/liesliy/tlabel/discussions)
-- 🌟 **在研究中用了TLabel？** → 告诉我们！给个⭐也行
+```bibtex
+@software{tlabel2026,
+  title = {TLabel: A Sensor-Agnostic Tactile Data Annotation Toolkit},
+  author = {NiuZhu Tech},
+  year = {2026},
+  url = {https://github.com/liesliy/tlabel}
+}
+```
+
+---
 
 ## 🤝 贡献
 
@@ -275,6 +371,15 @@ tlabel/
 - 📊 改进雷达图UI（暗色模式、交互悬停）
 - 🌐 加更多语言（日本語、한국어）
 - 🧪 补集成测试
+- 🤖 改进预标注模型（用轻量ML替代规则？）
+
+---
+
+## 💬 反馈
+
+- 🐛 **Bug** → [提Issue](https://github.com/liesliy/tlabel/issues)
+- 💡 **功能建议** → [GitHub Discussions](https://github.com/liesliy/tlabel/discussions)
+- 🌟 **在研究中用了TLabel？** → 告诉我们！给个⭐也行
 
 ---
 
@@ -284,6 +389,10 @@ tlabel/
 
 ---
 
-<p align="center">
-  <strong>如果TLabel帮你省下了手动标注触觉数据的时间，给个⭐让我们开心一下！</strong>
-</p>
+<div align="center">
+
+**如果TLabel帮你省下了手动标注触觉数据的时间，给个⭐让我们开心一下！**
+
+[⭐ GitHub加星](https://github.com/liesliy/tlabel/stargazers) · [📦 PyPI安装](https://pypi.org/project/tlabel/) · [🏆 试试基准测试](https://github.com/liesliy/tlabel-bench)
+
+</div>
