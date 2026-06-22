@@ -1,273 +1,192 @@
-# TouchLabel AI 🦞
+<div align="center">
 
-<h3 align="center">Sensor-Agnostic Tactile Data Annotation Toolkit</h3>
-<p align="center"><strong>load → review → export · Three steps to close the loop</strong></p>
+# 🦞 TouchLabel AI
 
-<p align="center">
-  <a href="https://pypi.org/project/tlabel/"><img src="https://img.shields.io/pypi/v/tlabel?color=e85d75" alt="PyPI"></a>
-  <a href="https://pypi.org/project/tlabel/"><img src="https://img.shields.io/pypi/pyversions/tlabel" alt="Python"></a>
-  <a href="https://github.com/liesliy/tlabel/blob/main/LICENSE"><img src="https://img.shields.io/pypi/l/tlabel" alt="License"></a>
-  <a href="https://github.com/liesliy/tlabel/stargazers"><img src="https://img.shields.io/github/stars/liesliy/tlabel?style=social" alt="GitHub Stars"></a>
-  <a href="https://pepy.tech/projects/tlabel"><img src="https://img.shields.io/pepy/dt/tlabel?color=blue" alt="Downloads"></a>
-  <a href="README_CN.md">中文文档</a>
-</p>
+### **The World's First Sensor-Agnostic Tactile Data Annotation Toolkit**
 
----
+**Load any tactile sensor → Annotate visually → Export a unified schema**
 
-## 🔥 What's New in v0.2.0b1
+[![PyPI](https://img.shields.io/pypi/v/tlabel?color=e85d75&label=PyPI)](https://pypi.org/project/tlabel/)
+[![Python](https://img.shields.io/pypi/pyversions/tlabel?label=Python)](https://pypi.org/project/tlabel/)
+[![License](https://img.shields.io/pypi/l/tlabel?label=License)](https://github.com/liesliy/tlabel/blob/main/LICENSE)
+[![Downloads](https://img.shields.io/pepy/dt/tlabel?color=blue&label=Downloads)](https://pepy.tech/projects/tlabel)
+[![GitHub Stars](https://img.shields.io/github/stars/liesliy/tlabel?style=social)](https://github.com/liesliy/tlabel/stargazers)
+[![Last Commit](https://img.shields.io/github/last-commit/liesliy/tlabel?label=Last%20Commit)](https://github.com/liesliy/tlabel/commits/main)
+[![中文文档](https://img.shields.io/badge/文档-中文-blue)](README_CN.md)
 
-**Major improvements for downstream compatibility and user experience:**
+![TLabel Panel Demo](docs/demo_panel.gif)
 
-- ✨ **Enhanced metadata**: Added `sensor_id`, `calibration_params`, `feature_names`, and episode boundary markers (`is_first`/`is_last`)
-- 🔄 **LeRobot integration**: Bidirectional converters for seamless data exchange with Hugging Face LeRobot framework
-- 💾 **HDF5 export**: Scientific computing standard format for research workflows
-- 📚 **Comprehensive tutorials**: Step-by-step guides for GelSight, PaXini, and Daimon sensors
-- 🎯 **Better error messages**: Clear guidance with exact `pip install` commands and format descriptions
-- 📖 **Improved docs**: 5-Minute Quick Start, sensor-specific loading instructions, troubleshooting table
+**GelSight · DIGIT · PaXini · Daimon — one tool, one format, all sensors**
 
-See [CHANGELOG.md](CHANGELOG.md) for full details.
+[🚀 Quick Start](#-quick-start) · [🤖 AI Pre-Annotation](#-ai-pre-annotation) · [📊 Benchmark](#-benchmark) · [📖 Docs](#-supported-sensors) · [🤝 Contributing](#-contributing)
+
+</div>
 
 ---
 
-> 🎯 **Got tactile data from different sensors that refuse to talk to each other?**
-> TLabel makes them speak the same language — load any format, annotate in a visual panel, export a unified schema.
+## 🆕 What's New
+
+### v0.5.0 — AI-Assisted Pre-Annotation
+**Let the engine suggest labels, then you review and correct — human-in-the-loop, not black-box.**
+- 🤖 **PredictEngine**: predict contact, slip, and manipulation phase automatically
+- 📈 **Warm start with `fit()`**: learn from your partially labeled data — even 10% labels significantly boost accuracy
+- 🎯 **Confidence threshold**: only apply predictions above your threshold, you stay in control
+- 🔬 **HMM Phase Detection**: Hidden Markov Model for manipulation phase inference with Viterbi decoding
+- 🧹 **Removed black-box pkl models**: no opaque pretrained weights — every prediction is interpretable
+
+<details>
+<summary><b>Previous releases</b></summary>
+
+- **v0.4.2** — Full i18n: bilingual Panel UI (中文/English), localized error messages, docs in both languages
+- **v0.4.1** — Panel UI integration: Tab navigation, batch correction tool, export buttons directly in panel
+- **v0.4.0** — Interactive Panel: color-coded timeline, 22-dim radar chart, frame detail editor
+- **v0.2.0b1** — LeRobot integration, HDF5 export, enhanced metadata, comprehensive tutorials
+
+</details>
 
 ---
 
-## 🎯 5-Minute Quick Start
+## 🎯 Why TLabel?
 
-New to TLabel? Start here. This tutorial gets you from zero to annotated data in 5 minutes — no sensor data needed.
+> **Every tactile sensor spits out a different format. There's no universal annotation tool — until now.**
 
-### Step 1: Install (30 seconds)
+| The Problem | TLabel's Answer |
+|:------------|:----------------|
+| 4 different sensors → 4 different pipelines | **One `tlabel.load()` call, auto-detected** |
+| Raw tactile data = unreadable numbers | **Visual Panel: timeline + radar chart + frame editor** |
+| Fixing labels frame-by-frame is soul-crushing | **AI pre-annotation + batch patch + cascade rules** |
+| "We use DIGIT, they use PaXini" — data doesn't mix | **Sensor-agnostic 22-dim schema, one format for all** |
+| No standardized tactile labels exist | **TLabel Format v2 — the first unified specification** |
+| Annotation tools assume vision, not touch | **Built for tactile from day one** |
+
+**TLabel is the only tool that:**
+- ✅ Supports 4+ tactile sensor families out of the box
+- ✅ Provides a unified 22-dimension annotation schema
+- ✅ Offers AI-assisted pre-annotation with human-in-the-loop
+- ✅ Ships an interactive visual Panel for Jupyter
+- ✅ Includes a cross-sensor benchmark ([TLabel-Bench](https://github.com/liesliy/tlabel-bench))
+
+---
+
+## 🚀 Quick Start
+
+### Install
 
 ```bash
 pip install tlabel
 ```
 
-That's it. The core package installs in seconds with just numpy as a dependency.
+That's it. Core installs in seconds with just numpy as a dependency.
 
-### Step 2: Try the Built-in Demo (1 minute)
-
-Open a Python terminal or Jupyter notebook:
+### Try the Demo (30 seconds)
 
 ```python
 import tlabel
 
-# Load built-in GelSight demo data (no files needed!)
-data = tlabel.demo()
-
-# Open the interactive annotation panel
-data.review()
+data = tlabel.demo()     # Built-in GelSight demo — no files needed
+data.review()            # Interactive Panel pops up in Jupyter
 ```
 
-A colorful panel pops up right in your notebook:
-- **Timeline** at the top shows contact (green), slip (red), and idle (gray) frames
-- **Radar chart** displays all 22 dimensions for the current frame
-- **Detail panel** lets you inspect and edit individual values
+**What you'll see:** a color-coded timeline (🟢 contact / 🔴 slip / ⬜ idle), 22-dim radar chart, frame detail editor, and batch patching — all in one panel.
 
-![TLabel Panel with Export Buttons](docs/demo_panel_with_export_zh.png)
-
-**Try this:** Click on different frames in the timeline. Notice how the radar chart updates. Spot any frames that look wrong (e.g., `contact=0` but `force_magnitude > 0`).
-
-### Step 3: Make Your First Correction (2 minutes)
-
-Found a mislabeled frame? Fix it:
-
-```python
-# In the panel, use the batch correction tool:
-# 1. Select a range of frames (drag on timeline)
-# 2. Set contact=0 in the correction panel
-# 3. Click "Apply" — cascade rules auto-zero 7 related fields
-
-# Or do it programmatically:
-data.batch_patch(10, 20, "contact", 0)  # Frames 10-20: no contact
-```
-
-The cascade system ensures physical consistency: setting `contact=0` automatically zeroes `force_magnitude`, `slip_event`, and resets `manipulation_phase` to `"idle"`.
-
-### Step 4: Export Your Annotations (30 seconds)
-
-```python
-# Export to JSON (full TLabel Format v2 schema)
-data.export("my_annotations.json")
-
-# Or export to CSV for quick analysis in Excel/pandas
-data.export("my_annotations.csv")
-```
-
-**Done!** You've just completed the full annotation loop: load → review → correct → export.
-
-### What's Next?
-
-- **Have real sensor data?** See the step-by-step tutorials:
-  - [GelSight / DIGIT Tutorial](docs/tutorial-gelsight.md)
-  - [PaXini PXCap Tutorial](docs/tutorial-paxini.md)
-  - [Daimon DM-TacClaw Tutorial](docs/tutorial-daimon.md)
-- **Want to understand the 22 dimensions?** Check out [TLabel Format v2](#tlabel-format-v2--22-dimensions)
-- **Need a web-based tool for your team?** Try [tlabel-web](https://github.com/liesliy/tlabel/tree/main/tlabel-web)
-- **Try the interactive demo in your browser:** [Live Demo](https://liesliy.github.io/tlabel/demo.html)
-
----
-
-## 📥 Loading Your Own Data
-
-Once you're comfortable with the demo, load your real sensor data:
-
-### GelSight / DIGIT (vision-based tactile sensors)
-
-```python
-# Install extra dependencies
-pip install tlabel[gelsight]
-
-# Load your .pkl file (from gelsight-force-estimation or similar)
-data = tlabel.load("my_gelsight_episode.pkl")
-data.review()
-```
-
-**What happens:** The adapter extracts 22 dimensions from background-subtracted tactile images, including force magnitude, slip detection, optical flow, and manipulation phase inference.
-
-### PaXini PXCap (distributed force array)
-
-```python
-pip install tlabel[paxini]
-
-# Load your .h5 or .hdf5 file
-data = tlabel.load("my_paxini_episode.h5")
-data.review()
-```
-
-**What happens:** The adapter reads 6D force/torque vectors from each taxel region, detects contact and slip events, and maps them to 20 TLabel dimensions (no optical flow for force-only sensors).
-
-### Daimon DM-TacClaw (multimodal robot arm + tactile)
-
-```python
-pip install tlabel[daimon]
-
-# Load from LeRobot-style directory structure
-data = tlabel.load("path/to/daimon_episode/")
-data.review()
-```
-
-**Requirements:** The directory should contain:
-- `meta/info.json` — episode metadata
-- `data/chunk-*.parquet` — observation data (114-dim state vector)
-- `videos/` — FFV1-encoded tactile video files (optional, degrades gracefully if missing)
-
-**What happens:** The adapter decodes FFV1 video frames, extracts tactile features (deformation, contact area, texture), and fuses them with robot state data.
-
-### Troubleshooting Common Issues
-
-| Error | Solution |
-|-------|----------|
-| `ImportError: No module named 'cv2'` | Run `pip install tlabel[gelsight]` or `pip install opencv-python` |
-| `ImportError: No module named 'h5py'` | Run `pip install tlabel[paxini]` or `pip install h5py` |
-| `ImportError: No module named 'pyarrow'` | Run `pip install tlabel[daimon]` or `pip install pyarrow` |
-| `ValueError: Unknown format` | Check file extension (.pkl, .h5, .hdf5, .parquet) or pass `format="gelsight"` explicitly |
-| `FileNotFoundError` | Double-check the path; use absolute paths if unsure |
-
----
-
-## ⚡ 30-Second Demo
-
-**👉 [Try it live in your browser](https://www.coze.cn/s/f-KJdzphlHs/)** — no install needed, see the panel in action right now.
-
-Or fire it up in Jupyter:
-
-```python
-import tlabel
-data = tlabel.demo()    # ← built-in GelSight demo
-data.review()           # ← interactive panel pops up
-```
-
-Or try other sensors:
-
+Other sensors:
 ```python
 tlabel.demo('digit').review()    # DIGIT sensor
 tlabel.demo('paxini').review()   # PaXini force sensor
 tlabel.demo('daimon').review()   # Daimon DM-TacClaw
 ```
 
-**What you'll see:** a color-coded timeline (🟢 contact / 🔴 slip / ⬜ idle), 22-dim radar chart, frame detail editor, and batch patching — all in one panel.
+👉 **[Try it live in your browser](https://liesliy.github.io/tlabel/demo.html)** — no install needed.
 
-![TLabel Panel Demo](docs/demo_panel_zh.png)
-
----
-
-## 🚀 Quick Start
-
-```bash
-pip install tlabel
-```
+### Load Your Own Data
 
 ```python
 import tlabel
 
-# Load — auto-detect sensor format, no config needed
+# Auto-detect sensor format — no config needed
 data = tlabel.load("gelsight_force.pkl")     # GelSight / DIGIT
 data = tlabel.load("paxini_episode.h5")      # PaXini
 data = tlabel.load("daimon_data/")           # Daimon (directory or .parquet)
-
-# Annotate — interactive Jupyter panel
-data.review()          # Chinese UI
-data.review(lang="en") # English UI
-
-# Export — unified TLabel Format
-data.export("output.json")   # TLabel Format v2 JSON
-data.export("output.csv")    # flat CSV
 ```
 
-# Pre-annotate — AI-assisted, review & correct
-from tlabel.predict import PredictEngine
-engine = PredictEngine()
-results = engine.predict(data)          # predict contact, slip, phase...
-engine.apply(data, results, min_confidence=0.7)  # apply only high-confidence
-data.review()                           # review & correct in panel
+### Annotate & Export
+
+```python
+# Interactive Jupyter panel (bilingual: 中文 / English)
+data.review()           # Chinese UI
+data.review(lang="en")  # English UI
+
+# Export — unified TLabel Format v2
+data.export("output.json")   # Full schema JSON
+data.export("output.csv")    # Flat CSV for pandas/Excel
 ```
 
-That's it. Full loop. 🔁
+Full loop: **load → review → correct → export** 🔁
 
 ---
 
-## 🤔 Why TLabel?
+## 🤖 AI Pre-Annotation
 
-| Pain | TLabel's Answer |
-|------|-----------------|
-| Every sensor spits out a different format | **One `load()` call, auto-detected** |
-| Raw tactile data is unreadable numbers | **Visual panel: timeline + radar + details** |
-| Fixing labels frame-by-frame is soul-crushing | **Batch patch + cascade rules, fix ranges in one click** |
-| Your lab mate exported... something... | **Unified TLabel Format v2, 22 dimensions, no ambiguity** |
-| "But we use DIGIT and they use PaXini" | **Sensor-agnostic. Load both, same schema, same tool.** |
-| "Manually labeling thousands of frames is tedious" | **AI pre-annotation: predict contact, slip, phase — review & correct** |
+**New in v0.5.0** — Let the engine suggest labels, then you review and correct.
+
+```python
+from tlabel.predict import PredictEngine
+
+engine = PredictEngine()
+
+# Option 1: Cold start — no prior labels needed
+results = engine.predict(data)
+
+# Option 2: Warm start — learn from your partial annotations first
+engine.fit(data)          # Extract statistics from labeled frames
+results = engine.predict(data)
+
+# Apply only high-confidence predictions (≥ 0.7)
+applied = engine.apply(data, results, min_confidence=0.7)
+print(f"Auto-filled {applied} fields")
+
+# Review in Panel — correct any mistakes
+data.review()
+```
+
+**What it predicts:**
+
+| Dimension | Method | Confidence Range |
+|:----------|:-------|:----------------:|
+| `contact` | Rule-based (force + deformation + area) | 0.4 – 0.9 |
+| `slip_event` | Rule-based (shear + delta + entropy) | 0.55 – 0.8 |
+| `manipulation_phase` | HMM + Viterbi decoding | 0.55 – 0.65 |
+| Missing dims (with `fit()`) | Statistical (mean from labeled frames) | ~0.4 |
+
+> 💡 **Tip:** Use `fit()` on partially labeled data first — even 10–20% labeled frames significantly improve predictions. Predictions below your confidence threshold are simply skipped.
 
 ---
 
 ## 📡 Supported Sensors
 
-| Sensor | Format | Dimensions | Optical Flow | Status |
-|--------|--------|:----------:|:------------:|:------:|
-| **GelSight Mini** | `.pkl` | 22 | ✅ | ✅ Stable |
-| **DIGIT** | `.pkl` | 22 | ✅ | ✅ Stable |
-| **Daimon DM-TacClaw** | `.parquet` / dir | 22 (video) / 20 (no video) | ✅ / — | ✅ Stable |
-| **PaXini PXCap** | `.h5` / `.hdf5` | 20 | — | ✅ Stable |
+| Sensor | Type | Format | Dims | Optical Flow | Status |
+|:-------|:-----|:-------|:----:|:------------:|:------:|
+| **GelSight Mini** | Vision-based | `.pkl` | 22 | ✅ | ✅ Stable |
+| **DIGIT** | Vision-based | `.pkl` | 22 | ✅ | ✅ Stable |
+| **Daimon DM-TacClaw** | Multimodal | `.parquet` / dir | 22 (video) / 20 (no video) | ✅ / — | ✅ Stable |
+| **PaXini PXCap** | Force array | `.h5` / `.hdf5` | 20 | — | ✅ Stable |
 
-> Force-type sensors (PaXini) lack optical images → 20 dims. Image-type → full 22. Daimon gracefully degrades when no video is present. No errors, no surprises.
+> Force-type sensors (PaXini) lack optical images → 20 dims. Image-type → full 22. Daimon gracefully degrades when no video is present. **No errors, no surprises.**
 
----
-
-## 📦 Installation
+### Per-Sensor Installation
 
 ```bash
-# Just the core (numpy only, ~2s install)
-pip install tlabel
-
-# Per-sensor extras
 pip install tlabel[gelsight]   # GelSight / DIGIT → opencv-python
 pip install tlabel[paxini]     # PaXini → h5py
 pip install tlabel[daimon]     # Daimon → pyarrow + opencv-python
-
-# I want it all
-pip install tlabel[all]
+pip install tlabel[all]        # Everything
 ```
+
+### Sensor Tutorials
+
+- 📖 [GelSight / DIGIT Tutorial](docs/tutorial-gelsight.md)
+- 📖 [PaXini PXCap Tutorial](docs/tutorial-paxini.md)
+- 📖 [Daimon DM-TacClaw Tutorial](docs/tutorial-daimon.md)
 
 ---
 
@@ -277,12 +196,15 @@ pip install tlabel[all]
 - 🕸 **22-dim radar chart**: see the full feature vector at a glance, bilingual labels
 - ✏️ **Frame & batch patching**: fix one frame or a range, your call
 - 🔗 **Cascade rules**: set `contact=0` → 7 related fields auto-zero + phase resets to `idle`
+- 🤖 **Pre-annotation integration**: apply AI predictions, then review in the same panel
 - 🌐 **Bilingual toggle**: 中文 / English, one click top-right
-- 📤 **Export**: JSON / CSV, auto-detected by file extension
+- 📤 **In-panel export**: JSON / CSV with one click
 
 ---
 
-## TLabel Format v2 — 22 Dimensions
+## 📐 TLabel Format v2 — 22 Dimensions
+
+The first unified tactile annotation schema. Every frame, every sensor, same 22 dimensions.
 
 ### Static Features (18-dim)
 
@@ -307,7 +229,7 @@ pip install tlabel[all]
 | 17 | `delta_force_shear` | Frame-to-frame ΔF_shear |
 | 18 | `friction_cone_ratio` | Tangential/normal force ratio |
 
-### Temporal Features (4-dim, v0.2.0)
+### Temporal Features (4-dim)
 
 | # | Key | Image-type | Force-type | Description |
 |---|-----|:----------:|:----------:|-------------|
@@ -315,6 +237,8 @@ pip install tlabel[all]
 | 20 | `optical_flow_direction` | ✅ | — | Optical flow angle (°) |
 | 21 | `temporal_deformation_rate` | ✅ | ✅ | Rate of deformation change |
 | 22 | `contact_transition` | ✅ | ✅ | Contact state transition probability |
+
+📖 **Full specification:** [annotation-spec.md](docs/annotation-spec.md) | [tlabel-format.md](docs/tlabel-format.md)
 
 ---
 
@@ -350,6 +274,13 @@ frame.patch("contact", 0)                         # Single frame (cascade=True)
 frame.patch("contact", 0, cascade=False)           # No cascade
 data.batch_patch(10, 50, "contact", 0)             # Range patch
 
+# ── Pre-Annotation ──
+from tlabel.predict import PredictEngine
+engine = PredictEngine()
+engine.fit(data)                                   # Warm start from partial labels
+results = engine.predict(data)                     # Predict contact, slip, phase
+engine.apply(data, results, min_confidence=0.7)    # Apply high-confidence only
+
 # ── Review & Export ──
 data.review()                    # Jupyter panel (Chinese)
 data.review(lang="en")           # English
@@ -362,7 +293,7 @@ data.export("output.csv")        # CSV
 When `contact` is set to `0`, these fields are automatically zeroed:
 
 | Auto-zeroed Field | Condition |
-|-------------------|-----------|
+|:------------------|:----------|
 | `force_magnitude` | always |
 | `force_peak` | always |
 | `slip_event` | always |
@@ -372,44 +303,22 @@ When `contact` is set to `0`, these fields are automatically zeroed:
 | `contact_transition` | only if value > 0.5 |
 | `manipulation_phase` | → `"idle"` (if not already) |
 
-### 🤖 AI-Assisted Pre-Annotation
+---
 
-Let the engine suggest labels, then you review and correct — **human-in-the-loop, not black-box**.
+## 🏆 Benchmark
 
-```python
-from tlabel.predict import PredictEngine
+**[TLabel-Bench](https://github.com/liesliy/tlabel-bench)** — The first cross-sensor unified tactile annotation benchmark.
 
-engine = PredictEngine()
+Same objects, different sensors, one format. TLabel-Bench provides cross-sensor annotations (material labels, episode segmentation, quality scores) for objects annotated with GelSight Mini, DIGIT, DMA, and more — all in the unified TLabel format.
 
-# Option 1: cold start — no prior labels
-results = engine.predict(data)
-
-# Option 2: warm start — learn from partially labeled data first
-engine.fit(data)        # extract statistics from existing annotations
-results = engine.predict(data)
-
-# Apply only high-confidence predictions (≥0.7)
-applied = engine.apply(data, results, min_confidence=0.7)
-print(f"Auto-filled {applied} fields")
-
-# Review the summary
-stats = engine.summary(results)
-print(stats)
-# → {total_frames, predicted_fields, avg_confidence, method_distribution, ...}
-
-data.review()  # check predictions in the panel, correct as needed
+```bash
+git clone https://github.com/liesliy/tlabel-bench.git
+cd tlabel-bench
+bash scripts/download_data.sh
+python evaluation/material_classification.py
 ```
 
-**What it predicts:**
-
-| Dimension | Method | Confidence Range |
-|-----------|--------|:----------------:|
-| `contact` | Rule (force + deformation + area) | 0.4 – 0.9 |
-| `slip_event` | Rule (shear + delta + entropy) | 0.55 – 0.8 |
-| `manipulation_phase` | Rule (contact + slip + force cascade) | 0.55 – 0.65 |
-| Missing dims (with `fit()`) | Statistics (mean from labeled frames) | ~0.4 |
-
-> 💡 **Tip**: Use `fit()` on partially labeled data first — even 10–20% labeled frames significantly improve statistical predictions. Predictions below your confidence threshold are simply skipped, so you stay in control.
+If you're using TLabel in research, citing the benchmark helps demonstrate sensor-agnostic value 👇
 
 ---
 
@@ -438,29 +347,20 @@ tlabel/
 
 ---
 
-## 💬 Feedback
+## 📝 Citing TLabel
 
-Found a bug? Have an idea? Just want to say hi?
+If you use TLabel in your research, please cite:
 
-- 🐛 **Bug report** → [Open an Issue](https://github.com/liesliy/tlabel/issues)
-- 💡 **Feature request** → [GitHub Discussions](https://github.com/liesliy/tlabel/discussions)
-- 🌟 **Using tlabel in your research?** → We'd love to hear about it! Drop us a star ⭐
-
-
-## 🏆 Benchmark
-
-**[TLabel-Bench](https://github.com/liesliy/tlabel-bench)** — The first cross-sensor unified tactile annotation benchmark.
-
-Same objects, different sensors, one format. TLabel-Bench provides cross-sensor annotations (material labels, episode segmentation, quality scores) for objects annotated with GelSight Mini, DIGIT, DMA, and more — all in the unified TLabel format.
-
-```bash
-git clone https://github.com/liesliy/tlabel-bench.git
-cd tlabel-bench
-bash scripts/download_data.sh
-python evaluation/material_classification.py
+```bibtex
+@software{tlabel2026,
+  title = {TLabel: A Sensor-Agnostic Tactile Data Annotation Toolkit},
+  author = {NiuZhu Tech},
+  year = {2026},
+  url = {https://github.com/liesliy/tlabel}
+}
 ```
 
-If you're using TLabel in research, citing the benchmark is a great way to show sensor-agnostic value 👇
+---
 
 ## 🤝 Contributing
 
@@ -471,15 +371,28 @@ We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 - 📊 Improve radar chart UI (dark mode, interactive hover)
 - 🌐 Add more language support (日本語, 한국어)
 - 🧪 Add integration tests for edge cases
+- 🤖 Improve pre-annotation models (replace rules with lightweight ML?)
+
+---
+
+## 💬 Feedback
+
+- 🐛 **Bug report** → [Open an Issue](https://github.com/liesliy/tlabel/issues)
+- 💡 **Feature request** → [GitHub Discussions](https://github.com/liesliy/tlabel/discussions)
+- 🌟 **Using TLabel in your research?** → We'd love to hear about it! Drop us a star ⭐
 
 ---
 
 ## 📄 License
 
-[MIT](LICENSE) © Niuzu Tech
+[MIT](LICENSE) © NiuZhu Tech
 
 ---
 
-<p align="center">
-  <strong>If this saved you from manually labeling tactile data, a ⭐ would make our day!</strong>
-</p>
+<div align="center">
+
+**If this saved you from manually labeling tactile data, a ⭐ would make our day!**
+
+[⭐ Star on GitHub](https://github.com/liesliy/tlabel/stargazers) · [📦 Install from PyPI](https://pypi.org/project/tlabel/) · [🏆 Try the Benchmark](https://github.com/liesliy/tlabel-bench)
+
+</div>
