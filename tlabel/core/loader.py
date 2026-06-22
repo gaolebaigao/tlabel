@@ -20,9 +20,12 @@ def load(file_path: Union[str, Path],
     
     参数:
         file_path: 数据文件路径
-        format: 强制指定格式 ("gelsight" / "paxini" / "daimon" / "tlabel")
+        format: 强制指定格式 ("gelsight" / "paxini" / "daimon" / "vtouch" / "tlabel")
         trajectory_id: 轨迹ID（GelSight数据集可选）
         **kwargs: 传递给适配器的额外参数
+            VTouch额外参数:
+                hand: 选择哪只手 "left"/"right" (默认"left")
+                sensor_side: 选择哪侧传感器 "left"/"right" (默认"left")
     
     返回:
         TLabelData — 统一标注容器
@@ -60,10 +63,11 @@ def load(file_path: Union[str, Path],
 
     adapter_cls = get_adapter(fmt)
     if adapter_cls is None:
-        available = list(k for k in ["gelsight", "paxini", "daimon", "tlabel"] if get_adapter(k))
+        available = list(k for k in ["gelsight", "paxini", "vtouch", "daimon", "tlabel"] if get_adapter(k))
         missing_deps = {
             "gelsight": "pip install tlabel[gelsight]  # 安装 opencv-python",
             "paxini": "pip install tlabel[paxini]      # 安装 h5py",
+            "vtouch": "pip install tlabel[vtouch]      # install h5py + opencv-python",
             "daimon": "pip install tlabel[daimon]      # 安装 pyarrow + opencv-python",
             "tlabel": "无需额外依赖（TLabel Format JSON）",
         }
