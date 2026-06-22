@@ -6,6 +6,100 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
+## [0.5.0] - 2026-06-21
+
+### 🎉 Major Highlights
+
+This release introduces **AI-Assisted Pre-Annotation** with a redesigned `PredictEngine` — predict contact, slip, and manipulation phase automatically, then review and correct in the interactive Panel. Human-in-the-loop, not black-box.
+
+### ✨ Added
+
+#### AI Pre-Annotation (PredictEngine Redesign)
+- `PredictEngine` with rule-based + HMM prediction for contact, slip, and manipulation phase
+- **HMM Phase Detection**: Hidden Markov Model with Viterbi decoding for manipulation phase inference
+- **Warm start with `fit()`**: learn from partially labeled data — even 10–20% labels significantly boost accuracy
+- **Confidence-based filtering**: `apply(data, results, min_confidence=0.7)` — only apply high-confidence predictions
+- `engine.summary(results)` — prediction statistics overview
+- `engine.fit(data)` → `engine.predict(data)` workflow for semi-supervised annotation
+
+#### Panel Integration
+- Pre-annotation results viewable and correctable directly in the Panel
+- AI predictions shown with confidence indicators
+
+### 🔧 Changed
+
+- **Removed black-box pkl models**: deleted opaque pretrained weights with no training data source or documentation. Every prediction is now interpretable — rules + HMM, no hidden parameters
+- `PredictEngine` API streamlined: `predict()` → `apply()` → `review()` three-step workflow
+- Time-series post-processing for smoother phase predictions
+
+### 🐛 Fixed
+
+- Phase prediction discontinuity: HMM Viterbi decoding eliminates erratic frame-to-frame phase switches
+- Confidence calibration: rule-based predictions now report calibrated confidence ranges
+
+---
+
+## [0.4.2] - 2026-06-20
+
+### 🎉 Major Highlights
+
+**Full internationalization (i18n)** — the Panel UI, error messages, and documentation now support both Chinese and English seamlessly.
+
+### ✨ Added
+
+- Complete bilingual Panel UI: toggle between 中文/English with one click
+- Localized error messages and installation hints for all sensor adapters
+- English documentation for all sensor tutorials
+- Panel language state persists within session
+
+### 🔧 Changed
+
+- `review(lang="en")` / `review(lang="zh")` for explicit language selection
+- Default Panel language follows system locale, falls back to Chinese
+
+---
+
+## [0.4.1] - 2026-06-20
+
+### 🎉 Major Highlights
+
+**Panel UI integration** — bringing annotation, correction, and export into one cohesive interactive experience.
+
+### ✨ Added
+
+- Tab navigation in Panel: Overview / Annotation / Correction tabs
+- Batch correction tool integrated in Panel: select frame range → set values → apply
+- Export buttons directly in Panel (JSON / CSV)
+- In-panel batch operations with visual feedback
+
+### 🔧 Changed
+
+- Panel layout reorganized for clearer workflow: view → annotate → correct → export
+- Improved frame detail display with editable fields
+
+---
+
+## [0.4.0] - 2026-06-20
+
+### 🎉 Major Highlights
+
+**Interactive Visual Panel** — the first Jupyter-native annotation interface for tactile data. See your data, don't just read numbers.
+
+### ✨ Added
+
+- Color-coded timeline: green = contact · red = slip · gray = idle — patterns jump out instantly
+- 22-dim radar chart: full feature vector at a glance, bilingual labels
+- Frame detail editor: inspect and edit individual frame values
+- `_repr_html_()` for automatic Jupyter rendering
+- `data.review()` entry point for explicit Panel launch
+
+### 🔧 Changed
+
+- `TLabelData` now renders as interactive Panel in Jupyter (was plain text repr)
+- Template engine for Panel HTML+JS+CSS generation
+
+---
+
 ## [0.3.0] - 2026-06-18
 
 ### 🎉 Major Highlights
@@ -63,140 +157,42 @@ This release focuses on **downstream compatibility** and **user experience impro
 ### ✨ Added
 
 #### Metadata Enhancement
-- Added `sensor_id` and `calibration_params` fields to `TLabelData.__init__()` for better sensor identification and calibration tracking
-- Enhanced `to_dict()` output with `feature_names` list (22 dimension names) for downstream frameworks
-- Added `is_first` and `is_last` episode boundary markers to frame exports (critical for reinforcement learning and temporal modeling)
-- Default sensor IDs for all adapters: `"gelsight_main"`, `"paxini_pxcap"`, `"daimon_taclaw"`
+- Added `sensor_id` and `calibration_params` fields to `TLabelData.__init__()` for downstream traceability
+- Added `feature_names` list to `TLabelData` — all 22 dimension keys in order
+- Episode boundary markers: `is_first` and `is_last` boolean flags on `TLabelFrame`
 
 #### LeRobot Integration
-- New `tlabel.converters.lerobot` module with bidirectional conversion:
-  - `lerobot_to_tlabel()`: Convert LeRobot Parquet datasets to TLabel Format v2
-  - `tlabel_to_lerobot()`: Export TLabel annotations back to LeRobot schema
-- Automatic handling of `meta/info.json` and Parquet file reading/writing
-- Support for custom tactile field paths (default: `"observation.tactile"`)
+- Bidirectional converters: `tlabel.adapters.lerobot.TLabelLeRobotConverter`
+  - `to_lerobot(data, output_dir)` — export TLabel data to LeRobot format (parquet + metadata)
+  - `from_lerobot(data_dir)` — load LeRobot format data into TLabelData
+- Supports Daimon DM-TacClaw LeRobot datasets out of the box
 
-#### HDF5 Export Support
-- Added `_export_hdf5()` function in `tlabel/export/writer.py`
-- Exports include:
-  - `timestamps` dataset
-  - `frame_indices` dataset
-  - `is_first` / `is_last` episode boundary arrays
-  - `tactile_features` matrix (all 22 dimensions)
-  - `metadata` group with sensor_id, calibration, and schema info
-- Requires `h5py` dependency (included in `[all]` extras)
+#### HDF5 Export
+- `data.export("output.hdf5")` — scientific computing standard format
+- Compatible with MATLAB, SciPy, and h5py workflows
+- Stores all 22 dimensions + metadata as HDF5 datasets and attributes
 
-#### Comprehensive Tutorials
-- **`docs/tutorial-gelsight.md`**: Complete GelSight/DIGIT tutorial covering:
-  - Prerequisites and environment setup
-  - Data loading from `.pkl` files
-  - Interactive review and correction workflow
-  - Export options (JSON, CSV, HDF5)
-  - Advanced tips and troubleshooting
-- **`docs/tutorial-paxini.md`**: PaXini PXCap tutorial with:
-  - HDF5 file structure explanation
-  - Force-only sensor considerations (20 dims vs 22)
-  - Calibration parameter extraction
-- **`docs/tutorial-daimon.md`**: Daimon DM-TacClaw tutorial including:
-  - LeRobot directory structure requirements
-  - FFV1 video decoding with ffmpeg
-  - Multi-modal data fusion (tactile + robot state)
-  - Graceful degradation when videos are missing
+#### Documentation & Tutorials
+- Comprehensive sensor tutorials:
+  - `docs/tutorial-gelsight.md` — GelSight Mini / DIGIT step-by-step guide
+  - `docs/tutorial-paxini.md` — PaXini PXCap step-by-step guide
+  - `docs/tutorial-daimon.md` — Daimon DM-TacClaw step-by-step guide
+- 5-Minute Quick Start section in README
+- Troubleshooting table for common errors
 
-#### Documentation Improvements
-- Added **"5-Minute Quick Start"** section to README with complete installation → demo → correction → export flow
-- New **"Loading Your Own Data"** section with sensor-specific instructions for GelSight, PaXini, and Daimon
-- Troubleshooting table for common import errors with direct `pip install` solutions
-- Links to all three step-by-step tutorials from main README
-
-#### Error Message Enhancements
-- **FileNotFoundError**: Now suggests using absolute paths
-- **ValueError** (unknown format): Lists all supported formats with sensor type descriptions:
-  ```
-  • .pkl / .pickle  — GelSight Mini, DIGIT (vision-based tactile sensors)
-  • .h5 / .hdf5     — PaXini PXCap (distributed force array)
-  • .parquet        — Daimon DM-TacClaw (multimodal robot)
-  • Directory       — Daimon LeRobot format (with info.json + parquet + videos)
-  ```
-- **ImportError**: Provides exact `pip install` command for missing dependencies
+#### Error Messages
+- Clear `ImportError` messages with exact `pip install` commands
+- Format detection errors now show supported formats and file extensions
+- Missing file errors suggest checking paths and using absolute paths
 
 ### 🔧 Changed
 
-#### Schema Updates
-- Extended `manipulation_phase` enum values from 6 to 11 states:
-  - Original: `idle`, `initial_contact`, `stable_contact`, `slip`, `release`, `re_contact`
-  - Added: `approach`, `retract`, `grasp`, `transport`, `hold`
-- Relaxed `schema_version` pattern from strict `^0\.2\.0$` to flexible `^0\.[0-9]+\.[0-9]+$` for future minor releases
-
-#### Dependency Updates
-- Added `scipy>=1.7` to `[daimon]` optional dependencies (required for signal processing)
-- Added `scipy>=1.7` and `pillow>=9.0` to `[all]` meta-package
-- Updated version from `0.2.0a7` (alpha) to `0.2.0b1` (beta) — indicating improved stability
-
-#### Documentation Fixes
-- Fixed docstrings in `tlabel/export/writer.py`, `tlabel/viewer/panel.py`, and `tlabel/adapters/base.py` to correctly reference "22 dimensions" instead of outdated "18 dimensions"
+- `TLabelFrame` now includes `is_first` and `is_last` properties
+- Export format auto-detected by file extension (.json, .csv, .hdf5)
+- README reorganized with Quick Start first, details later
 
 ### 🐛 Fixed
 
-- Resolved schema mismatch between JSON Schema definition and adapter outputs for `manipulation_phase`
-- Corrected all remaining references to "18-dim" in code comments and docstrings
-- Improved error messages to guide users toward solutions rather than just stating problems
-
-### 📦 Build & Release
-
-- Updated `pyproject.toml` version to `0.2.0b1`
-- Updated `tlabel/_version.py` to `0.2.0b1`
-- Built wheel (`tlabel-0.2.0b1-py3-none-any.whl`) and source distribution (`tlabel-0.2.0b1.tar.gz`)
-- Published to PyPI via twine
-
-### 🔄 Migration Notes
-
-**For existing users:**
-- No breaking changes — all existing code continues to work
-- New fields (`sensor_id`, `calibration_params`, `feature_names`, `is_first`, `is_last`) are optional and default to sensible values
-- If you're exporting to LeRobot or RLDS, use the new converter functions instead of manual CSV/JSON parsing
-
-**For new users:**
-- Start with the 5-Minute Quick Start in README
-- Use sensor-specific tutorials for detailed guidance
-- Try the interactive browser demo at https://liesliy.github.io/tlabel/demo.html
-
----
-
-## [0.2.0a7] - Previous Release
-
-### Added
-- Initial TLabel Format v2 implementation with 22 dimensions
-- Support for GelSight, DIGIT, PaXini, and Daimon sensors
-- Interactive Jupyter panel with timeline, radar chart, and batch patching
-- Cascade rules for physical consistency
-- AI-assisted pre-annotation engine
-- JSON and CSV export support
-
----
-
-## Upcoming Features (Planned)
-
-### High Priority
-- Web-based annotation tool deployment (tlabel-web)
-- Dark mode for interactive panel
-- Additional language support (日本語, 한국어)
-- Integration tests for edge cases
-
-### Medium Priority
-- SynTouch and XELA sensor adapters
-- Batch processing pipeline for multiple episodes
-- Annotation quality metrics and validation checks
-- Export to TFRecord for TensorFlow pipelines
-
-### Low Priority
-- Real-time annotation during data collection
-- Collaborative annotation features
-- Annotation history and version control
-- Plugin system for custom feature extractors
-
----
-
-For more information, visit:
-- [GitHub Repository](https://github.com/liesliy/tlabel)
-- [PyPI Package](https://pypi.org/project/tlabel/)
-- [Documentation](https://github.com/liesliy/tlabel/tree/main/docs)
+- HDF5 export handles numpy types correctly (NumpyEncoder)
+- LeRobot converter handles missing optional fields gracefully
+- Format detection more robust for edge-case filenames
