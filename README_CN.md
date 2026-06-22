@@ -14,7 +14,7 @@
 [![Last Commit](https://img.shields.io/github/last-commit/liesliy/tlabel?label=Last%20Commit)](https://github.com/liesliy/tlabel/commits/main)
 [![English](https://img.shields.io/badge/Docs-English-blue)](README.md)
 
-![TLabel 面板演示](docs/demo_panel.gif)
+![TLabel 面板演示](docs/demo_panel_v050.png)
 
 **GelSight · DIGIT · 帕西尼 · 戴盟 — 一个工具，一种格式，全部传感器**
 
