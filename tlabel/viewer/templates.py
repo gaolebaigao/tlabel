@@ -1033,14 +1033,14 @@ def generate_panel_html(
     // Build table like pandas describe() with i18n
     // i18n keys and their corresponding data keys
     const statKeyMap = [
-      { i18n: 'stats.count', data: 'count' },
-      { i18n: 'stats.mean', data: 'mean' },
-      { i18n: 'stats.std', data: 'std' },
-      { i18n: 'stats.min', data: 'min' },
-      { i18n: 'stats.p25', data: '25%' },
-      { i18n: 'stats.p50', data: '50%' },
-      { i18n: 'stats.p75', data: '75%' },
-      { i18n: 'stats.max', data: 'max' },
+      {{ i18n: 'stats.count', data: 'count' }},
+      {{ i18n: 'stats.mean', data: 'mean' }},
+      {{ i18n: 'stats.std', data: 'std' }},
+      {{ i18n: 'stats.min', data: 'min' }},
+      {{ i18n: 'stats.p25', data: '25%' }},
+      {{ i18n: 'stats.p50', data: '50%' }},
+      {{ i18n: 'stats.p75', data: '75%' }},
+      {{ i18n: 'stats.max', data: 'max' }},
     ];
     const fields = Object.keys(dd);
     
