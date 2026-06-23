@@ -46,7 +46,7 @@ def generate_panel_html(
   <div style="display:flex;align-items:center;gap:10px;">
     <span style="font-size:20px;">🦞</span>
     <span style="font-size:16px;font-weight:700;color:#e85d75;" data-i18n="app.title">TLabel 触觉标注工具</span>
-    <span style="font-size:10px;color:#868e96;background:#e9ecef;padding:1px 6px;border-radius:4px;">v0.5.0</span>
+    <span style="font-size:10px;color:#868e96;background:#e9ecef;padding:1px 6px;border-radius:4px;">v0.5.1</span>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span style="font-size:12px;color:#868e96;" id="{tid}-sensor-info"></span>
@@ -440,6 +440,19 @@ def generate_panel_html(
       'predict.smooth': '时序平滑',
       'predict.hmm': 'HMM解码',
       'predict.cascade': '联动修正',
+      // Stats i18n keys for describe table
+      'stats.count': '计数', 'stats.mean': '均值', 'stats.std': '标准差',
+      'stats.min': '最小值', 'stats.max': '最大值',
+      'stats.p25': '25%分位', 'stats.p50': '中位数', 'stats.p75': '75%分位',
+      // Radar chart i18n labels (dimension names)
+      'dim.contact': '接触', 'dim.deformation': '形变', 'dim.force': '力度',
+      'dim.force_peak': '峰值', 'dim.force_dir': '力向', 'dim.slip_entropy': '滑熵',
+      'dim.slip_event': '滑移', 'dim.texture': '纹理', 'dim.edge': '边缘',
+      'dim.contact_area': '面积', 'dim.centroid_x': '质心', 'dim.normal_mag': '法向',
+      'dim.normal_var': '法向变化', 'dim.shear_mag': '剪切', 'dim.shear_dir': '剪切向',
+      'dim.delta_fn': 'Δ法向', 'dim.delta_fs': 'Δ剪切', 'dim.friction': '摩擦',
+      'dim.flow_mag': '流速', 'dim.flow_dir': '流向', 'dim.deform_rate': '形变速',
+      'dim.transition': '相变',
     }},
     'en': {{
       'app.title': 'TLabel Tactile Annotation',
@@ -494,6 +507,19 @@ def generate_panel_html(
       'predict.smooth': 'Temporal Smooth',
       'predict.hmm': 'HMM Decode',
       'predict.cascade': 'Cascade Fix',
+      // Stats i18n keys for describe table
+      'stats.count': 'count', 'stats.mean': 'mean', 'stats.std': 'std',
+      'stats.min': 'min', 'stats.max': 'max',
+      'stats.p25': '25%', 'stats.p50': '50%', 'stats.p75': '75%',
+      // Radar chart i18n labels (dimension names)
+      'dim.contact': 'Contact', 'dim.deformation': 'Deform', 'dim.force': 'Force',
+      'dim.force_peak': 'Peak', 'dim.force_dir': 'Force Dir', 'dim.slip_entropy': 'Slip Ent',
+      'dim.slip_event': 'Slip', 'dim.texture': 'Texture', 'dim.edge': 'Edge',
+      'dim.contact_area': 'Area', 'dim.centroid_x': 'Centroid', 'dim.normal_mag': 'Normal',
+      'dim.normal_var': 'Norm Var', 'dim.shear_mag': 'Shear', 'dim.shear_dir': 'Shear Dir',
+      'dim.delta_fn': 'ΔNormal', 'dim.delta_fs': 'ΔShear', 'dim.friction': 'Friction',
+      'dim.flow_mag': 'Flow', 'dim.flow_dir': 'Flow Dir', 'dim.deform_rate': 'Def Rate',
+      'dim.transition': 'Transition',
     }}
   }};
 
@@ -593,10 +619,17 @@ def generate_panel_html(
   }}
 
   // ===== Radar Chart =====
-  const radarLabels = ['contact','deformation','force','force_peak','force_dir',
-    'slip_entropy','slip_event','texture','edge','contact_area','centroid_x',
-    'normal_mag','normal_var','shear_mag','shear_dir',
-    'delta_fn','delta_fs','friction','flow_mag','flow_dir','deform_rate','transition'];
+  // i18n keys for radar labels (mapped to dim.* keys in I18N)
+  const radarLabelKeys = ['dim.contact','dim.deformation','dim.force','dim.force_peak','dim.force_dir',
+    'dim.slip_entropy','dim.slip_event','dim.texture','dim.edge','dim.contact_area','dim.centroid_x',
+    'dim.normal_mag','dim.normal_var','dim.shear_mag','dim.shear_dir',
+    'dim.delta_fn','dim.delta_fs','dim.friction','dim.flow_mag','dim.flow_dir','dim.deform_rate','dim.transition'];
+  // Original keys for data access
+  const radarDataKeys = ['contact','deformation_magnitude','force_magnitude','force_peak','force_direction',
+    'slip_entropy','slip_event','texture_energy','edge_density','contact_area','centroid_x',
+    'normal_field_magnitude','normal_field_variance','shear_field_magnitude','shear_field_direction',
+    'delta_force_normal','delta_force_shear','friction_cone_ratio','optical_flow_magnitude',
+    'optical_flow_direction','temporal_deformation_rate','contact_transition'];
 
   function drawRadar(tv2) {{
     const canvas = document.getElementById(tid + '-radar');
@@ -606,8 +639,8 @@ def generate_panel_html(
     ctx.clearRect(0, 0, W, H);
 
     const cx = W / 2, cy = H / 2, R = 130;
-    const n = radarLabels.length;
-    const values = radarLabels.map(k => {{
+    const n = radarLabelKeys.length;
+    const values = radarDataKeys.map(k => {{
       const v = tv2[k] || 0;
       return Math.min(Math.max(v, 0), 1);
     }});
@@ -642,7 +675,7 @@ def generate_panel_html(
       if (deg > 5 && deg < 175) ctx.textAlign = 'left';
       else if (deg > 185 && deg < 355) ctx.textAlign = 'right';
       else ctx.textAlign = 'center';
-      ctx.fillText(radarLabels[i], lx, ly);
+      ctx.fillText(t(radarLabelKeys[i]), lx, ly);
     }}
 
     // Data polygon
@@ -877,12 +910,28 @@ def generate_panel_html(
     // Also update local episodeInfo for display
     Object.assign(episodeInfo, data.episode_info);
 
-    // Show status
+    // Disable button to prevent double-click
+    const btn = document.getElementById(tid + '-btn-episode-apply');
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+    btn.style.cursor = 'not-allowed';
+
+    // Show status with detailed message
     const statusEl = document.getElementById(tid + '-episode-status');
-    statusEl.textContent = '✅ ' + t('episode.saved');
+    const savedMsg = currentLang === 'zh-CN' 
+      ? 'Episode标注已保存（将随导出数据一起输出）'
+      : 'Episode labels saved (will be exported with data)';
+    statusEl.textContent = '✅ ' + savedMsg;
     statusEl.style.color = '#51cf66';
     statusEl.style.display = 'inline';
-    setTimeout(() => {{ statusEl.style.display = 'none'; }}, 2000);
+
+    // Re-enable button and hide status after 4 seconds
+    setTimeout(() => {{
+      statusEl.style.display = 'none';
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      btn.style.cursor = 'pointer';
+    }}, 4000);
 
     renderEpisodeInfo();
   }}
@@ -923,16 +972,22 @@ def generate_panel_html(
       return;
     }}
 
+    // Colors for light/dark mode
+    const textColor = isDark ? '#c0caf5' : '#343a40';
+    const borderColor = isDark ? '#3b4261' : '#f1f3f5';
+
     // Overall
-    document.getElementById(tid + '-quality-overall').textContent = q.overall.toFixed(1);
+    const overallEl = document.getElementById(tid + '-quality-overall');
+    overallEl.textContent = q.overall.toFixed(1);
+    overallEl.style.color = textColor;
 
     // Grade badge
     const grade = q.grade || '-';
     const gradeColors = {{ 'A': '#51cf66', 'B': '#4dabf7', 'C': '#ffd43b', 'D': '#ff922b', 'F': '#ff6b6b' }};
     const badge = document.getElementById(tid + '-quality-grade-badge');
     badge.textContent = grade;
-    badge.style.background = gradeColors[grade] || '#e9ecef';
-    badge.style.color = (grade === 'C' || grade === 'D') ? '#343a40' : '#fff';
+    badge.style.background = gradeColors[grade] || (isDark ? '#3b4261' : '#e9ecef');
+    badge.style.color = (grade === 'C' || grade === 'D') ? textColor : '#fff';
 
     // Dimension bars
     const dims = [
@@ -943,14 +998,16 @@ def generate_panel_html(
     ];
     for (const d of dims) {{
       const val = q[d.key] || 0;
-      document.getElementById(tid + '-q-' + d.el).textContent = val.toFixed(1);
-      document.getElementById(tid + '-q-' + d.el + '-bar').style.width = val + '%';
+      const valEl = document.getElementById(tid + '-q-' + d.el);
+      if (valEl) valEl.textContent = val.toFixed(1);
+      const barEl = document.getElementById(tid + '-q-' + d.el + '-bar');
+      if (barEl) barEl.style.width = val + '%';
     }}
 
     // Warnings
     const warnEl = document.getElementById(tid + '-quality-warnings');
     if (q.warnings && q.warnings.length > 0) {{
-      warnEl.innerHTML = q.warnings.map(w => `<div style="padding:4px 0;border-bottom:1px solid #f1f3f5;">⚠️ ${{w}}</div>`).join('');
+      warnEl.innerHTML = q.warnings.map(w => `<div style="padding:4px 0;border-bottom:1px solid ${{borderColor}};color:${{textColor}};">⚠️ ${{w}}</div>`).join('');
     }} else {{
       warnEl.innerHTML = `<span style="color:#51cf66;">✅ ${{t('quality.noWarnings')}}</span>`;
     }}
@@ -966,23 +1023,41 @@ def generate_panel_html(
       return;
     }}
 
-    // Build table like pandas describe()
-    const statKeys = ['count', 'mean', 'std', 'min', '25%', '50%', '75%', 'max'];
+    // Colors for light/dark mode
+    const labelColor = isDark ? '#565f89' : '#868e96';
+    const borderColor = isDark ? '#3b4261' : '#dee2e6';
+    const headerColor = isDark ? '#c0caf5' : '#495057';
+    const textColor = isDark ? '#c0caf5' : '#343a40';
+    const rowBg = isDark ? '#1f2335' : '#f1f3f5';
+
+    // Build table like pandas describe() with i18n
+    // i18n keys and their corresponding data keys
+    const statKeyMap = [
+      { i18n: 'stats.count', data: 'count' },
+      { i18n: 'stats.mean', data: 'mean' },
+      { i18n: 'stats.std', data: 'std' },
+      { i18n: 'stats.min', data: 'min' },
+      { i18n: 'stats.p25', data: '25%' },
+      { i18n: 'stats.p50', data: '50%' },
+      { i18n: 'stats.p75', data: '75%' },
+      { i18n: 'stats.max', data: 'max' },
+    ];
     const fields = Object.keys(dd);
     
-    let html = '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
-    html += '<thead><tr><th style="padding:6px 10px;text-align:left;border-bottom:2px solid #dee2e6;color:#868e96;"></th>';
+    let html = `<table style="width:100%;border-collapse:collapse;font-size:12px;color:${{textColor}};">`;
+    html += `<thead><tr><th style="padding:6px 10px;text-align:left;border-bottom:2px solid ${{borderColor}};color:${{labelColor}};"></th>`;
     for (const f of fields) {{
-      html += `<th style="padding:6px 10px;text-align:right;border-bottom:2px solid #dee2e6;color:#495057;">${{f}}</th>`;
+      const fieldName = t('dim.' + f) || f;
+      html += `<th style="padding:6px 10px;text-align:right;border-bottom:2px solid ${{borderColor}};color:${{headerColor}};">${{fieldName}}</th>`;
     }}
     html += '</tr></thead><tbody>';
     
-    for (const sk of statKeys) {{
-      html += `<tr><td style="padding:5px 10px;border-bottom:1px solid #f1f3f5;color:#868e96;font-weight:600;">${{sk}}</td>`;
+    for (const skm of statKeyMap) {{
+      html += `<tr><td style="padding:5px 10px;border-bottom:1px solid ${{borderColor}};color:${{labelColor}};font-weight:600;">${{t(skm.i18n)}}</td>`;
       for (const f of fields) {{
-        const val = dd[f][sk];
+        const val = dd[f][skm.data];
         const display = (val !== undefined && val !== null) ? (typeof val === 'number' ? val.toFixed(4) : val) : '-';
-        html += `<td style="padding:5px 10px;text-align:right;border-bottom:1px solid #f1f3f5;color:#343a40;">${{display}}</td>`;
+        html += `<td style="padding:5px 10px;text-align:right;border-bottom:1px solid ${{rowBg}};color:${{textColor}};">${{display}}</td>`;
       }}
       html += '</tr>';
     }}
@@ -1048,12 +1123,18 @@ def generate_panel_html(
       rootEl.querySelectorAll('th, td').forEach(el => {{
         el.style.borderColor = '#3b4261'; el.style.color = '#c0caf5';
       }});
+      // Re-render quality and stats tabs for dark mode colors
+      renderQuality();
+      renderDescribe();
     }} else {{
       btn.textContent = '🌙';
       rootEl.style.background = '#f8f9fa';
       rootEl.style.color = '#343a40';
       updateStats();
       showFrame(currentFrameIdx);
+      // Re-render quality and stats tabs for light mode colors
+      renderQuality();
+      renderDescribe();
     }}
   }}
 
