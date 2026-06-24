@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.6.0] - 2026-06-24
+
+### Added
+- **ToucHD-Force adapter** (`tlabel/adapters/touchd.py`) - AnyTouch 2 (ICLR 2026)
+  - 4 sensors: DIGIT, BioTip, GelSight, DuraGel
+  - 3D contact force ground truth (Fx, Fy, Fz) with sensor-specific normalization
+  - Action labels (press, slide, etc.) + left/right hand image selection
+  - 22-dim TLabel v2 feature extraction + force-driven slip detection
+  - Optical flow computation (Farneback) when cv2 available
+  - Manipulation phase inference (idle -> initial_contact -> stable_contact -> slip -> release)
+- Auto-detect ToucHD directories (via `all_data_direction.json`)
+- `tlabel.load()` now supports `format="touchd"` with `sensor`, `obj_id`, `hand` params
+- `pip install tlabel[touchd]` optional dependency group
+
+
 All notable changes to TLabel will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
