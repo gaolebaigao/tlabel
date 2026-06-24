@@ -13,7 +13,7 @@ from tlabel.core.types import TLabelData, TLabelFrame
 _DEMO_DIR = Path(__file__).parent / "demo_data"
 
 # 可用的Demo传感器列表
-AVAILABLE_SENSORS = ["gelsight", "digit", "paxini", "daimon"]
+AVAILABLE_SENSORS = ["gelsight", "digit", "paxini", "daimon", "touchd"]
 
 
 def demo(sensor: Optional[str] = None, **kwargs) -> TLabelData:
@@ -21,7 +21,7 @@ def demo(sensor: Optional[str] = None, **kwargs) -> TLabelData:
     加载内置Demo数据集，快速体验TLabel标注面板
 
     参数:
-        sensor: 传感器类型，可选 "gelsight" / "digit" / "paxini" / "daimon"
+        sensor: 传感器类型，可选 "gelsight" / "digit" / "paxini" / "daimon" / "touchd"
                 不传则默认加载 gelsight demo
 
     返回:
@@ -31,7 +31,7 @@ def demo(sensor: Optional[str] = None, **kwargs) -> TLabelData:
         import tlabel
         data = tlabel.demo()              # 默认GelSight demo
         data = tlabel.demo('digit')       # DIGIT demo
-        data = tlabel.demo('paxini')      # 帕西尼 demo
+        data = tlabel.demo('touchd')      # ToucHD-Force demo
         data.review()                     # Jupyter弹出面板
     """
     if sensor is None:

@@ -1,0 +1,5349 @@
+{
+  "schema_version": "0.4.0",
+  "format": "tlabel",
+  "tlabel_dimensions": 22,
+  "sensor": {
+    "type": "vision-based_tactile",
+    "model": "ToucHD-Force (AnyTouch 2, ICLR 2026)",
+    "source": "BAAI/ToucHD-Force",
+    "tier": "Tier 1 — Physical Dynamics (Touch-Force Paired)"
+  },
+  "episode": {
+    "description": "ToucHD-Force DIGIT sensor, object 6, speed 1, right hand, press action",
+    "num_frames": 100,
+    "duration_s": 3.33,
+    "fps": 30,
+    "stats": {
+      "total_samples": 100,
+      "contact_frames": 75,
+      "contact_ratio": 0.75,
+      "slip_frames": 10
+    }
+  },
+  "capabilities": {
+    "contact": true,
+    "deformation_magnitude": true,
+    "force_magnitude": true,
+    "force_peak": true,
+    "force_direction": true,
+    "slip_entropy": true,
+    "slip_event": true,
+    "texture_energy": true,
+    "edge_density": true,
+    "contact_area": true,
+    "centroid_x": true,
+    "normal_field_magnitude": true,
+    "normal_field_variance": true,
+    "shear_field_magnitude": true,
+    "shear_field_direction": true,
+    "delta_force_normal": true,
+    "delta_force_shear": true,
+    "friction_cone_ratio": true,
+    "optical_flow_magnitude": true,
+    "optical_flow_direction": true,
+    "temporal_deformation_rate": true,
+    "contact_transition": true
+  },
+  "frames": [
+    {
+      "frame_idx": 0,
+      "timestamp_s": 0.0,
+      "tlabel_v2": {
+        "contact": 0.0,
+        "deformation_magnitude": 0.0099,
+        "force_magnitude": 0.0,
+        "force_peak": 0,
+        "force_direction": 0.0,
+        "slip_entropy": 0.1,
+        "slip_event": 0,
+        "texture_energy": 0.0065,
+        "edge_density": 0.0076,
+        "contact_area": 0,
+        "centroid_x": 0.5,
+        "normal_field_magnitude": 0,
+        "normal_field_variance": 0.0079,
+        "shear_field_magnitude": 0.0038,
+        "shear_field_direction": 0.0,
+        "delta_force_normal": 0.0,
+        "delta_force_shear": 0.0,
+        "friction_cone_ratio": 3.8372,
+        "optical_flow_magnitude": 0.0,
+        "optical_flow_direction": 0.0,
+        "temporal_deformation_rate": 0.0,
+        "contact_transition": 0.0
+      },
+      "manipulation_phase": "idle",
+      "confidence": 0.9,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "force_xyz_raw_N": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 82,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 1,
+      "timestamp_s": 0.0333,
+      "tlabel_v2": {
+        "contact": 0.0,
+        "deformation_magnitude": 0,
+        "force_magnitude": 0.0,
+        "force_peak": 0.0054,
+        "force_direction": 0.0,
+        "slip_entropy": 0.1,
+        "slip_event": 0,
+        "texture_energy": 0,
+        "edge_density": 0,
+        "contact_area": 0.0024,
+        "centroid_x": 0.51,
+        "normal_field_magnitude": 0,
+        "normal_field_variance": 0,
+        "shear_field_magnitude": 0,
+        "shear_field_direction": 0.0,
+        "delta_force_normal": 0.0203,
+        "delta_force_shear": 0.0031,
+        "friction_cone_ratio": -2.8114,
+        "optical_flow_magnitude": 0.0,
+        "optical_flow_direction": 0.0,
+        "temporal_deformation_rate": 0.2026,
+        "contact_transition": 0.1013
+      },
+      "manipulation_phase": "idle",
+      "confidence": 0.9,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "force_xyz_raw_N": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 92,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 2,
+      "timestamp_s": 0.0667,
+      "tlabel_v2": {
+        "contact": 0.0,
+        "deformation_magnitude": 0,
+        "force_magnitude": 0.0,
+        "force_peak": 0,
+        "force_direction": 0.0,
+        "slip_entropy": 0.1,
+        "slip_event": 0,
+        "texture_energy": 0.0147,
+        "edge_density": 0,
+        "contact_area": 0.0007,
+        "centroid_x": 0.5199,
+        "normal_field_magnitude": 0,
+        "normal_field_variance": 0,
+        "shear_field_magnitude": 0.0006,
+        "shear_field_direction": 0.0,
+        "delta_force_normal": 0.023,
+        "delta_force_shear": 0.0038,
+        "friction_cone_ratio": 0.5546,
+        "optical_flow_magnitude": 0.0,
+        "optical_flow_direction": 0.0,
+        "temporal_deformation_rate": 0.2302,
+        "contact_transition": 0.1151
+      },
+      "manipulation_phase": "idle",
+      "confidence": 0.9,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "force_xyz_raw_N": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 102,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 3,
+      "timestamp_s": 0.1,
+      "tlabel_v2": {
+        "contact": 0.0,
+        "deformation_magnitude": 0,
+        "force_magnitude": 0.0,
+        "force_peak": 0,
+        "force_direction": 0.0,
+        "slip_entropy": 0.1,
+        "slip_event": 0,
+        "texture_energy": 0,
+        "edge_density": 0.0093,
+        "contact_area": 0,
+        "centroid_x": 0.5296,
+        "normal_field_magnitude": 0,
+        "normal_field_variance": 0.0041,
+        "shear_field_magnitude": 0,
+        "shear_field_direction": 0.0,
+        "delta_force_normal": 0.0042,
+        "delta_force_shear": 0.0196,
+        "friction_cone_ratio": -6.1042,
+        "optical_flow_magnitude": 0.0,
+        "optical_flow_direction": 0.0,
+        "temporal_deformation_rate": 0.0418,
+        "contact_transition": 0.0209
+      },
+      "manipulation_phase": "idle",
+      "confidence": 0.9,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "force_xyz_raw_N": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 112,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 4,
+      "timestamp_s": 0.1333,
+      "tlabel_v2": {
+        "contact": 0.0,
+        "deformation_magnitude": 0,
+        "force_magnitude": 0.0,
+        "force_peak": 0.002,
+        "force_direction": 0.0,
+        "slip_entropy": 0.1,
+        "slip_event": 0,
+        "texture_energy": 0.0074,
+        "edge_density": 0.0009,
+        "contact_area": 0,
+        "centroid_x": 0.5389,
+        "normal_field_magnitude": 0,
+        "normal_field_variance": 0,
+        "shear_field_magnitude": 0,
+        "shear_field_direction": 0.0,
+        "delta_force_normal": 0.0092,
+        "delta_force_shear": 0.0106,
+        "friction_cone_ratio": -3.5992,
+        "optical_flow_magnitude": 0.0,
+        "optical_flow_direction": 0.0,
+        "temporal_deformation_rate": 0.0921,
+        "contact_transition": 0.0461
+      },
+      "manipulation_phase": "idle",
+      "confidence": 0.9,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "force_xyz_raw_N": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 122,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 5,
+      "timestamp_s": 0.1667,
+      "tlabel_v2": {
+        "contact": 0.0,
+        "deformation_magnitude": 0.0069,
+        "force_magnitude": 0.0,
+        "force_peak": 0,
+        "force_direction": 0.0,
+        "slip_entropy": 0.1,
+        "slip_event": 0,
+        "texture_energy": 0.0032,
+        "edge_density": 0,
+        "contact_area": 0,
+        "centroid_x": 0.5479,
+        "normal_field_magnitude": 0.0061,
+        "normal_field_variance": 0.0052,
+        "shear_field_magnitude": 0.0047,
+        "shear_field_direction": 0.0,
+        "delta_force_normal": 0.0168,
+        "delta_force_shear": 0.0031,
+        "friction_cone_ratio": 0.7613,
+        "optical_flow_magnitude": 0.0,
+        "optical_flow_direction": 0.0,
+        "temporal_deformation_rate": 0.1678,
+        "contact_transition": 0.0839
+      },
+      "manipulation_phase": "idle",
+      "confidence": 0.9,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "force_xyz_raw_N": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 132,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 6,
+      "timestamp_s": 0.2,
+      "tlabel_v2": {
+        "contact": 0.0,
+        "deformation_magnitude": 0.0066,
+        "force_magnitude": 0.0,
+        "force_peak": 0.0098,
+        "force_direction": 0.0,
+        "slip_entropy": 0.1,
+        "slip_event": 0,
+        "texture_energy": 0,
+        "edge_density": 0,
+        "contact_area": 0,
+        "centroid_x": 0.5565,
+        "normal_field_magnitude": 0,
+        "normal_field_variance": 0.0041,
+        "shear_field_magnitude": 0.0068,
+        "shear_field_direction": 0.0,
+        "delta_force_normal": 0.0014,
+        "delta_force_shear": 0.01,
+        "friction_cone_ratio": 6.7812,
+        "optical_flow_magnitude": 0.0,
+        "optical_flow_direction": 0.0,
+        "temporal_deformation_rate": 0.0144,
+        "contact_transition": 0.0072
+      },
+      "manipulation_phase": "idle",
+      "confidence": 0.9,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "force_xyz_raw_N": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 142,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 7,
+      "timestamp_s": 0.2333,
+      "tlabel_v2": {
+        "contact": 0.0,
+        "deformation_magnitude": 0.0072,
+        "force_magnitude": 0.0,
+        "force_peak": 0,
+        "force_direction": 0.0,
+        "slip_entropy": 0.1,
+        "slip_event": 0,
+        "texture_energy": 0.0036,
+        "edge_density": 0.0077,
+        "contact_area": 0,
+        "centroid_x": 0.5644,
+        "normal_field_magnitude": 0.0156,
+        "normal_field_variance": 0,
+        "shear_field_magnitude": 0.0041,
+        "shear_field_direction": 0.0,
+        "delta_force_normal": 0.0017,
+        "delta_force_shear": 0.003,
+        "friction_cone_ratio": 0.2626,
+        "optical_flow_magnitude": 0.0,
+        "optical_flow_direction": 0.0,
+        "temporal_deformation_rate": 0.0174,
+        "contact_transition": 0.0087
+      },
+      "manipulation_phase": "idle",
+      "confidence": 0.9,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "force_xyz_raw_N": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 152,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 8,
+      "timestamp_s": 0.2667,
+      "tlabel_v2": {
+        "contact": 0.0,
+        "deformation_magnitude": 0.0018,
+        "force_magnitude": 0.0,
+        "force_peak": 0,
+        "force_direction": 0.0,
+        "slip_entropy": 0.1,
+        "slip_event": 0,
+        "texture_energy": 0,
+        "edge_density": 0.0018,
+        "contact_area": 0.0148,
+        "centroid_x": 0.5717,
+        "normal_field_magnitude": 0,
+        "normal_field_variance": 0,
+        "shear_field_magnitude": 0,
+        "shear_field_direction": -0.0,
+        "delta_force_normal": 0.0183,
+        "delta_force_shear": 0.0033,
+        "friction_cone_ratio": -2.5088,
+        "optical_flow_magnitude": 0.0,
+        "optical_flow_direction": 0.0,
+        "temporal_deformation_rate": 0.1831,
+        "contact_transition": 0.0915
+      },
+      "manipulation_phase": "idle",
+      "confidence": 0.9,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0,
+          -0.0,
+          0.0
+        ],
+        "force_xyz_raw_N": [
+          0.0,
+          -0.0,
+          0.0
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 162,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 9,
+      "timestamp_s": 0.3,
+      "tlabel_v2": {
+        "contact": 0.0,
+        "deformation_magnitude": 0,
+        "force_magnitude": 0.0,
+        "force_peak": 0.0051,
+        "force_direction": 0.0,
+        "slip_entropy": 0.1,
+        "slip_event": 0,
+        "texture_energy": 0.001,
+        "edge_density": 0.0048,
+        "contact_area": 0,
+        "centroid_x": 0.5783,
+        "normal_field_magnitude": 0,
+        "normal_field_variance": 0,
+        "shear_field_magnitude": 0,
+        "shear_field_direction": -0.0,
+        "delta_force_normal": 0.0059,
+        "delta_force_shear": 0.0026,
+        "friction_cone_ratio": -7.3176,
+        "optical_flow_magnitude": 0.0,
+        "optical_flow_direction": 0.0,
+        "temporal_deformation_rate": 0.0592,
+        "contact_transition": 0.0296
+      },
+      "manipulation_phase": "idle",
+      "confidence": 0.9,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0,
+          -0.0,
+          0.0
+        ],
+        "force_xyz_raw_N": [
+          0.0,
+          -0.0,
+          0.0
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 172,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 10,
+      "timestamp_s": 0.3333,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.0001,
+        "force_magnitude": 0.0,
+        "force_peak": 0,
+        "force_direction": 0.0,
+        "slip_entropy": 2.3585,
+        "slip_event": 0.012,
+        "texture_energy": 0,
+        "edge_density": 0.0023,
+        "contact_area": 0,
+        "centroid_x": 0.5841,
+        "normal_field_magnitude": 0.0021,
+        "normal_field_variance": 0,
+        "shear_field_magnitude": 0,
+        "shear_field_direction": -0.0,
+        "delta_force_normal": 0.0281,
+        "delta_force_shear": 0.0002,
+        "friction_cone_ratio": -2.1938,
+        "optical_flow_magnitude": 0.8368,
+        "optical_flow_direction": 108.32,
+        "temporal_deformation_rate": 0.2808,
+        "contact_transition": 0.1404
+      },
+      "manipulation_phase": "initial_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0,
+          -0.0,
+          0.0
+        ],
+        "force_xyz_raw_N": [
+          0.0,
+          -0.0,
+          0.0
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 182,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 11,
+      "timestamp_s": 0.3667,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.0412,
+        "force_magnitude": 0.05,
+        "force_peak": 0.0846,
+        "force_direction": -101.25,
+        "slip_entropy": 2.4808,
+        "slip_event": 0.0145,
+        "texture_energy": 0.018,
+        "edge_density": 0.0117,
+        "contact_area": 0.0299,
+        "centroid_x": 0.5891,
+        "normal_field_magnitude": 0.0427,
+        "normal_field_variance": 0.0018,
+        "shear_field_magnitude": 0.0002,
+        "shear_field_direction": -111.9,
+        "delta_force_normal": 0.0155,
+        "delta_force_shear": 0.008,
+        "friction_cone_ratio": 0.0058,
+        "optical_flow_magnitude": 0.692,
+        "optical_flow_direction": 227.63,
+        "temporal_deformation_rate": 0.1546,
+        "contact_transition": 0.0773
+      },
+      "manipulation_phase": "initial_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.0012,
+          -0.0029,
+          0.05
+        ],
+        "force_xyz_raw_N": [
+          -0.0062,
+          -0.0312,
+          0.707
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 192,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 12,
+      "timestamp_s": 0.4,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.0917,
+        "force_magnitude": 0.1,
+        "force_peak": 0.1419,
+        "force_direction": -114.01,
+        "slip_entropy": 2.4009,
+        "slip_event": 0.0041,
+        "texture_energy": 0.0243,
+        "edge_density": 0.0285,
+        "contact_area": 0.0687,
+        "centroid_x": 0.5932,
+        "normal_field_magnitude": 0.0701,
+        "normal_field_variance": 0.0132,
+        "shear_field_magnitude": 0.0173,
+        "shear_field_direction": -131.99,
+        "delta_force_normal": 0.0245,
+        "delta_force_shear": 0.0054,
+        "friction_cone_ratio": 0.2462,
+        "optical_flow_magnitude": 0.4573,
+        "optical_flow_direction": 139.22,
+        "temporal_deformation_rate": 0.2446,
+        "contact_transition": 0.1223
+      },
+      "manipulation_phase": "initial_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.0066,
+          -0.0074,
+          0.1
+        ],
+        "force_xyz_raw_N": [
+          -0.0348,
+          -0.0782,
+          1.414
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 202,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 13,
+      "timestamp_s": 0.4333,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.1043,
+        "force_magnitude": 0.15,
+        "force_peak": 0.1768,
+        "force_direction": -120.78,
+        "slip_entropy": 2.5814,
+        "slip_event": 0.0817,
+        "texture_energy": 0.0327,
+        "edge_density": 0.0368,
+        "contact_area": 0.1154,
+        "centroid_x": 0.5964,
+        "normal_field_magnitude": 0.1018,
+        "normal_field_variance": 0.0215,
+        "shear_field_magnitude": 0.0211,
+        "shear_field_direction": -140.29,
+        "delta_force_normal": 0.0238,
+        "delta_force_shear": 0.013,
+        "friction_cone_ratio": 0.2076,
+        "optical_flow_magnitude": 0.4336,
+        "optical_flow_direction": 322.96,
+        "temporal_deformation_rate": 0.2381,
+        "contact_transition": 0.1191
+      },
+      "manipulation_phase": "initial_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.0155,
+          -0.0129,
+          0.15
+        ],
+        "force_xyz_raw_N": [
+          -0.0812,
+          -0.1364,
+          2.121
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 212,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 14,
+      "timestamp_s": 0.4667,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.165,
+        "force_magnitude": 0.2,
+        "force_peak": 0.2435,
+        "force_direction": -124.47,
+        "slip_entropy": 2.432,
+        "slip_event": 0.0162,
+        "texture_energy": 0.0623,
+        "edge_density": 0.0411,
+        "contact_area": 0.1285,
+        "centroid_x": 0.5985,
+        "normal_field_magnitude": 0.1417,
+        "normal_field_variance": 0.0239,
+        "shear_field_magnitude": 0.0502,
+        "shear_field_direction": -144.22,
+        "delta_force_normal": 0.0265,
+        "delta_force_shear": 0.0073,
+        "friction_cone_ratio": 0.3544,
+        "optical_flow_magnitude": 0.4772,
+        "optical_flow_direction": 85.41,
+        "temporal_deformation_rate": 0.265,
+        "contact_transition": 0.1325
+      },
+      "manipulation_phase": "initial_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.0261,
+          -0.0188,
+          0.2
+        ],
+        "force_xyz_raw_N": [
+          -0.1373,
+          -0.1999,
+          2.828
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 222,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 15,
+      "timestamp_s": 0.5,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.2232,
+        "force_magnitude": 0.25,
+        "force_peak": 0.2918,
+        "force_direction": -126.24,
+        "slip_entropy": 2.5963,
+        "slip_event": 0.0658,
+        "texture_energy": 0.0791,
+        "edge_density": 0.0457,
+        "contact_area": 0.1515,
+        "centroid_x": 0.5997,
+        "normal_field_magnitude": 0.1613,
+        "normal_field_variance": 0.0336,
+        "shear_field_magnitude": 0.0658,
+        "shear_field_direction": -145.97,
+        "delta_force_normal": 0.0048,
+        "delta_force_shear": 0.0121,
+        "friction_cone_ratio": 0.4079,
+        "optical_flow_magnitude": 0.269,
+        "optical_flow_direction": 180.95,
+        "temporal_deformation_rate": 0.0479,
+        "contact_transition": 0.024
+      },
+      "manipulation_phase": "initial_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.0367,
+          -0.0247,
+          0.25
+        ],
+        "force_xyz_raw_N": [
+          -0.1925,
+          -0.2626,
+          3.535
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 232,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 16,
+      "timestamp_s": 0.5333,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.2347,
+        "force_magnitude": 0.3,
+        "force_peak": 0.3872,
+        "force_direction": -126.53,
+        "slip_entropy": 2.5626,
+        "slip_event": 0.0281,
+        "texture_energy": 0.0814,
+        "edge_density": 0.0602,
+        "contact_area": 0.1786,
+        "centroid_x": 0.6,
+        "normal_field_magnitude": 0.2088,
+        "normal_field_variance": 0.0487,
+        "shear_field_magnitude": 0.0725,
+        "shear_field_direction": -146.25,
+        "delta_force_normal": 0.0155,
+        "delta_force_shear": 0.0105,
+        "friction_cone_ratio": 0.3474,
+        "optical_flow_magnitude": 0.1711,
+        "optical_flow_direction": 114.09,
+        "temporal_deformation_rate": 0.1554,
+        "contact_transition": 0.0777
+      },
+      "manipulation_phase": "initial_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.0448,
+          -0.0299,
+          0.3
+        ],
+        "force_xyz_raw_N": [
+          -0.2353,
+          -0.3178,
+          4.242
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 242,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 17,
+      "timestamp_s": 0.5667,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.2843,
+        "force_magnitude": 0.35,
+        "force_peak": 0.4075,
+        "force_direction": -125.4,
+        "slip_entropy": 2.5173,
+        "slip_event": 0.057,
+        "texture_energy": 0.1089,
+        "edge_density": 0.0712,
+        "contact_area": 0.2019,
+        "centroid_x": 0.5992,
+        "normal_field_magnitude": 0.2556,
+        "normal_field_variance": 0.0528,
+        "shear_field_magnitude": 0.0868,
+        "shear_field_direction": -145.16,
+        "delta_force_normal": 0.0213,
+        "delta_force_shear": 0.0096,
+        "friction_cone_ratio": 0.3396,
+        "optical_flow_magnitude": 0.691,
+        "optical_flow_direction": 105.69,
+        "temporal_deformation_rate": 0.2132,
+        "contact_transition": 0.1066
+      },
+      "manipulation_phase": "initial_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.0486,
+          -0.0338,
+          0.35
+        ],
+        "force_xyz_raw_N": [
+          -0.2552,
+          -0.359,
+          4.949
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 252,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 18,
+      "timestamp_s": 0.6,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.3303,
+        "force_magnitude": 0.4,
+        "force_peak": 0.4851,
+        "force_direction": -122.6,
+        "slip_entropy": 2.5515,
+        "slip_event": 0.0798,
+        "texture_energy": 0.1585,
+        "edge_density": 0.0867,
+        "contact_area": 0.2499,
+        "centroid_x": 0.5974,
+        "normal_field_magnitude": 0.2823,
+        "normal_field_variance": 0.0609,
+        "shear_field_magnitude": 0.0765,
+        "shear_field_direction": -142.27,
+        "delta_force_normal": 0.03,
+        "delta_force_shear": 0.0017,
+        "friction_cone_ratio": 0.2709,
+        "optical_flow_magnitude": 0.428,
+        "optical_flow_direction": 12.94,
+        "temporal_deformation_rate": 0.3002,
+        "contact_transition": 0.1501
+      },
+      "manipulation_phase": "initial_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.0464,
+          -0.0359,
+          0.4
+        ],
+        "force_xyz_raw_N": [
+          -0.2434,
+          -0.3806,
+          5.656
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 262,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 19,
+      "timestamp_s": 0.6333,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.4063,
+        "force_magnitude": 0.45,
+        "force_peak": 0.5213,
+        "force_direction": -117.33,
+        "slip_entropy": 2.5686,
+        "slip_event": 0.0031,
+        "texture_energy": 0.1189,
+        "edge_density": 0.0855,
+        "contact_area": 0.2667,
+        "centroid_x": 0.5946,
+        "normal_field_magnitude": 0.3306,
+        "normal_field_variance": 0.0681,
+        "shear_field_magnitude": 0.0755,
+        "shear_field_direction": -136.24,
+        "delta_force_normal": 0.0254,
+        "delta_force_shear": 0.0239,
+        "friction_cone_ratio": 0.2284,
+        "optical_flow_magnitude": 0.9217,
+        "optical_flow_direction": 229.47,
+        "temporal_deformation_rate": 0.2542,
+        "contact_transition": 0.1271
+      },
+      "manipulation_phase": "initial_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.0372,
+          -0.0356,
+          0.45
+        ],
+        "force_xyz_raw_N": [
+          -0.1951,
+          -0.3776,
+          6.363
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 272,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 20,
+      "timestamp_s": 0.6667,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.1779,
+        "force_magnitude": 0.273,
+        "force_peak": 0.3294,
+        "force_direction": -107.6,
+        "slip_entropy": 2.4338,
+        "slip_event": 0.0439,
+        "texture_energy": 0.0904,
+        "edge_density": 0.0507,
+        "contact_area": 0.1804,
+        "centroid_x": 0.5909,
+        "normal_field_magnitude": 0.1877,
+        "normal_field_variance": 0.0394,
+        "shear_field_magnitude": 0.0309,
+        "shear_field_direction": -122.67,
+        "delta_force_normal": 0.0322,
+        "delta_force_shear": 0.0095,
+        "friction_cone_ratio": 0.1644,
+        "optical_flow_magnitude": 0.6332,
+        "optical_flow_direction": 100.78,
+        "temporal_deformation_rate": 0.3224,
+        "contact_transition": 0.1612
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.0114,
+          -0.0178,
+          0.273
+        ],
+        "force_xyz_raw_N": [
+          -0.0601,
+          -0.1893,
+          3.8596
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 282,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 21,
+      "timestamp_s": 0.7,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.2333,
+        "force_magnitude": 0.2385,
+        "force_peak": 0.2966,
+        "force_direction": -88.54,
+        "slip_entropy": 2.3481,
+        "slip_event": 0.0356,
+        "texture_energy": 0.0667,
+        "edge_density": 0.0465,
+        "contact_area": 0.1618,
+        "centroid_x": 0.5863,
+        "normal_field_magnitude": 0.1668,
+        "normal_field_variance": 0.0311,
+        "shear_field_magnitude": 0.0058,
+        "shear_field_direction": -87.06,
+        "delta_force_normal": 0.0021,
+        "delta_force_shear": 0.0199,
+        "friction_cone_ratio": 0.0349,
+        "optical_flow_magnitude": 0.6501,
+        "optical_flow_direction": 221.71,
+        "temporal_deformation_rate": 0.021,
+        "contact_transition": 0.0105
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0006,
+          -0.0117,
+          0.2385
+        ],
+        "force_xyz_raw_N": [
+          0.0032,
+          -0.1241,
+          3.3728
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 292,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 22,
+      "timestamp_s": 0.7333,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.1628,
+        "force_magnitude": 0.2145,
+        "force_peak": 0.2587,
+        "force_direction": -53.04,
+        "slip_entropy": 2.6441,
+        "slip_event": 0.0503,
+        "texture_energy": 0.05,
+        "edge_density": 0.0449,
+        "contact_area": 0.1378,
+        "centroid_x": 0.5808,
+        "normal_field_magnitude": 0.1481,
+        "normal_field_variance": 0.0325,
+        "shear_field_magnitude": 0.0199,
+        "shear_field_direction": -33.33,
+        "delta_force_normal": 0.0025,
+        "delta_force_shear": 0.019,
+        "friction_cone_ratio": 0.134,
+        "optical_flow_magnitude": 0.6403,
+        "optical_flow_direction": 231.58,
+        "temporal_deformation_rate": 0.0252,
+        "contact_transition": 0.0126
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.01,
+          -0.0066,
+          0.2145
+        ],
+        "force_xyz_raw_N": [
+          0.0526,
+          -0.07,
+          3.0333
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 302,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 23,
+      "timestamp_s": 0.7667,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.2042,
+        "force_magnitude": 0.2019,
+        "force_peak": 0.2228,
+        "force_direction": -14.64,
+        "slip_entropy": 2.4848,
+        "slip_event": 0.0961,
+        "texture_energy": 0.0665,
+        "edge_density": 0.0379,
+        "contact_area": 0.1232,
+        "centroid_x": 0.5746,
+        "normal_field_magnitude": 0.1502,
+        "normal_field_variance": 0.028,
+        "shear_field_magnitude": 0.0167,
+        "shear_field_direction": -7.37,
+        "delta_force_normal": 0.0071,
+        "delta_force_shear": 0.0095,
+        "friction_cone_ratio": 0.111,
+        "optical_flow_magnitude": 0.7263,
+        "optical_flow_direction": 315.89,
+        "temporal_deformation_rate": 0.0711,
+        "contact_transition": 0.0355
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0175,
+          -0.0023,
+          0.2019
+        ],
+        "force_xyz_raw_N": [
+          0.092,
+          -0.024,
+          2.8548
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 312,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 24,
+      "timestamp_s": 0.8,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.1772,
+        "force_magnitude": 0.2012,
+        "force_peak": 0.2477,
+        "force_direction": 8.45,
+        "slip_entropy": 2.4171,
+        "slip_event": 0.0751,
+        "texture_energy": 0.0547,
+        "edge_density": 0.0313,
+        "contact_area": 0.1085,
+        "centroid_x": 0.5675,
+        "normal_field_magnitude": 0.1341,
+        "normal_field_variance": 0.036,
+        "shear_field_magnitude": 0.0335,
+        "shear_field_direction": 4.2,
+        "delta_force_normal": 0.0088,
+        "delta_force_shear": 0.0041,
+        "friction_cone_ratio": 0.2496,
+        "optical_flow_magnitude": 0.1308,
+        "optical_flow_direction": 324.92,
+        "temporal_deformation_rate": 0.0879,
+        "contact_transition": 0.044
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0239,
+          0.0018,
+          0.2012
+        ],
+        "force_xyz_raw_N": [
+          0.1257,
+          0.0187,
+          2.8443
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 322,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 25,
+      "timestamp_s": 0.8333,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.196,
+        "force_magnitude": 0.2123,
+        "force_peak": 0.255,
+        "force_direction": 22.17,
+        "slip_entropy": 2.5682,
+        "slip_event": 0.0389,
+        "texture_energy": 0.0606,
+        "edge_density": 0.0411,
+        "contact_area": 0.1213,
+        "centroid_x": 0.5598,
+        "normal_field_magnitude": 0.1677,
+        "normal_field_variance": 0.0372,
+        "shear_field_magnitude": 0.0269,
+        "shear_field_direction": 11.4,
+        "delta_force_normal": 0.0089,
+        "delta_force_shear": 0.012,
+        "friction_cone_ratio": 0.1606,
+        "optical_flow_magnitude": 0.5983,
+        "optical_flow_direction": 270.85,
+        "temporal_deformation_rate": 0.0894,
+        "contact_transition": 0.0447
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0299,
+          0.006,
+          0.2123
+        ],
+        "force_xyz_raw_N": [
+          0.1568,
+          0.0639,
+          3.0022
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 332,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 26,
+      "timestamp_s": 0.8667,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.2005,
+        "force_magnitude": 0.235,
+        "force_peak": 0.2882,
+        "force_direction": 32.3,
+        "slip_entropy": 2.4988,
+        "slip_event": 0.0058,
+        "texture_energy": 0.0615,
+        "edge_density": 0.0365,
+        "contact_area": 0.1587,
+        "centroid_x": 0.5516,
+        "normal_field_magnitude": 0.1614,
+        "normal_field_variance": 0.0393,
+        "shear_field_magnitude": 0.0493,
+        "shear_field_direction": 17.37,
+        "delta_force_normal": 0.0272,
+        "delta_force_shear": 0.0043,
+        "friction_cone_ratio": 0.3053,
+        "optical_flow_magnitude": 0.1019,
+        "optical_flow_direction": 295.87,
+        "temporal_deformation_rate": 0.2716,
+        "contact_transition": 0.1358
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0352,
+          0.011,
+          0.235
+        ],
+        "force_xyz_raw_N": [
+          0.1848,
+          0.1168,
+          3.3224
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 342,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 27,
+      "timestamp_s": 0.9,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.2051,
+        "force_magnitude": 0.2682,
+        "force_peak": 0.3241,
+        "force_direction": 41.4,
+        "slip_entropy": 2.3552,
+        "slip_event": 0.0813,
+        "texture_energy": 0.0664,
+        "edge_density": 0.0503,
+        "contact_area": 0.1745,
+        "centroid_x": 0.5427,
+        "normal_field_magnitude": 0.1673,
+        "normal_field_variance": 0.0481,
+        "shear_field_magnitude": 0.0545,
+        "shear_field_direction": 23.57,
+        "delta_force_normal": 0.0001,
+        "delta_force_shear": 0.0068,
+        "friction_cone_ratio": 0.3258,
+        "optical_flow_magnitude": 0.0241,
+        "optical_flow_direction": 0.0,
+        "temporal_deformation_rate": 0.0009,
+        "contact_transition": 0.0005
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.039,
+          0.017,
+          0.2682
+        ],
+        "force_xyz_raw_N": [
+          0.2048,
+          0.1806,
+          3.7919
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 352,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 28,
+      "timestamp_s": 0.9333,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.2739,
+        "force_magnitude": 0.3106,
+        "force_peak": 0.3805,
+        "force_direction": 50.72,
+        "slip_entropy": 2.5493,
+        "slip_event": 0.0375,
+        "texture_energy": 0.0941,
+        "edge_density": 0.0656,
+        "contact_area": 0.1824,
+        "centroid_x": 0.5335,
+        "normal_field_magnitude": 0.2197,
+        "normal_field_variance": 0.0467,
+        "shear_field_magnitude": 0.0644,
+        "shear_field_direction": 31.17,
+        "delta_force_normal": 0.0155,
+        "delta_force_shear": 0.0002,
+        "friction_cone_ratio": 0.2931,
+        "optical_flow_magnitude": 0.249,
+        "optical_flow_direction": 226.58,
+        "temporal_deformation_rate": 0.1546,
+        "contact_transition": 0.0773
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0398,
+          0.0241,
+          0.3106
+        ],
+        "force_xyz_raw_N": [
+          0.209,
+          0.2556,
+          4.3922
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 362,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 29,
+      "timestamp_s": 0.9667,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.2799,
+        "force_magnitude": 0.3606,
+        "force_peak": 0.4513,
+        "force_direction": 60.94,
+        "slip_entropy": 2.62,
+        "slip_event": 0.0901,
+        "texture_energy": 0.1263,
+        "edge_density": 0.0831,
+        "contact_area": 0.2083,
+        "centroid_x": 0.5239,
+        "normal_field_magnitude": 0.244,
+        "normal_field_variance": 0.0511,
+        "shear_field_magnitude": 0.0572,
+        "shear_field_direction": 41.68,
+        "delta_force_normal": 0.0105,
+        "delta_force_shear": 0.0076,
+        "friction_cone_ratio": 0.2343,
+        "optical_flow_magnitude": 0.0752,
+        "optical_flow_direction": 0.0,
+        "temporal_deformation_rate": 0.1052,
+        "contact_transition": 0.0526
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0359,
+          0.0319,
+          0.3606
+        ],
+        "force_xyz_raw_N": [
+          0.1883,
+          0.3388,
+          5.0992
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 372,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 30,
+      "timestamp_s": 1.0,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.3398,
+        "force_magnitude": 0.4162,
+        "force_peak": 0.5182,
+        "force_direction": 72.33,
+        "slip_entropy": 2.595,
+        "slip_event": 0.0685,
+        "texture_energy": 0.1191,
+        "edge_density": 0.0869,
+        "contact_area": 0.2645,
+        "centroid_x": 0.5141,
+        "normal_field_magnitude": 0.2983,
+        "normal_field_variance": 0.0618,
+        "shear_field_magnitude": 0.0653,
+        "shear_field_direction": 57.23,
+        "delta_force_normal": 0.0056,
+        "delta_force_shear": 0.003,
+        "friction_cone_ratio": 0.219,
+        "optical_flow_magnitude": 0.5487,
+        "optical_flow_direction": 137.12,
+        "temporal_deformation_rate": 0.0564,
+        "contact_transition": 0.0282
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0257,
+          0.04,
+          0.4162
+        ],
+        "force_xyz_raw_N": [
+          0.1351,
+          0.424,
+          5.8847
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 382,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 31,
+      "timestamp_s": 1.0333,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.3778,
+        "force_magnitude": 0.4751,
+        "force_peak": 0.5825,
+        "force_direction": 84.7,
+        "slip_entropy": 2.3406,
+        "slip_event": 0.0056,
+        "texture_energy": 0.1365,
+        "edge_density": 0.0963,
+        "contact_area": 0.2881,
+        "centroid_x": 0.5042,
+        "normal_field_magnitude": 0.3477,
+        "normal_field_variance": 0.0728,
+        "shear_field_magnitude": 0.0546,
+        "shear_field_direction": 79.39,
+        "delta_force_normal": 0.032,
+        "delta_force_shear": 0.0137,
+        "friction_cone_ratio": 0.1572,
+        "optical_flow_magnitude": 0.2677,
+        "optical_flow_direction": 241.81,
+        "temporal_deformation_rate": 0.3198,
+        "contact_transition": 0.1599
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0089,
+          0.0473,
+          0.4751
+        ],
+        "force_xyz_raw_N": [
+          0.0466,
+          0.5023,
+          6.7175
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 392,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 32,
+      "timestamp_s": 1.0667,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.3973,
+        "force_magnitude": 0.535,
+        "force_peak": 0.6547,
+        "force_direction": 97.42,
+        "slip_entropy": 2.5332,
+        "slip_event": 0.052,
+        "texture_energy": 0.153,
+        "edge_density": 0.1076,
+        "contact_area": 0.3365,
+        "centroid_x": 0.4942,
+        "normal_field_magnitude": 0.3762,
+        "normal_field_variance": 0.086,
+        "shear_field_magnitude": 0.0723,
+        "shear_field_direction": 104.75,
+        "delta_force_normal": 0.0033,
+        "delta_force_shear": 0.0102,
+        "friction_cone_ratio": 0.1921,
+        "optical_flow_magnitude": 0.1345,
+        "optical_flow_direction": 10.36,
+        "temporal_deformation_rate": 0.0332,
+        "contact_transition": 0.0166
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.014,
+          0.0531,
+          0.535
+        ],
+        "force_xyz_raw_N": [
+          -0.0734,
+          0.5637,
+          7.5644
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 402,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 33,
+      "timestamp_s": 1.1,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.4877,
+        "force_magnitude": 0.5935,
+        "force_peak": 0.7258,
+        "force_direction": 109.67,
+        "slip_entropy": 2.4035,
+        "slip_event": 0.0136,
+        "texture_energy": 0.1849,
+        "edge_density": 0.11,
+        "contact_area": 0.3705,
+        "centroid_x": 0.4842,
+        "normal_field_magnitude": 0.4243,
+        "normal_field_variance": 0.0883,
+        "shear_field_magnitude": 0.0981,
+        "shear_field_direction": 125.84,
+        "delta_force_normal": 0.0434,
+        "delta_force_shear": 0.0049,
+        "friction_cone_ratio": 0.2313,
+        "optical_flow_magnitude": 0.6672,
+        "optical_flow_direction": 223.95,
+        "temporal_deformation_rate": 0.4342,
+        "contact_transition": 0.2171
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.0407,
+          0.0564,
+          0.5935
+        ],
+        "force_xyz_raw_N": [
+          -0.2138,
+          0.5983,
+          8.3916
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 412,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 34,
+      "timestamp_s": 1.1333,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.4845,
+        "force_magnitude": 0.6482,
+        "force_peak": 0.7773,
+        "force_direction": 120.86,
+        "slip_entropy": 2.5384,
+        "slip_event": 0.0493,
+        "texture_energy": 0.1941,
+        "edge_density": 0.1353,
+        "contact_area": 0.3745,
+        "centroid_x": 0.4744,
+        "normal_field_magnitude": 0.4525,
+        "normal_field_variance": 0.0969,
+        "shear_field_magnitude": 0.1189,
+        "shear_field_direction": 140.37,
+        "delta_force_normal": 0.0098,
+        "delta_force_shear": 0.0075,
+        "friction_cone_ratio": 0.2627,
+        "optical_flow_magnitude": 0.1453,
+        "optical_flow_direction": 170.63,
+        "temporal_deformation_rate": 0.0975,
+        "contact_transition": 0.0488
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.0681,
+          0.0564,
+          0.6482
+        ],
+        "force_xyz_raw_N": [
+          -0.3573,
+          0.598,
+          9.166
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 422,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 35,
+      "timestamp_s": 1.1667,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.538,
+        "force_magnitude": 0.6971,
+        "force_peak": 0.8416,
+        "force_direction": 130.89,
+        "slip_entropy": 2.447,
+        "slip_event": 0.0177,
+        "texture_energy": 0.2012,
+        "edge_density": 0.1322,
+        "contact_area": 0.4163,
+        "centroid_x": 0.4649,
+        "normal_field_magnitude": 0.4885,
+        "normal_field_variance": 0.0932,
+        "shear_field_magnitude": 0.144,
+        "shear_field_direction": 150.26,
+        "delta_force_normal": 0.0008,
+        "delta_force_shear": 0.0051,
+        "friction_cone_ratio": 0.2948,
+        "optical_flow_magnitude": 0.6023,
+        "optical_flow_direction": 29.43,
+        "temporal_deformation_rate": 0.0084,
+        "contact_transition": 0.0042
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.092,
+          0.0526,
+          0.6971
+        ],
+        "force_xyz_raw_N": [
+          -0.4829,
+          0.5576,
+          9.8569
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 432,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 36,
+      "timestamp_s": 1.2,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.5882,
+        "force_magnitude": 0.7381,
+        "force_peak": 0.8835,
+        "force_direction": 140.12,
+        "slip_entropy": 2.5614,
+        "slip_event": 0.0185,
+        "texture_energy": 0.229,
+        "edge_density": 0.1449,
+        "contact_area": 0.4306,
+        "centroid_x": 0.4557,
+        "normal_field_magnitude": 0.5404,
+        "normal_field_variance": 0.1092,
+        "shear_field_magnitude": 0.1504,
+        "shear_field_direction": 157.54,
+        "delta_force_normal": 0.0438,
+        "delta_force_shear": 0.0085,
+        "friction_cone_ratio": 0.2783,
+        "optical_flow_magnitude": 0.494,
+        "optical_flow_direction": 322.27,
+        "temporal_deformation_rate": 0.4384,
+        "contact_transition": 0.2192
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.1086,
+          0.0449,
+          0.7381
+        ],
+        "force_xyz_raw_N": [
+          -0.5702,
+          0.4764,
+          10.4367
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 442,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 37,
+      "timestamp_s": 1.2333,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.6773,
+        "force_magnitude": 0.7696,
+        "force_peak": 0.9347,
+        "force_direction": 149.29,
+        "slip_entropy": 2.4872,
+        "slip_event": 0.0533,
+        "texture_energy": 0.2213,
+        "edge_density": 0.1499,
+        "contact_area": 0.4527,
+        "centroid_x": 0.447,
+        "normal_field_magnitude": 0.5369,
+        "normal_field_variance": 0.1152,
+        "shear_field_magnitude": 0.1433,
+        "shear_field_direction": 163.62,
+        "delta_force_normal": 0.0131,
+        "delta_force_shear": 0.0077,
+        "friction_cone_ratio": 0.2668,
+        "optical_flow_magnitude": 0.1754,
+        "optical_flow_direction": 320.59,
+        "temporal_deformation_rate": 0.1309,
+        "contact_transition": 0.0654
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.1148,
+          0.0338,
+          0.7696
+        ],
+        "force_xyz_raw_N": [
+          -0.6028,
+          0.3581,
+          10.8823
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 452,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 38,
+      "timestamp_s": 1.2667,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.666,
+        "force_magnitude": 0.7904,
+        "force_peak": 0.9573,
+        "force_direction": 159.78,
+        "slip_entropy": 2.4992,
+        "slip_event": 0.0087,
+        "texture_energy": 0.2519,
+        "edge_density": 0.1699,
+        "contact_area": 0.4844,
+        "centroid_x": 0.4388,
+        "normal_field_magnitude": 0.5489,
+        "normal_field_variance": 0.1265,
+        "shear_field_magnitude": 0.1269,
+        "shear_field_direction": 169.67,
+        "delta_force_normal": 0.0134,
+        "delta_force_shear": 0.014,
+        "friction_cone_ratio": 0.2312,
+        "optical_flow_magnitude": 0.6548,
+        "optical_flow_direction": 205.48,
+        "temporal_deformation_rate": 0.1337,
+        "contact_transition": 0.0668
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.109,
+          0.0199,
+          0.7904
+        ],
+        "force_xyz_raw_N": [
+          -0.5722,
+          0.2107,
+          11.1759
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 462,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 39,
+      "timestamp_s": 1.3,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.6117,
+        "force_magnitude": 0.7996,
+        "force_peak": 0.9651,
+        "force_direction": 174.55,
+        "slip_entropy": 2.4349,
+        "slip_event": 0.0187,
+        "texture_energy": 0.235,
+        "edge_density": 0.1558,
+        "contact_area": 0.4743,
+        "centroid_x": 0.4312,
+        "normal_field_magnitude": 0.5347,
+        "normal_field_variance": 0.1234,
+        "shear_field_magnitude": 0.0977,
+        "shear_field_direction": 177.3,
+        "delta_force_normal": 0.0017,
+        "delta_force_shear": 0.0024,
+        "friction_cone_ratio": 0.1826,
+        "optical_flow_magnitude": 0.1368,
+        "optical_flow_direction": 92.85,
+        "temporal_deformation_rate": 0.017,
+        "contact_transition": 0.0085
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.0914,
+          0.0043,
+          0.7996
+        ],
+        "force_xyz_raw_N": [
+          -0.4798,
+          0.0458,
+          11.3058
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 472,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 40,
+      "timestamp_s": 1.3333,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.6475,
+        "force_magnitude": 0.7968,
+        "force_peak": 0.9464,
+        "force_direction": -159.93,
+        "slip_entropy": 2.5099,
+        "slip_event": 0.0572,
+        "texture_energy": 0.2466,
+        "edge_density": 0.164,
+        "contact_area": 0.4705,
+        "centroid_x": 0.4243,
+        "normal_field_magnitude": 0.5521,
+        "normal_field_variance": 0.1145,
+        "shear_field_magnitude": 0.0771,
+        "shear_field_direction": -169.75,
+        "delta_force_normal": 0.0548,
+        "delta_force_shear": 0.0046,
+        "friction_cone_ratio": 0.1397,
+        "optical_flow_magnitude": 0.1534,
+        "optical_flow_direction": 219.82,
+        "temporal_deformation_rate": 0.5482,
+        "contact_transition": 0.2741
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.0641,
+          -0.0116,
+          0.7968
+        ],
+        "force_xyz_raw_N": [
+          -0.3367,
+          -0.123,
+          11.2669
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 482,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 41,
+      "timestamp_s": 1.3667,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.6385,
+        "force_magnitude": 0.7822,
+        "force_peak": 0.922,
+        "force_direction": -119.94,
+        "slip_entropy": 2.4934,
+        "slip_event": 0.0533,
+        "texture_energy": 0.2226,
+        "edge_density": 0.1557,
+        "contact_area": 0.4653,
+        "centroid_x": 0.4182,
+        "normal_field_magnitude": 0.5415,
+        "normal_field_variance": 0.1211,
+        "shear_field_magnitude": 0.0629,
+        "shear_field_direction": -139.34,
+        "delta_force_normal": 0.0154,
+        "delta_force_shear": 0.0072,
+        "friction_cone_ratio": 0.1162,
+        "optical_flow_magnitude": 1.2169,
+        "optical_flow_direction": 148.26,
+        "temporal_deformation_rate": 0.1543,
+        "contact_transition": 0.0772
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.0309,
+          -0.0265,
+          0.7822
+        ],
+        "force_xyz_raw_N": [
+          -0.1622,
+          -0.2815,
+          11.0606
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 492,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 42,
+      "timestamp_s": 1.4,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.6166,
+        "force_magnitude": 0.7564,
+        "force_peak": 0.9056,
+        "force_direction": -87.25,
+        "slip_entropy": 2.5371,
+        "slip_event": 0.0938,
+        "texture_energy": 0.2209,
+        "edge_density": 0.1537,
+        "contact_area": 0.4696,
+        "centroid_x": 0.4128,
+        "normal_field_magnitude": 0.5283,
+        "normal_field_variance": 0.114,
+        "shear_field_magnitude": 0.0401,
+        "shear_field_direction": -84.45,
+        "delta_force_normal": 0.0118,
+        "delta_force_shear": 0.0032,
+        "friction_cone_ratio": 0.0759,
+        "optical_flow_magnitude": 0.1595,
+        "optical_flow_direction": 293.25,
+        "temporal_deformation_rate": 0.1177,
+        "contact_transition": 0.0588
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0038,
+          -0.0393,
+          0.7564
+        ],
+        "force_xyz_raw_N": [
+          0.02,
+          -0.4167,
+          10.6952
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 502,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 43,
+      "timestamp_s": 1.4333,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.5821,
+        "force_magnitude": 0.7203,
+        "force_peak": 0.8851,
+        "force_direction": -70.3,
+        "slip_entropy": 2.5871,
+        "slip_event": 0.0392,
+        "texture_energy": 0.2128,
+        "edge_density": 0.1428,
+        "contact_area": 0.4452,
+        "centroid_x": 0.4084,
+        "normal_field_magnitude": 0.4975,
+        "normal_field_variance": 0.0969,
+        "shear_field_magnitude": 0.0895,
+        "shear_field_direction": -54.11,
+        "delta_force_normal": 0.0169,
+        "delta_force_shear": 0.0158,
+        "friction_cone_ratio": 0.18,
+        "optical_flow_magnitude": 0.008,
+        "optical_flow_direction": 0.0,
+        "temporal_deformation_rate": 0.1687,
+        "contact_transition": 0.0844
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0354,
+          -0.0489,
+          0.7203
+        ],
+        "force_xyz_raw_N": [
+          0.1858,
+          -0.5187,
+          10.1853
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 512,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 44,
+      "timestamp_s": 1.4667,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.5356,
+        "force_magnitude": 0.6755,
+        "force_peak": 0.8188,
+        "force_direction": -61.55,
+        "slip_entropy": 2.5892,
+        "slip_event": 0.0624,
+        "texture_energy": 0.2036,
+        "edge_density": 0.1277,
+        "contact_area": 0.4167,
+        "centroid_x": 0.4048,
+        "normal_field_magnitude": 0.4762,
+        "normal_field_variance": 0.0992,
+        "shear_field_magnitude": 0.1179,
+        "shear_field_direction": -42.4,
+        "delta_force_normal": 0.0454,
+        "delta_force_shear": 0.0018,
+        "friction_cone_ratio": 0.2477,
+        "optical_flow_magnitude": 0.1241,
+        "optical_flow_direction": 54.6,
+        "temporal_deformation_rate": 0.4541,
+        "contact_transition": 0.2271
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.06,
+          -0.0548,
+          0.6755
+        ],
+        "force_xyz_raw_N": [
+          0.3149,
+          -0.5813,
+          9.5512
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 522,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 45,
+      "timestamp_s": 1.5,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.4771,
+        "force_magnitude": 0.6236,
+        "force_peak": 0.7402,
+        "force_direction": -56.78,
+        "slip_entropy": 2.651,
+        "slip_event": 0.0877,
+        "texture_energy": 0.1911,
+        "edge_density": 0.1299,
+        "contact_area": 0.3691,
+        "centroid_x": 0.4022,
+        "normal_field_magnitude": 0.4338,
+        "normal_field_variance": 0.0887,
+        "shear_field_magnitude": 0.1298,
+        "shear_field_direction": -37.08,
+        "delta_force_normal": 0.0075,
+        "delta_force_shear": 0.0076,
+        "friction_cone_ratio": 0.2992,
+        "optical_flow_magnitude": 0.4611,
+        "optical_flow_direction": 259.21,
+        "temporal_deformation_rate": 0.0755,
+        "contact_transition": 0.0377
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0752,
+          -0.0568,
+          0.6236
+        ],
+        "force_xyz_raw_N": [
+          0.3947,
+          -0.6029,
+          8.8182
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 532,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 46,
+      "timestamp_s": 1.5333,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.4812,
+        "force_magnitude": 0.5669,
+        "force_peak": 0.6903,
+        "force_direction": -54.3,
+        "slip_entropy": 2.3368,
+        "slip_event": 0.0346,
+        "texture_energy": 0.1729,
+        "edge_density": 0.1045,
+        "contact_area": 0.3551,
+        "centroid_x": 0.4006,
+        "normal_field_magnitude": 0.4034,
+        "normal_field_variance": 0.0848,
+        "shear_field_magnitude": 0.1369,
+        "shear_field_direction": -34.55,
+        "delta_force_normal": 0.0225,
+        "delta_force_shear": 0.0245,
+        "friction_cone_ratio": 0.3394,
+        "optical_flow_magnitude": 0.0646,
+        "optical_flow_direction": 0.0,
+        "temporal_deformation_rate": 0.2251,
+        "contact_transition": 0.1125
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0802,
+          -0.0553,
+          0.5669
+        ],
+        "force_xyz_raw_N": [
+          0.4213,
+          -0.5863,
+          8.0155
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 542,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 47,
+      "timestamp_s": 1.5667,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.4081,
+        "force_magnitude": 0.5074,
+        "force_peak": 0.6162,
+        "force_direction": -53.43,
+        "slip_entropy": 2.5481,
+        "slip_event": 0.0707,
+        "texture_energy": 0.1545,
+        "edge_density": 0.1027,
+        "contact_area": 0.2931,
+        "centroid_x": 0.4,
+        "normal_field_magnitude": 0.3418,
+        "normal_field_variance": 0.0855,
+        "shear_field_magnitude": 0.1277,
+        "shear_field_direction": -33.7,
+        "delta_force_normal": 0.002,
+        "delta_force_shear": 0.0009,
+        "friction_cone_ratio": 0.3737,
+        "optical_flow_magnitude": 0.3905,
+        "optical_flow_direction": 40.77,
+        "temporal_deformation_rate": 0.02,
+        "contact_transition": 0.01
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0761,
+          -0.0507,
+          0.5074
+        ],
+        "force_xyz_raw_N": [
+          0.3993,
+          -0.5382,
+          7.1751
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 552,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 48,
+      "timestamp_s": 1.6,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.3593,
+        "force_magnitude": 0.4477,
+        "force_peak": 0.5482,
+        "force_direction": -53.95,
+        "slip_entropy": 2.3308,
+        "slip_event": 0.0055,
+        "texture_energy": 0.1496,
+        "edge_density": 0.0949,
+        "contact_area": 0.2628,
+        "centroid_x": 0.4004,
+        "normal_field_magnitude": 0.3219,
+        "normal_field_variance": 0.0556,
+        "shear_field_magnitude": 0.1078,
+        "shear_field_direction": -34.21,
+        "delta_force_normal": 0.0126,
+        "delta_force_shear": 0.0127,
+        "friction_cone_ratio": 0.3348,
+        "optical_flow_magnitude": 0.4092,
+        "optical_flow_direction": 162.8,
+        "temporal_deformation_rate": 0.1256,
+        "contact_transition": 0.0628
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0648,
+          -0.0441,
+          0.4477
+        ],
+        "force_xyz_raw_N": [
+          0.3405,
+          -0.4677,
+          6.3305
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 562,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 49,
+      "timestamp_s": 1.6333,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.3069,
+        "force_magnitude": 0.3901,
+        "force_peak": 0.453,
+        "force_direction": -55.99,
+        "slip_entropy": 2.4754,
+        "slip_event": 0.0498,
+        "texture_energy": 0.1143,
+        "edge_density": 0.082,
+        "contact_area": 0.2325,
+        "centroid_x": 0.4018,
+        "normal_field_magnitude": 0.2838,
+        "normal_field_variance": 0.0493,
+        "shear_field_magnitude": 0.0807,
+        "shear_field_direction": -36.26,
+        "delta_force_normal": 0.0103,
+        "delta_force_shear": 0.008,
+        "friction_cone_ratio": 0.2843,
+        "optical_flow_magnitude": 0.0823,
+        "optical_flow_direction": 0.0,
+        "temporal_deformation_rate": 0.1033,
+        "contact_transition": 0.0517
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0495,
+          -0.0363,
+          0.3901
+        ],
+        "force_xyz_raw_N": [
+          0.2598,
+          -0.3851,
+          5.5154
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 572,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 50,
+      "timestamp_s": 1.6667,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.2694,
+        "force_magnitude": 0.3368,
+        "force_peak": 0.4057,
+        "force_direction": -60.09,
+        "slip_entropy": 2.4322,
+        "slip_event": 0.075,
+        "texture_energy": 0.1025,
+        "edge_density": 0.0683,
+        "contact_area": 0.2006,
+        "centroid_x": 0.4041,
+        "normal_field_magnitude": 0.23,
+        "normal_field_variance": 0.0478,
+        "shear_field_magnitude": 0.0609,
+        "shear_field_direction": -40.7,
+        "delta_force_normal": 0.0109,
+        "delta_force_shear": 0.0071,
+        "friction_cone_ratio": 0.265,
+        "optical_flow_magnitude": 0.0532,
+        "optical_flow_direction": 0.0,
+        "temporal_deformation_rate": 0.1087,
+        "contact_transition": 0.0543
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0329,
+          -0.0283,
+          0.3368
+        ],
+        "force_xyz_raw_N": [
+          0.1725,
+          -0.2998,
+          4.7623
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 582,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 51,
+      "timestamp_s": 1.7,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.2269,
+        "force_magnitude": 0.29,
+        "force_peak": 0.3631,
+        "force_direction": -67.6,
+        "slip_entropy": 2.2349,
+        "slip_event": 0.0401,
+        "texture_energy": 0.0979,
+        "edge_density": 0.0521,
+        "contact_area": 0.1761,
+        "centroid_x": 0.4074,
+        "normal_field_magnitude": 0.2059,
+        "normal_field_variance": 0.0422,
+        "shear_field_magnitude": 0.0372,
+        "shear_field_direction": -50.2,
+        "delta_force_normal": 0.0106,
+        "delta_force_shear": 0.0083,
+        "friction_cone_ratio": 0.1808,
+        "optical_flow_magnitude": 0.6633,
+        "optical_flow_direction": 147.14,
+        "temporal_deformation_rate": 0.1056,
+        "contact_transition": 0.0528
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0173,
+          -0.0207,
+          0.29
+        ],
+        "force_xyz_raw_N": [
+          0.0906,
+          -0.2198,
+          4.1011
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 592,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 52,
+      "timestamp_s": 1.7333,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.22,
+        "force_magnitude": 0.2517,
+        "force_peak": 0.3147,
+        "force_direction": -81.89,
+        "slip_entropy": 2.5722,
+        "slip_event": 0.002,
+        "texture_energy": 0.0642,
+        "edge_density": 0.0508,
+        "contact_area": 0.1497,
+        "centroid_x": 0.4117,
+        "normal_field_magnitude": 0.1812,
+        "normal_field_variance": 0.0325,
+        "shear_field_magnitude": 0.0164,
+        "shear_field_direction": -73.93,
+        "delta_force_normal": 0.0046,
+        "delta_force_shear": 0.0081,
+        "friction_cone_ratio": 0.0907,
+        "optical_flow_magnitude": 0.4702,
+        "optical_flow_direction": 308.05,
+        "temporal_deformation_rate": 0.0458,
+        "contact_transition": 0.0229
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0041,
+          -0.0141,
+          0.2517
+        ],
+        "force_xyz_raw_N": [
+          0.0214,
+          -0.1498,
+          3.5584
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 602,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 53,
+      "timestamp_s": 1.7667,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.1713,
+        "force_magnitude": 0.2232,
+        "force_peak": 0.2794,
+        "force_direction": -110.18,
+        "slip_entropy": 2.3919,
+        "slip_event": 0.0293,
+        "texture_energy": 0.0731,
+        "edge_density": 0.0363,
+        "contact_area": 0.1515,
+        "centroid_x": 0.4168,
+        "normal_field_magnitude": 0.1438,
+        "normal_field_variance": 0.0294,
+        "shear_field_magnitude": 0.0216,
+        "shear_field_direction": -126.61,
+        "delta_force_normal": 0.0351,
+        "delta_force_shear": 0.0076,
+        "friction_cone_ratio": 0.15,
+        "optical_flow_magnitude": 0.7065,
+        "optical_flow_direction": 147.39,
+        "temporal_deformation_rate": 0.3506,
+        "contact_transition": 0.1753
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.0064,
+          -0.0086,
+          0.2232
+        ],
+        "force_xyz_raw_N": [
+          -0.0335,
+          -0.0912,
+          3.1556
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 612,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 54,
+      "timestamp_s": 1.8,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.1229,
+        "force_magnitude": 0.2057,
+        "force_peak": 0.2638,
+        "force_direction": -151.0,
+        "slip_entropy": 2.5211,
+        "slip_event": 0.0764,
+        "texture_energy": 0.0607,
+        "edge_density": 0.046,
+        "contact_area": 0.1231,
+        "centroid_x": 0.4227,
+        "normal_field_magnitude": 0.1406,
+        "normal_field_variance": 0.0376,
+        "shear_field_magnitude": 0.0294,
+        "shear_field_direction": -164.66,
+        "delta_force_normal": 0.0134,
+        "delta_force_shear": 0.0062,
+        "friction_cone_ratio": 0.2087,
+        "optical_flow_magnitude": 0.2091,
+        "optical_flow_direction": 300.57,
+        "temporal_deformation_rate": 0.1345,
+        "contact_transition": 0.0672
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.0146,
+          -0.004,
+          0.2057
+        ],
+        "force_xyz_raw_N": [
+          -0.0765,
+          -0.0424,
+          2.9089
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 622,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 55,
+      "timestamp_s": 1.8333,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.1604,
+        "force_magnitude": 0.2,
+        "force_peak": 0.2435,
+        "force_direction": 179.52,
+        "slip_entropy": 2.446,
+        "slip_event": 0.0018,
+        "texture_energy": 0.0522,
+        "edge_density": 0.0319,
+        "contact_area": 0.1255,
+        "centroid_x": 0.4294,
+        "normal_field_magnitude": 0.1601,
+        "normal_field_variance": 0.0336,
+        "shear_field_magnitude": 0.0191,
+        "shear_field_direction": 179.76,
+        "delta_force_normal": 0.0105,
+        "delta_force_shear": 0.0162,
+        "friction_cone_ratio": 0.1193,
+        "optical_flow_magnitude": 0.7852,
+        "optical_flow_direction": 239.41,
+        "temporal_deformation_rate": 0.1054,
+        "contact_transition": 0.0527
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.0214,
+          0.0001,
+          0.2
+        ],
+        "force_xyz_raw_N": [
+          -0.1121,
+          0.0009,
+          2.828
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 632,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 56,
+      "timestamp_s": 1.8667,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.1282,
+        "force_magnitude": 0.2062,
+        "force_peak": 0.2347,
+        "force_direction": 162.87,
+        "slip_entropy": 2.4375,
+        "slip_event": 0.0166,
+        "texture_energy": 0.0621,
+        "edge_density": 0.0395,
+        "contact_area": 0.1257,
+        "centroid_x": 0.4369,
+        "normal_field_magnitude": 0.13,
+        "normal_field_variance": 0.0338,
+        "shear_field_magnitude": 0.024,
+        "shear_field_direction": 171.33,
+        "delta_force_normal": 0.016,
+        "delta_force_shear": 0.0134,
+        "friction_cone_ratio": 0.1848,
+        "optical_flow_magnitude": 0.4419,
+        "optical_flow_direction": 106.96,
+        "temporal_deformation_rate": 0.1597,
+        "contact_transition": 0.0798
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.0275,
+          0.0042,
+          0.2062
+        ],
+        "force_xyz_raw_N": [
+          -0.1442,
+          0.0444,
+          2.9163
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 642,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 57,
+      "timestamp_s": 1.9,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.1604,
+        "force_magnitude": 0.2242,
+        "force_peak": 0.2954,
+        "force_direction": 151.69,
+        "slip_entropy": 2.5493,
+        "slip_event": 0.0733,
+        "texture_energy": 0.0691,
+        "edge_density": 0.0479,
+        "contact_area": 0.1193,
+        "centroid_x": 0.4449,
+        "normal_field_magnitude": 0.1569,
+        "normal_field_variance": 0.0303,
+        "shear_field_magnitude": 0.0335,
+        "shear_field_direction": 165.07,
+        "delta_force_normal": 0.0197,
+        "delta_force_shear": 0.0035,
+        "friction_cone_ratio": 0.2133,
+        "optical_flow_magnitude": 0.1213,
+        "optical_flow_direction": 27.05,
+        "temporal_deformation_rate": 0.1974,
+        "contact_transition": 0.0987
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.0331,
+          0.0088,
+          0.2242
+        ],
+        "force_xyz_raw_N": [
+          -0.1737,
+          0.0936,
+          3.1702
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 652,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 58,
+      "timestamp_s": 1.9333,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.2018,
+        "force_magnitude": 0.2532,
+        "force_peak": 0.3215,
+        "force_direction": 142.36,
+        "slip_entropy": 2.4373,
+        "slip_event": 0.0246,
+        "texture_energy": 0.0941,
+        "edge_density": 0.0531,
+        "contact_area": 0.1572,
+        "centroid_x": 0.4535,
+        "normal_field_magnitude": 0.1663,
+        "normal_field_variance": 0.0426,
+        "shear_field_magnitude": 0.0433,
+        "shear_field_direction": 159.11,
+        "delta_force_normal": 0.0229,
+        "delta_force_shear": 0.0132,
+        "friction_cone_ratio": 0.2601,
+        "optical_flow_magnitude": 0.1131,
+        "optical_flow_direction": 195.08,
+        "temporal_deformation_rate": 0.2288,
+        "contact_transition": 0.1144
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.0377,
+          0.0144,
+          0.2532
+        ],
+        "force_xyz_raw_N": [
+          -0.1979,
+          0.1526,
+          3.5796
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 662,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 59,
+      "timestamp_s": 1.9667,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.2412,
+        "force_magnitude": 0.2919,
+        "force_peak": 0.3564,
+        "force_direction": 133.23,
+        "slip_entropy": 2.556,
+        "slip_event": 0.0692,
+        "texture_energy": 0.0984,
+        "edge_density": 0.0561,
+        "contact_area": 0.1815,
+        "centroid_x": 0.4626,
+        "normal_field_magnitude": 0.1891,
+        "normal_field_variance": 0.0435,
+        "shear_field_magnitude": 0.0651,
+        "shear_field_direction": 152.24,
+        "delta_force_normal": 0.0027,
+        "delta_force_shear": 0.0045,
+        "friction_cone_ratio": 0.3442,
+        "optical_flow_magnitude": 0.1066,
+        "optical_flow_direction": 349.58,
+        "temporal_deformation_rate": 0.0268,
+        "contact_transition": 0.0134
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.04,
+          0.021,
+          0.2919
+        ],
+        "force_xyz_raw_N": [
+          -0.2098,
+          0.2232,
+          4.1281
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 672,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 60,
+      "timestamp_s": 2.0,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.2704,
+        "force_magnitude": 0.339,
+        "force_peak": 0.4136,
+        "force_direction": 123.45,
+        "slip_entropy": 2.5028,
+        "slip_event": 0.0319,
+        "texture_energy": 0.102,
+        "edge_density": 0.0608,
+        "contact_area": 0.2084,
+        "centroid_x": 0.4721,
+        "normal_field_magnitude": 0.2269,
+        "normal_field_variance": 0.0572,
+        "shear_field_magnitude": 0.0655,
+        "shear_field_direction": 143.16,
+        "delta_force_normal": 0.0027,
+        "delta_force_shear": 0.0041,
+        "friction_cone_ratio": 0.2887,
+        "optical_flow_magnitude": 0.9648,
+        "optical_flow_direction": 284.66,
+        "temporal_deformation_rate": 0.027,
+        "contact_transition": 0.0135
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.0382,
+          0.0286,
+          0.339
+        ],
+        "force_xyz_raw_N": [
+          -0.2005,
+          0.3035,
+          4.7939
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 682,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 61,
+      "timestamp_s": 2.0333,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.3347,
+        "force_magnitude": 0.3925,
+        "force_peak": 0.4562,
+        "force_direction": 112.55,
+        "slip_entropy": 2.5267,
+        "slip_event": 0.0233,
+        "texture_energy": 0.1267,
+        "edge_density": 0.0821,
+        "contact_area": 0.236,
+        "centroid_x": 0.4818,
+        "normal_field_magnitude": 0.287,
+        "normal_field_variance": 0.0555,
+        "shear_field_magnitude": 0.0649,
+        "shear_field_direction": 130.0,
+        "delta_force_normal": 0.0497,
+        "delta_force_shear": 0.0092,
+        "friction_cone_ratio": 0.226,
+        "optical_flow_magnitude": 0.1569,
+        "optical_flow_direction": 354.27,
+        "temporal_deformation_rate": 0.4969,
+        "contact_transition": 0.2485
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.0308,
+          0.0366,
+          0.3925
+        ],
+        "force_xyz_raw_N": [
+          -0.1615,
+          0.3888,
+          5.5504
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 692,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 62,
+      "timestamp_s": 2.0667,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.3513,
+        "force_magnitude": 0.4503,
+        "force_peak": 0.5549,
+        "force_direction": 100.53,
+        "slip_entropy": 2.658,
+        "slip_event": 0.0239,
+        "texture_energy": 0.1299,
+        "edge_density": 0.0886,
+        "contact_area": 0.2621,
+        "centroid_x": 0.4917,
+        "normal_field_magnitude": 0.3052,
+        "normal_field_variance": 0.0623,
+        "shear_field_magnitude": 0.0514,
+        "shear_field_direction": 110.59,
+        "delta_force_normal": 0.0241,
+        "delta_force_shear": 0.0107,
+        "friction_cone_ratio": 0.1685,
+        "optical_flow_magnitude": 0.3413,
+        "optical_flow_direction": 341.99,
+        "temporal_deformation_rate": 0.2415,
+        "contact_transition": 0.1207
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.0167,
+          0.0444,
+          0.4503
+        ],
+        "force_xyz_raw_N": [
+          -0.0876,
+          0.4712,
+          6.3675
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 702,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 63,
+      "timestamp_s": 2.1,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.4278,
+        "force_magnitude": 0.5101,
+        "force_peak": 0.61,
+        "force_direction": 87.86,
+        "slip_entropy": 2.4951,
+        "slip_event": 0.0613,
+        "texture_energy": 0.1598,
+        "edge_density": 0.1079,
+        "contact_area": 0.3223,
+        "centroid_x": 0.5017,
+        "normal_field_magnitude": 0.3414,
+        "normal_field_variance": 0.0769,
+        "shear_field_magnitude": 0.0523,
+        "shear_field_direction": 85.67,
+        "delta_force_normal": 0.012,
+        "delta_force_shear": 0.0056,
+        "friction_cone_ratio": 0.1531,
+        "optical_flow_magnitude": 0.3114,
+        "optical_flow_direction": 126.05,
+        "temporal_deformation_rate": 0.1198,
+        "contact_transition": 0.0599
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0039,
+          0.051,
+          0.5101
+        ],
+        "force_xyz_raw_N": [
+          0.0203,
+          0.5409,
+          7.2126
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 712,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 64,
+      "timestamp_s": 2.1333,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.484,
+        "force_magnitude": 0.5695,
+        "force_peak": 0.6776,
+        "force_direction": 75.32,
+        "slip_entropy": 2.4168,
+        "slip_event": 0.0816,
+        "texture_energy": 0.1756,
+        "edge_density": 0.1104,
+        "contact_area": 0.3346,
+        "centroid_x": 0.5117,
+        "normal_field_magnitude": 0.4222,
+        "normal_field_variance": 0.0901,
+        "shear_field_magnitude": 0.0805,
+        "shear_field_direction": 62.11,
+        "delta_force_normal": 0.0033,
+        "delta_force_shear": 0.0036,
+        "friction_cone_ratio": 0.1907,
+        "optical_flow_magnitude": 0.2919,
+        "optical_flow_direction": 46.63,
+        "temporal_deformation_rate": 0.0329,
+        "contact_transition": 0.0165
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0293,
+          0.0554,
+          0.5695
+        ],
+        "force_xyz_raw_N": [
+          0.154,
+          0.5878,
+          8.0521
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 722,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 65,
+      "timestamp_s": 2.1667,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.5066,
+        "force_magnitude": 0.6261,
+        "force_peak": 0.7546,
+        "force_direction": 63.65,
+        "slip_entropy": 2.5659,
+        "slip_event": 0.0087,
+        "texture_energy": 0.2079,
+        "edge_density": 0.1165,
+        "contact_area": 0.3631,
+        "centroid_x": 0.5215,
+        "normal_field_magnitude": 0.4471,
+        "normal_field_variance": 0.0892,
+        "shear_field_magnitude": 0.1095,
+        "shear_field_direction": 44.97,
+        "delta_force_normal": 0.0002,
+        "delta_force_shear": 0.0069,
+        "friction_cone_ratio": 0.2449,
+        "optical_flow_magnitude": 0.5304,
+        "optical_flow_direction": 27.41,
+        "temporal_deformation_rate": 0.0017,
+        "contact_transition": 0.0008
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0569,
+          0.0568,
+          0.6261
+        ],
+        "force_xyz_raw_N": [
+          0.2985,
+          0.6028,
+          8.8523
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 732,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 66,
+      "timestamp_s": 2.2,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.5418,
+        "force_magnitude": 0.6776,
+        "force_peak": 0.825,
+        "force_direction": 53.15,
+        "slip_entropy": 2.7527,
+        "slip_event": 0.0825,
+        "texture_energy": 0.198,
+        "edge_density": 0.1421,
+        "contact_area": 0.3953,
+        "centroid_x": 0.5312,
+        "normal_field_magnitude": 0.4579,
+        "normal_field_variance": 0.104,
+        "shear_field_magnitude": 0.1385,
+        "shear_field_direction": 33.44,
+        "delta_force_normal": 0.0061,
+        "delta_force_shear": 0.0093,
+        "friction_cone_ratio": 0.3025,
+        "optical_flow_magnitude": 0.2108,
+        "optical_flow_direction": 312.23,
+        "temporal_deformation_rate": 0.0611,
+        "contact_transition": 0.0306
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0827,
+          0.0546,
+          0.6776
+        ],
+        "force_xyz_raw_N": [
+          0.4342,
+          0.5794,
+          9.5816
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 742,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 67,
+      "timestamp_s": 2.2333,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.5941,
+        "force_magnitude": 0.7221,
+        "force_peak": 0.8716,
+        "force_direction": 43.66,
+        "slip_entropy": 2.6067,
+        "slip_event": 0.0619,
+        "texture_energy": 0.2283,
+        "edge_density": 0.1412,
+        "contact_area": 0.4381,
+        "centroid_x": 0.5405,
+        "normal_field_magnitude": 0.5018,
+        "normal_field_variance": 0.1041,
+        "shear_field_magnitude": 0.1479,
+        "shear_field_direction": 25.27,
+        "delta_force_normal": 0.0099,
+        "delta_force_shear": 0.0042,
+        "friction_cone_ratio": 0.2948,
+        "optical_flow_magnitude": 0.2002,
+        "optical_flow_direction": 182.69,
+        "temporal_deformation_rate": 0.099,
+        "contact_transition": 0.0495
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.1028,
+          0.0485,
+          0.7221
+        ],
+        "force_xyz_raw_N": [
+          0.5397,
+          0.515,
+          10.2107
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 752,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 68,
+      "timestamp_s": 2.2667,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.61,
+        "force_magnitude": 0.7577,
+        "force_peak": 0.9098,
+        "force_direction": 34.59,
+        "slip_entropy": 2.364,
+        "slip_event": 0.0634,
+        "texture_energy": 0.2348,
+        "edge_density": 0.159,
+        "contact_area": 0.4568,
+        "centroid_x": 0.5494,
+        "normal_field_magnitude": 0.5331,
+        "normal_field_variance": 0.1117,
+        "shear_field_magnitude": 0.1551,
+        "shear_field_direction": 18.84,
+        "delta_force_normal": 0.001,
+        "delta_force_shear": 0.0121,
+        "friction_cone_ratio": 0.291,
+        "optical_flow_magnitude": 0.7207,
+        "optical_flow_direction": 335.53,
+        "temporal_deformation_rate": 0.0096,
+        "contact_transition": 0.0048
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.1136,
+          0.0388,
+          0.7577
+        ],
+        "force_xyz_raw_N": [
+          0.5966,
+          0.4114,
+          10.7146
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 762,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 69,
+      "timestamp_s": 2.3,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.6176,
+        "force_magnitude": 0.7831,
+        "force_peak": 0.9417,
+        "force_direction": 24.88,
+        "slip_entropy": 2.6074,
+        "slip_event": 0.0067,
+        "texture_energy": 0.2247,
+        "edge_density": 0.1476,
+        "contact_area": 0.4795,
+        "centroid_x": 0.5578,
+        "normal_field_magnitude": 0.5434,
+        "normal_field_variance": 0.1181,
+        "shear_field_magnitude": 0.1406,
+        "shear_field_direction": 12.92,
+        "delta_force_normal": 0.0105,
+        "delta_force_shear": 0.0013,
+        "friction_cone_ratio": 0.2588,
+        "optical_flow_magnitude": 1.0176,
+        "optical_flow_direction": 277.35,
+        "temporal_deformation_rate": 0.1052,
+        "contact_transition": 0.0526
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.1129,
+          0.0259,
+          0.7831
+        ],
+        "force_xyz_raw_N": [
+          0.5927,
+          0.2749,
+          11.0732
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 772,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 70,
+      "timestamp_s": 2.3333,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.6266,
+        "force_magnitude": 0.7972,
+        "force_peak": 0.9754,
+        "force_direction": 12.42,
+        "slip_entropy": 2.3552,
+        "slip_event": 0.0164,
+        "texture_energy": 0.2172,
+        "edge_density": 0.1627,
+        "contact_area": 0.4882,
+        "centroid_x": 0.5657,
+        "normal_field_magnitude": 0.5692,
+        "normal_field_variance": 0.1261,
+        "shear_field_magnitude": 0.1098,
+        "shear_field_direction": 6.22,
+        "delta_force_normal": 0.0229,
+        "delta_force_shear": 0.0011,
+        "friction_cone_ratio": 0.1929,
+        "optical_flow_magnitude": 0.3166,
+        "optical_flow_direction": 229.87,
+        "temporal_deformation_rate": 0.2294,
+        "contact_transition": 0.1147
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.1,
+          0.0109,
+          0.7972
+        ],
+        "force_xyz_raw_N": [
+          0.5252,
+          0.1157,
+          11.2722
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 782,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 71,
+      "timestamp_s": 2.3667,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.609,
+        "force_magnitude": 0.7994,
+        "force_peak": 0.9524,
+        "force_direction": -7.56,
+        "slip_entropy": 2.4954,
+        "slip_event": 0.0894,
+        "texture_energy": 0.2423,
+        "edge_density": 0.1563,
+        "contact_area": 0.473,
+        "centroid_x": 0.5729,
+        "normal_field_magnitude": 0.5603,
+        "normal_field_variance": 0.1188,
+        "shear_field_magnitude": 0.0862,
+        "shear_field_direction": -3.76,
+        "delta_force_normal": 0.0069,
+        "delta_force_shear": 0.0051,
+        "friction_cone_ratio": 0.1538,
+        "optical_flow_magnitude": 0.0145,
+        "optical_flow_direction": 0.0,
+        "temporal_deformation_rate": 0.0686,
+        "contact_transition": 0.0343
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0764,
+          -0.005,
+          0.7994
+        ],
+        "force_xyz_raw_N": [
+          0.4013,
+          -0.0533,
+          11.3036
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 792,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 72,
+      "timestamp_s": 2.4,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.6372,
+        "force_magnitude": 0.7897,
+        "force_peak": 0.9453,
+        "force_direction": -42.56,
+        "slip_entropy": 2.5708,
+        "slip_event": 0.0845,
+        "texture_energy": 0.2441,
+        "edge_density": 0.1612,
+        "contact_area": 0.4871,
+        "centroid_x": 0.5794,
+        "normal_field_magnitude": 0.5548,
+        "normal_field_variance": 0.122,
+        "shear_field_magnitude": 0.0652,
+        "shear_field_direction": -24.43,
+        "delta_force_normal": 0.0288,
+        "delta_force_shear": 0.0068,
+        "friction_cone_ratio": 0.1176,
+        "optical_flow_magnitude": 0.9005,
+        "optical_flow_direction": 72.19,
+        "temporal_deformation_rate": 0.288,
+        "contact_transition": 0.144
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0452,
+          -0.0205,
+          0.7897
+        ],
+        "force_xyz_raw_N": [
+          0.2371,
+          -0.2177,
+          11.1663
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 802,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 73,
+      "timestamp_s": 2.4333,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.5999,
+        "force_magnitude": 0.7684,
+        "force_peak": 0.922,
+        "force_direction": -81.4,
+        "slip_entropy": 2.3409,
+        "slip_event": 0.0798,
+        "texture_energy": 0.2362,
+        "edge_density": 0.1515,
+        "contact_area": 0.4422,
+        "centroid_x": 0.585,
+        "normal_field_magnitude": 0.5334,
+        "normal_field_variance": 0.1031,
+        "shear_field_magnitude": 0.0369,
+        "shear_field_direction": -73.0,
+        "delta_force_normal": 0.0152,
+        "delta_force_shear": 0.0079,
+        "friction_cone_ratio": 0.0691,
+        "optical_flow_magnitude": 0.2127,
+        "optical_flow_direction": 280.75,
+        "temporal_deformation_rate": 0.1521,
+        "contact_transition": 0.076
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0105,
+          -0.0343,
+          0.7684
+        ],
+        "force_xyz_raw_N": [
+          0.0551,
+          -0.364,
+          10.8657
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 812,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 74,
+      "timestamp_s": 2.4667,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.5887,
+        "force_magnitude": 0.7365,
+        "force_peak": 0.8781,
+        "force_direction": -104.04,
+        "slip_entropy": 2.4737,
+        "slip_event": 0.0987,
+        "texture_energy": 0.2169,
+        "edge_density": 0.1473,
+        "contact_area": 0.4303,
+        "centroid_x": 0.5899,
+        "normal_field_magnitude": 0.5306,
+        "normal_field_variance": 0.1149,
+        "shear_field_magnitude": 0.0671,
+        "shear_field_direction": -116.81,
+        "delta_force_normal": 0.0005,
+        "delta_force_shear": 0.0021,
+        "friction_cone_ratio": 0.1265,
+        "optical_flow_magnitude": 1.0209,
+        "optical_flow_direction": 31.63,
+        "temporal_deformation_rate": 0.0054,
+        "contact_transition": 0.0027
+      },
+      "manipulation_phase": "stable_contact",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.0229,
+          -0.0453,
+          0.7365
+        ],
+        "force_xyz_raw_N": [
+          -0.1202,
+          -0.4808,
+          10.4138
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 822,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 75,
+      "timestamp_s": 2.5,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.2346,
+        "force_magnitude": 0.3,
+        "force_peak": 0.3591,
+        "force_direction": -115.45,
+        "slip_entropy": 2.4821,
+        "slip_event": 0.8,
+        "texture_energy": 0.0827,
+        "edge_density": 0.061,
+        "contact_area": 0.1694,
+        "centroid_x": 0.5938,
+        "normal_field_magnitude": 0.2199,
+        "normal_field_variance": 0.0481,
+        "shear_field_magnitude": 0.0422,
+        "shear_field_direction": -133.89,
+        "delta_force_normal": 0.0089,
+        "delta_force_shear": 0.0028,
+        "friction_cone_ratio": 0.1921,
+        "optical_flow_magnitude": 0.3993,
+        "optical_flow_direction": 254.33,
+        "temporal_deformation_rate": 0.089,
+        "contact_transition": 0.0445
+      },
+      "manipulation_phase": "slip",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.0219,
+          -0.0228,
+          0.3
+        ],
+        "force_xyz_raw_N": [
+          -0.1151,
+          -0.2418,
+          4.242
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 832,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 76,
+      "timestamp_s": 2.5333,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.2252,
+        "force_magnitude": 0.28,
+        "force_peak": 0.3295,
+        "force_direction": -121.57,
+        "slip_entropy": 2.5698,
+        "slip_event": 0.8,
+        "texture_energy": 0.0879,
+        "edge_density": 0.0605,
+        "contact_area": 0.1744,
+        "centroid_x": 0.5968,
+        "normal_field_magnitude": 0.2065,
+        "normal_field_variance": 0.0393,
+        "shear_field_magnitude": 0.0614,
+        "shear_field_direction": -141.16,
+        "delta_force_normal": 0.004,
+        "delta_force_shear": 0.0208,
+        "friction_cone_ratio": 0.2975,
+        "optical_flow_magnitude": 0.3446,
+        "optical_flow_direction": 189.5,
+        "temporal_deformation_rate": 0.0395,
+        "contact_transition": 0.0198
+      },
+      "manipulation_phase": "slip",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.0304,
+          -0.0245,
+          0.28
+        ],
+        "force_xyz_raw_N": [
+          -0.1595,
+          -0.2596,
+          3.9592
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 842,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 77,
+      "timestamp_s": 2.5667,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.2006,
+        "force_magnitude": 0.26,
+        "force_peak": 0.314,
+        "force_direction": -124.89,
+        "slip_entropy": 2.3968,
+        "slip_event": 0.8,
+        "texture_energy": 0.0727,
+        "edge_density": 0.0551,
+        "contact_area": 0.1673,
+        "centroid_x": 0.5988,
+        "normal_field_magnitude": 0.2117,
+        "normal_field_variance": 0.0385,
+        "shear_field_magnitude": 0.055,
+        "shear_field_direction": -144.64,
+        "delta_force_normal": 0.0151,
+        "delta_force_shear": 0.0113,
+        "friction_cone_ratio": 0.26,
+        "optical_flow_magnitude": 0.2821,
+        "optical_flow_direction": 244.88,
+        "temporal_deformation_rate": 0.1507,
+        "contact_transition": 0.0753
+      },
+      "manipulation_phase": "slip",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.0349,
+          -0.0248,
+          0.26
+        ],
+        "force_xyz_raw_N": [
+          -0.1833,
+          -0.2629,
+          3.6764
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 852,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 78,
+      "timestamp_s": 2.6,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.1869,
+        "force_magnitude": 0.24,
+        "force_peak": 0.2713,
+        "force_direction": -126.38,
+        "slip_entropy": 2.5399,
+        "slip_event": 0.8,
+        "texture_energy": 0.0785,
+        "edge_density": 0.0456,
+        "contact_area": 0.1597,
+        "centroid_x": 0.5999,
+        "normal_field_magnitude": 0.1557,
+        "normal_field_variance": 0.0287,
+        "shear_field_magnitude": 0.0605,
+        "shear_field_direction": -146.12,
+        "delta_force_normal": 0.0209,
+        "delta_force_shear": 0.0168,
+        "friction_cone_ratio": 0.3885,
+        "optical_flow_magnitude": 0.2294,
+        "optical_flow_direction": 175.2,
+        "temporal_deformation_rate": 0.2094,
+        "contact_transition": 0.1047
+      },
+      "manipulation_phase": "slip",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.0355,
+          -0.0239,
+          0.24
+        ],
+        "force_xyz_raw_N": [
+          -0.1865,
+          -0.2532,
+          3.3936
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 862,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 79,
+      "timestamp_s": 2.6333,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.1433,
+        "force_magnitude": 0.22,
+        "force_peak": 0.2583,
+        "force_direction": -126.44,
+        "slip_entropy": 2.58,
+        "slip_event": 0.8,
+        "texture_energy": 0.0678,
+        "edge_density": 0.0467,
+        "contact_area": 0.1195,
+        "centroid_x": 0.5999,
+        "normal_field_magnitude": 0.1678,
+        "normal_field_variance": 0.0369,
+        "shear_field_magnitude": 0.0566,
+        "shear_field_direction": -146.17,
+        "delta_force_normal": 0.0137,
+        "delta_force_shear": 0.0032,
+        "friction_cone_ratio": 0.3374,
+        "optical_flow_magnitude": 0.1457,
+        "optical_flow_direction": 177.22,
+        "temporal_deformation_rate": 0.1371,
+        "contact_transition": 0.0686
+      },
+      "manipulation_phase": "slip",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.0327,
+          -0.0219,
+          0.22
+        ],
+        "force_xyz_raw_N": [
+          -0.1716,
+          -0.2324,
+          3.1108
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 872,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 80,
+      "timestamp_s": 2.6667,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.1709,
+        "force_magnitude": 0.2,
+        "force_peak": 0.2363,
+        "force_direction": -125.06,
+        "slip_entropy": 2.5772,
+        "slip_event": 0.8,
+        "texture_energy": 0.0315,
+        "edge_density": 0.0457,
+        "contact_area": 0.1026,
+        "centroid_x": 0.5989,
+        "normal_field_magnitude": 0.1364,
+        "normal_field_variance": 0.0244,
+        "shear_field_magnitude": 0.0398,
+        "shear_field_direction": -144.82,
+        "delta_force_normal": 0.0232,
+        "delta_force_shear": 0.0047,
+        "friction_cone_ratio": 0.2922,
+        "optical_flow_magnitude": 0.1733,
+        "optical_flow_direction": 349.14,
+        "temporal_deformation_rate": 0.2322,
+        "contact_transition": 0.1161
+      },
+      "manipulation_phase": "slip",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.0272,
+          -0.0192,
+          0.2
+        ],
+        "force_xyz_raw_N": [
+          -0.1426,
+          -0.2032,
+          2.828
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 882,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 81,
+      "timestamp_s": 2.7,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.1129,
+        "force_magnitude": 0.18,
+        "force_peak": 0.2133,
+        "force_direction": -121.92,
+        "slip_entropy": 2.2905,
+        "slip_event": 0.8,
+        "texture_energy": 0.0565,
+        "edge_density": 0.0347,
+        "contact_area": 0.1203,
+        "centroid_x": 0.597,
+        "normal_field_magnitude": 0.1325,
+        "normal_field_variance": 0.02,
+        "shear_field_magnitude": 0.0316,
+        "shear_field_direction": -141.54,
+        "delta_force_normal": 0.0104,
+        "delta_force_shear": 0.0085,
+        "friction_cone_ratio": 0.2389,
+        "optical_flow_magnitude": 0.6113,
+        "optical_flow_direction": 170.87,
+        "temporal_deformation_rate": 0.1041,
+        "contact_transition": 0.0521
+      },
+      "manipulation_phase": "slip",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.02,
+          -0.0159,
+          0.18
+        ],
+        "force_xyz_raw_N": [
+          -0.1049,
+          -0.1683,
+          2.5452
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 892,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 82,
+      "timestamp_s": 2.7333,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.1356,
+        "force_magnitude": 0.16,
+        "force_peak": 0.1963,
+        "force_direction": -116.09,
+        "slip_entropy": 2.603,
+        "slip_event": 0.8,
+        "texture_energy": 0.0504,
+        "edge_density": 0.0307,
+        "contact_area": 0.094,
+        "centroid_x": 0.5941,
+        "normal_field_magnitude": 0.1113,
+        "normal_field_variance": 0.0238,
+        "shear_field_magnitude": 0.0281,
+        "shear_field_direction": -134.7,
+        "delta_force_normal": 0.001,
+        "delta_force_shear": 0.0073,
+        "friction_cone_ratio": 0.2529,
+        "optical_flow_magnitude": 0.0404,
+        "optical_flow_direction": 0.0,
+        "temporal_deformation_rate": 0.0104,
+        "contact_transition": 0.0052
+      },
+      "manipulation_phase": "slip",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.0122,
+          -0.0123,
+          0.16
+        ],
+        "force_xyz_raw_N": [
+          -0.064,
+          -0.1307,
+          2.2624
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 902,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 83,
+      "timestamp_s": 2.7667,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.1136,
+        "force_magnitude": 0.14,
+        "force_peak": 0.148,
+        "force_direction": -105.25,
+        "slip_entropy": 2.5916,
+        "slip_event": 0.8,
+        "texture_energy": 0.0455,
+        "edge_density": 0.033,
+        "contact_area": 0.055,
+        "centroid_x": 0.5902,
+        "normal_field_magnitude": 0.1189,
+        "normal_field_variance": 0.0203,
+        "shear_field_magnitude": 0.0192,
+        "shear_field_direction": -118.86,
+        "delta_force_normal": 0.0208,
+        "delta_force_shear": 0.0061,
+        "friction_cone_ratio": 0.1613,
+        "optical_flow_magnitude": 0.5267,
+        "optical_flow_direction": 349.17,
+        "temporal_deformation_rate": 0.208,
+        "contact_transition": 0.104
+      },
+      "manipulation_phase": "slip",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.0048,
+          -0.0088,
+          0.14
+        ],
+        "force_xyz_raw_N": [
+          -0.0254,
+          -0.0933,
+          1.9796
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 912,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 84,
+      "timestamp_s": 2.8,
+      "tlabel_v2": {
+        "contact": 1.0,
+        "deformation_magnitude": 0.1015,
+        "force_magnitude": 0.12,
+        "force_peak": 0.1375,
+        "force_direction": -83.82,
+        "slip_entropy": 2.6073,
+        "slip_event": 0.8,
+        "texture_energy": 0.0344,
+        "edge_density": 0.0267,
+        "contact_area": 0.0628,
+        "centroid_x": 0.5855,
+        "normal_field_magnitude": 0.0837,
+        "normal_field_variance": 0.028,
+        "shear_field_magnitude": 0.0116,
+        "shear_field_direction": -77.66,
+        "delta_force_normal": 0.0062,
+        "delta_force_shear": 0.0045,
+        "friction_cone_ratio": 0.138,
+        "optical_flow_magnitude": 0.0337,
+        "optical_flow_direction": 0.0,
+        "temporal_deformation_rate": 0.0615,
+        "contact_transition": 0.0308
+      },
+      "manipulation_phase": "slip",
+      "confidence": 0.95,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0012,
+          -0.0055,
+          0.12
+        ],
+        "force_xyz_raw_N": [
+          0.0064,
+          -0.0587,
+          1.6968
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 922,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 85,
+      "timestamp_s": 2.8333,
+      "tlabel_v2": {
+        "contact": 0.5,
+        "deformation_magnitude": 0.084,
+        "force_magnitude": 0.1,
+        "force_peak": 0.1245,
+        "force_direction": -45.92,
+        "slip_entropy": 0.1,
+        "slip_event": 0,
+        "texture_energy": 0.0192,
+        "edge_density": 0.0233,
+        "contact_area": 0.0491,
+        "centroid_x": 0.5798,
+        "normal_field_magnitude": 0.0863,
+        "normal_field_variance": 0.0111,
+        "shear_field_magnitude": 0.0096,
+        "shear_field_direction": -27.06,
+        "delta_force_normal": 0.0201,
+        "delta_force_shear": 0.0025,
+        "friction_cone_ratio": 0.1115,
+        "optical_flow_magnitude": 0.0,
+        "optical_flow_direction": 0.0,
+        "temporal_deformation_rate": 0.201,
+        "contact_transition": 0.1005
+      },
+      "manipulation_phase": "release",
+      "confidence": 0.9,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0054,
+          -0.0028,
+          0.1
+        ],
+        "force_xyz_raw_N": [
+          0.0283,
+          -0.0292,
+          1.414
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 932,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 86,
+      "timestamp_s": 2.8667,
+      "tlabel_v2": {
+        "contact": 0.5,
+        "deformation_magnitude": 0.0788,
+        "force_magnitude": 0.09,
+        "force_peak": 0.1224,
+        "force_direction": -9.72,
+        "slip_entropy": 0.1,
+        "slip_event": 0,
+        "texture_energy": 0.0326,
+        "edge_density": 0.0198,
+        "contact_area": 0.0372,
+        "centroid_x": 0.5734,
+        "normal_field_magnitude": 0.0537,
+        "normal_field_variance": 0.0187,
+        "shear_field_magnitude": 0.0119,
+        "shear_field_direction": -4.84,
+        "delta_force_normal": 0.0144,
+        "delta_force_shear": 0.0064,
+        "friction_cone_ratio": 0.222,
+        "optical_flow_magnitude": 0.0,
+        "optical_flow_direction": 0.0,
+        "temporal_deformation_rate": 0.1443,
+        "contact_transition": 0.0721
+      },
+      "manipulation_phase": "release",
+      "confidence": 0.9,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0084,
+          -0.0007,
+          0.09
+        ],
+        "force_xyz_raw_N": [
+          0.0439,
+          -0.0075,
+          1.2726
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 942,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 87,
+      "timestamp_s": 2.9,
+      "tlabel_v2": {
+        "contact": 0.5,
+        "deformation_magnitude": 0.0898,
+        "force_magnitude": 0.08,
+        "force_peak": 0.0934,
+        "force_direction": 11.19,
+        "slip_entropy": 0.1,
+        "slip_event": 0,
+        "texture_energy": 0.0252,
+        "edge_density": 0.0109,
+        "contact_area": 0.0352,
+        "centroid_x": 0.5663,
+        "normal_field_magnitude": 0.0396,
+        "normal_field_variance": 0.0076,
+        "shear_field_magnitude": 0.0186,
+        "shear_field_direction": 5.59,
+        "delta_force_normal": 0.0311,
+        "delta_force_shear": 0.003,
+        "friction_cone_ratio": 0.4704,
+        "optical_flow_magnitude": 0.0,
+        "optical_flow_direction": 0.0,
+        "temporal_deformation_rate": 0.3105,
+        "contact_transition": 0.1553
+      },
+      "manipulation_phase": "release",
+      "confidence": 0.9,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0099,
+          0.001,
+          0.08
+        ],
+        "force_xyz_raw_N": [
+          0.0519,
+          0.0103,
+          1.1312
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 952,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 88,
+      "timestamp_s": 2.9333,
+      "tlabel_v2": {
+        "contact": 0.5,
+        "deformation_magnitude": 0.0301,
+        "force_magnitude": 0.07,
+        "force_peak": 0.078,
+        "force_direction": 24.03,
+        "slip_entropy": 0.1,
+        "slip_event": 0,
+        "texture_energy": 0.0227,
+        "edge_density": 0.0105,
+        "contact_area": 0.0529,
+        "centroid_x": 0.5585,
+        "normal_field_magnitude": 0.0643,
+        "normal_field_variance": 0,
+        "shear_field_magnitude": 0.0088,
+        "shear_field_direction": 12.44,
+        "delta_force_normal": 0.0012,
+        "delta_force_shear": 0.0113,
+        "friction_cone_ratio": 0.137,
+        "optical_flow_magnitude": 0.0,
+        "optical_flow_direction": 0.0,
+        "temporal_deformation_rate": 0.0118,
+        "contact_transition": 0.0059
+      },
+      "manipulation_phase": "release",
+      "confidence": 0.9,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.01,
+          0.0022,
+          0.07
+        ],
+        "force_xyz_raw_N": [
+          0.0526,
+          0.0235,
+          0.9898
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 962,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 89,
+      "timestamp_s": 2.9667,
+      "tlabel_v2": {
+        "contact": 0.5,
+        "deformation_magnitude": 0.0389,
+        "force_magnitude": 0.06,
+        "force_peak": 0.0718,
+        "force_direction": 33.86,
+        "slip_entropy": 0.1,
+        "slip_event": 0,
+        "texture_energy": 0.0064,
+        "edge_density": 0.0043,
+        "contact_area": 0.0505,
+        "centroid_x": 0.5501,
+        "normal_field_magnitude": 0.0238,
+        "normal_field_variance": 0.0206,
+        "shear_field_magnitude": 0.0156,
+        "shear_field_direction": 18.36,
+        "delta_force_normal": 0.0136,
+        "delta_force_shear": 0.0058,
+        "friction_cone_ratio": 0.6572,
+        "optical_flow_magnitude": 0.0,
+        "optical_flow_direction": 0.0,
+        "temporal_deformation_rate": 0.136,
+        "contact_transition": 0.068
+      },
+      "manipulation_phase": "release",
+      "confidence": 0.9,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.009,
+          0.003,
+          0.06
+        ],
+        "force_xyz_raw_N": [
+          0.0472,
+          0.0317,
+          0.8484
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 972,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 90,
+      "timestamp_s": 3.0,
+      "tlabel_v2": {
+        "contact": 0.5,
+        "deformation_magnitude": 0.0349,
+        "force_magnitude": 0.05,
+        "force_peak": 0.0639,
+        "force_direction": 42.93,
+        "slip_entropy": 0.1,
+        "slip_event": 0,
+        "texture_energy": 0.0131,
+        "edge_density": 0.0128,
+        "contact_area": 0.0297,
+        "centroid_x": 0.5412,
+        "normal_field_magnitude": 0.0255,
+        "normal_field_variance": 0.0031,
+        "shear_field_magnitude": 0.0056,
+        "shear_field_direction": 24.72,
+        "delta_force_normal": 0.0194,
+        "delta_force_shear": 0.0062,
+        "friction_cone_ratio": 0.2178,
+        "optical_flow_magnitude": 0.0,
+        "optical_flow_direction": 0.0,
+        "temporal_deformation_rate": 0.1942,
+        "contact_transition": 0.0971
+      },
+      "manipulation_phase": "release",
+      "confidence": 0.9,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0072,
+          0.0033,
+          0.05
+        ],
+        "force_xyz_raw_N": [
+          0.0377,
+          0.035,
+          0.707
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 982,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 91,
+      "timestamp_s": 3.0333,
+      "tlabel_v2": {
+        "contact": 0.5,
+        "deformation_magnitude": 0,
+        "force_magnitude": 0.04,
+        "force_peak": 0.052,
+        "force_direction": 52.36,
+        "slip_entropy": 0.1,
+        "slip_event": 0,
+        "texture_energy": 0.0271,
+        "edge_density": 0.0119,
+        "contact_area": 0.018,
+        "centroid_x": 0.5319,
+        "normal_field_magnitude": 0.0121,
+        "normal_field_variance": 0.0053,
+        "shear_field_magnitude": 0.0074,
+        "shear_field_direction": 32.69,
+        "delta_force_normal": 0.0194,
+        "delta_force_shear": 0.0055,
+        "friction_cone_ratio": 0.6061,
+        "optical_flow_magnitude": 0.0,
+        "optical_flow_direction": 0.0,
+        "temporal_deformation_rate": 0.1938,
+        "contact_transition": 0.0969
+      },
+      "manipulation_phase": "release",
+      "confidence": 0.9,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.005,
+          0.0032,
+          0.04
+        ],
+        "force_xyz_raw_N": [
+          0.0261,
+          0.0338,
+          0.5656
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 992,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 92,
+      "timestamp_s": 3.0667,
+      "tlabel_v2": {
+        "contact": 0.5,
+        "deformation_magnitude": 0.0609,
+        "force_magnitude": 0.03,
+        "force_peak": 0.0382,
+        "force_direction": 62.77,
+        "slip_entropy": 0.1,
+        "slip_event": 0,
+        "texture_energy": 0.0106,
+        "edge_density": 0.0013,
+        "contact_area": 0.032,
+        "centroid_x": 0.5223,
+        "normal_field_magnitude": 0.0202,
+        "normal_field_variance": 0.0016,
+        "shear_field_magnitude": 0.0058,
+        "shear_field_direction": 43.88,
+        "delta_force_normal": 0.0094,
+        "delta_force_shear": 0.0014,
+        "friction_cone_ratio": 0.2879,
+        "optical_flow_magnitude": 0.0,
+        "optical_flow_direction": 0.0,
+        "temporal_deformation_rate": 0.0944,
+        "contact_transition": 0.0472
+      },
+      "manipulation_phase": "release",
+      "confidence": 0.9,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0028,
+          0.0027,
+          0.03
+        ],
+        "force_xyz_raw_N": [
+          0.0148,
+          0.0287,
+          0.4242
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 1002,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 93,
+      "timestamp_s": 3.1,
+      "tlabel_v2": {
+        "contact": 0.5,
+        "deformation_magnitude": 0.0401,
+        "force_magnitude": 0.02,
+        "force_peak": 0.0278,
+        "force_direction": 74.35,
+        "slip_entropy": 0.1,
+        "slip_event": 0,
+        "texture_energy": 0.0032,
+        "edge_density": 0.006,
+        "contact_area": 0.017,
+        "centroid_x": 0.5124,
+        "normal_field_magnitude": 0.001,
+        "normal_field_variance": 0.0087,
+        "shear_field_magnitude": 0.0015,
+        "shear_field_direction": 60.49,
+        "delta_force_normal": 0.0055,
+        "delta_force_shear": 0.0075,
+        "friction_cone_ratio": 1.477,
+        "optical_flow_magnitude": 0.0,
+        "optical_flow_direction": 0.0,
+        "temporal_deformation_rate": 0.0551,
+        "contact_transition": 0.0275
+      },
+      "manipulation_phase": "release",
+      "confidence": 0.9,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0011,
+          0.0019,
+          0.02
+        ],
+        "force_xyz_raw_N": [
+          0.0058,
+          0.0206,
+          0.2828
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 1012,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 94,
+      "timestamp_s": 3.1333,
+      "tlabel_v2": {
+        "contact": 0.5,
+        "deformation_magnitude": 0.0229,
+        "force_magnitude": 0.01,
+        "force_peak": 0.005,
+        "force_direction": 0.0,
+        "slip_entropy": 0.1,
+        "slip_event": 0,
+        "texture_energy": 0.011,
+        "edge_density": 0,
+        "contact_area": 0.0242,
+        "centroid_x": 0.5025,
+        "normal_field_magnitude": 0,
+        "normal_field_variance": 0.0027,
+        "shear_field_magnitude": 0,
+        "shear_field_direction": 83.64,
+        "delta_force_normal": 0.0445,
+        "delta_force_shear": 0.0124,
+        "friction_cone_ratio": -2.7999,
+        "optical_flow_magnitude": 0.0,
+        "optical_flow_direction": 0.0,
+        "temporal_deformation_rate": 0.4445,
+        "contact_transition": 0.2223
+      },
+      "manipulation_phase": "release",
+      "confidence": 0.9,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          0.0001,
+          0.001,
+          0.01
+        ],
+        "force_xyz_raw_N": [
+          0.0006,
+          0.0106,
+          0.1414
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 1022,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 95,
+      "timestamp_s": 3.1667,
+      "tlabel_v2": {
+        "contact": 0.0,
+        "deformation_magnitude": 0.0105,
+        "force_magnitude": 0.0,
+        "force_peak": 0,
+        "force_direction": 0.0,
+        "slip_entropy": 0.1,
+        "slip_event": 0,
+        "texture_energy": 0,
+        "edge_density": 0.0023,
+        "contact_area": 0.0122,
+        "centroid_x": 0.4925,
+        "normal_field_magnitude": 0.0162,
+        "normal_field_variance": 0,
+        "shear_field_magnitude": 0.0013,
+        "shear_field_direction": 180.0,
+        "delta_force_normal": 0.0292,
+        "delta_force_shear": 0.0169,
+        "friction_cone_ratio": 0.0825,
+        "optical_flow_magnitude": 0.0,
+        "optical_flow_direction": 0.0,
+        "temporal_deformation_rate": 0.2919,
+        "contact_transition": 0.1459
+      },
+      "manipulation_phase": "idle",
+      "confidence": 0.9,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.0,
+          0.0,
+          0.0
+        ],
+        "force_xyz_raw_N": [
+          -0.0,
+          0.0,
+          0.0
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 1032,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 96,
+      "timestamp_s": 3.2,
+      "tlabel_v2": {
+        "contact": 0.0,
+        "deformation_magnitude": 0.0063,
+        "force_magnitude": 0.0,
+        "force_peak": 0,
+        "force_direction": 0.0,
+        "slip_entropy": 0.1,
+        "slip_event": 0,
+        "texture_energy": 0.0041,
+        "edge_density": 0,
+        "contact_area": 0,
+        "centroid_x": 0.4826,
+        "normal_field_magnitude": 0,
+        "normal_field_variance": 0.0049,
+        "shear_field_magnitude": 0.0055,
+        "shear_field_direction": 180.0,
+        "delta_force_normal": 0.0061,
+        "delta_force_shear": 0.0053,
+        "friction_cone_ratio": 5.5202,
+        "optical_flow_magnitude": 0.0,
+        "optical_flow_direction": 0.0,
+        "temporal_deformation_rate": 0.0605,
+        "contact_transition": 0.0303
+      },
+      "manipulation_phase": "idle",
+      "confidence": 0.9,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.0,
+          0.0,
+          0.0
+        ],
+        "force_xyz_raw_N": [
+          -0.0,
+          0.0,
+          0.0
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 1042,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 97,
+      "timestamp_s": 3.2333,
+      "tlabel_v2": {
+        "contact": 0.0,
+        "deformation_magnitude": 0,
+        "force_magnitude": 0.0,
+        "force_peak": 0.0056,
+        "force_direction": 0.0,
+        "slip_entropy": 0.1,
+        "slip_event": 0,
+        "texture_energy": 0,
+        "edge_density": 0,
+        "contact_area": 0,
+        "centroid_x": 0.4728,
+        "normal_field_magnitude": 0,
+        "normal_field_variance": 0,
+        "shear_field_magnitude": 0.0002,
+        "shear_field_direction": 180.0,
+        "delta_force_normal": 0.0124,
+        "delta_force_shear": 0.007,
+        "friction_cone_ratio": 0.1673,
+        "optical_flow_magnitude": 0.0,
+        "optical_flow_direction": 0.0,
+        "temporal_deformation_rate": 0.1244,
+        "contact_transition": 0.0622
+      },
+      "manipulation_phase": "idle",
+      "confidence": 0.9,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.0,
+          0.0,
+          0.0
+        ],
+        "force_xyz_raw_N": [
+          -0.0,
+          0.0,
+          0.0
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 1052,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 98,
+      "timestamp_s": 3.2667,
+      "tlabel_v2": {
+        "contact": 0.0,
+        "deformation_magnitude": 0.0206,
+        "force_magnitude": 0.0,
+        "force_peak": 0.0011,
+        "force_direction": 0.0,
+        "slip_entropy": 0.1,
+        "slip_event": 0,
+        "texture_energy": 0.0046,
+        "edge_density": 0.0106,
+        "contact_area": 0,
+        "centroid_x": 0.4634,
+        "normal_field_magnitude": 0,
+        "normal_field_variance": 0.0035,
+        "shear_field_magnitude": 0.0097,
+        "shear_field_direction": 180.0,
+        "delta_force_normal": 0.0052,
+        "delta_force_shear": 0.0173,
+        "friction_cone_ratio": 9.7327,
+        "optical_flow_magnitude": 0.0,
+        "optical_flow_direction": 0.0,
+        "temporal_deformation_rate": 0.0521,
+        "contact_transition": 0.026
+      },
+      "manipulation_phase": "idle",
+      "confidence": 0.9,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.0,
+          0.0,
+          0.0
+        ],
+        "force_xyz_raw_N": [
+          -0.0,
+          0.0,
+          0.0
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 1062,
+        "hand": "r",
+        "action_label": "press"
+      }
+    },
+    {
+      "frame_idx": 99,
+      "timestamp_s": 3.3,
+      "tlabel_v2": {
+        "contact": 0.0,
+        "deformation_magnitude": 0.0019,
+        "force_magnitude": 0.0,
+        "force_peak": 0,
+        "force_direction": 0.0,
+        "slip_entropy": 0.1,
+        "slip_event": 0,
+        "texture_energy": 0,
+        "edge_density": 0.0031,
+        "contact_area": 0,
+        "centroid_x": 0.4542,
+        "normal_field_magnitude": 0.0008,
+        "normal_field_variance": 0.0079,
+        "shear_field_magnitude": 0,
+        "shear_field_direction": 180.0,
+        "delta_force_normal": 0.0263,
+        "delta_force_shear": 0.0121,
+        "friction_cone_ratio": -1.5339,
+        "optical_flow_magnitude": 0.0,
+        "optical_flow_direction": 0.0,
+        "temporal_deformation_rate": 0.2628,
+        "contact_transition": 0.1314
+      },
+      "manipulation_phase": "idle",
+      "confidence": 0.9,
+      "sensor_specific": {
+        "force_xyz_normalized": [
+          -0.0,
+          0.0,
+          0.0
+        ],
+        "force_xyz_raw_N": [
+          -0.0,
+          0.0,
+          0.0
+        ],
+        "force_scale_N": [
+          5.25,
+          10.61,
+          14.14
+        ],
+        "object_id": 6,
+        "obj_speed_name": "obj006_speed1",
+        "sensor_name": "digit",
+        "image_id": 1072,
+        "hand": "r",
+        "action_label": "press"
+      }
+    }
+  ]
+}
