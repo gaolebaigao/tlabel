@@ -1,6 +1,18 @@
 # Changelog
 
-## [0.6.1] - 2026-06-24
+## [0.6.2] - 2026-06-24
+
+### Added
+- `tlabel.demo('touchd')` — ToucHD-Force demo data (100 frames, simulated press sequence)
+- `tests/release_regression.py` — Release regression test script (run before every release)
+- ToucHD demo covers full phase sequence: idle -> initial_contact -> stable_contact -> slip -> release
+
+### Fixed
+- Fix missing `_version.py` in wheel package (v0.6.0 was incomplete)
+- Fix missing submodules (batch/predict/quality/export/converters/viewer) in wheel
+
+
+## [0.6.2] - 2026-06-24
 
 ### Added
 - **ToucHD-Force adapter** (`tlabel/adapters/touchd.py`) - AnyTouch 2 (ICLR 2026)
