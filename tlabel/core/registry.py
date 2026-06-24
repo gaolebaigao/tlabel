@@ -31,8 +31,7 @@ def auto_detect_format(file_path: str) -> Optional[str]:
     if path.endswith(".pkl") or path.endswith(".pickle"):
         return "gelsight"
     if path.endswith(".h5") or path.endswith(".hdf5"):
-        # 需要区分VTouch和PaXini的HDF5
-        return _detect_hdf5_type(file_path)
+        return "paxini"
     if path.endswith(".parquet"):
         return "daimon"
     if path.endswith(".json"):
@@ -42,13 +41,15 @@ def auto_detect_format(file_path: str) -> Optional[str]:
         try:
             p = Path(file_path)
             if not p.exists():
-                return None
+                return None  # 文件不存在时无法判断内容格式
             with open(file_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
+            # 优先检测 TLabel Format（有 schema_version + frames）
             if "schema_version" in data and "frames" in data:
                 return "tlabel"
             if "episodes" in data:
                 return "tlabel"
+            # Daimon info.json
             if "robot_type" in data and "codebase_version" in data:
                 return "daimon"
             if "frames" in data and "channels" in data:
@@ -57,32 +58,17 @@ def auto_detect_format(file_path: str) -> Optional[str]:
             pass
         return None
 
-    # 目录路径: 检测是否为Daimon episode目录
+    # 目录路径: 检测是否为Daimon episode目录或ToucHD目录
     from pathlib import Path
     p = Path(file_path)
     if p.is_dir():
         if (p / "meta" / "info.json").exists() or list(p.glob("data/chunk-*/file-*.parquet")):
             return "daimon"
+        # ToucHD-Force: 含all_data_direction.json
+        if (p / "all_data_direction.json").exists():
+            return "touchd"
 
     return None
-
-
-def _detect_hdf5_type(file_path: str) -> str:
-    """区分VTouch HDF5和PaXini HDF5"""
-    try:
-        import h5py
-        with h5py.File(file_path, 'r') as hf:
-            keys = set(hf.keys())
-            # VTouch特征: 有tactile和cameras顶层key
-            if 'tactile' in keys or 'cameras' in keys:
-                return "vtouch"
-            # PaXini特征: 有dataset/observation结构
-            if 'dataset' in keys:
-                return "paxini"
-    except Exception:
-        pass
-    # 默认PaXini（向后兼容）
-    return "paxini"
 
 
 # 延迟注册 — 避免import时依赖缺失
@@ -111,9 +97,9 @@ def _ensure_adapters():
             register_adapter("tlabel", TLabelAdapter)
         except ImportError:
             pass
-    if "vtouch" not in _ADAPTERS:
+    if "touchd" not in _ADAPTERS:
         try:
-            from tlabel.adapters.vtouch import VTouchAdapter
-            register_adapter("vtouch", VTouchAdapter)
+            from tlabel.adapters.touchd import ToucHDAdapter
+            register_adapter("touchd", ToucHDAdapter)
         except ImportError:
             pass
