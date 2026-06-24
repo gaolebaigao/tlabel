@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.6.0] - 2026-06-24
+## [0.6.1] - 2026-06-24
 
 ### Added
 - **ToucHD-Force adapter** (`tlabel/adapters/touchd.py`) - AnyTouch 2 (ICLR 2026)
