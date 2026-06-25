@@ -103,6 +103,8 @@ def _extract_tlabel_v2(diff_img, is_contact, delta_mag_shear=None,
         # --- 时序4维 ---
         "optical_flow_magnitude", "optical_flow_direction",
         "temporal_deformation_rate", "contact_transition",
+        # --- v0.7: force_magnitude 诚实替代 ---
+        "deformation_magnitude_peak",
     ]}
 
     if diff_img is None or diff_img.size == 0:
@@ -174,7 +176,8 @@ def _extract_tlabel_v2(diff_img, is_contact, delta_mag_shear=None,
     return {
         "contact": contact,
         "deformation_magnitude": round(deformation_mag, 4),
-        "force_magnitude": round(force_mag, 4),
+        "force_magnitude": round(force_mag, 4),  # deprecated in v0.7, kept for backward compat
+        "deformation_magnitude_peak": round(force_mag, 4),  # v0.7: honest replacement for force_magnitude
         "force_peak": round(force_peak, 4),
         "force_direction": round(force_dir, 2),
         "slip_entropy": round(slip_ent, 4),
@@ -240,6 +243,7 @@ class GelSightAdapter(BaseAdapter):
         return {
             "contact": True, "deformation_magnitude": True,
             "force_magnitude": True, "force_peak": True,
+            "deformation_magnitude_peak": True,  # v0.7
             "force_direction": True, "slip_entropy": True,
             "slip_event": True, "texture_energy": True,
             "edge_density": True, "contact_area": True,

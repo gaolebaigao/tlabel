@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "TLabel Annotation Format",
-  "version": "0.2.0",
-  "description": "Schema for TLabel cross-sensor tactile annotation files",
+  "version": "0.7.0",
+  "description": "Schema for TLabel cross-sensor tactile annotation files — v0.7 adds sensor_profile and feature metadata",
   "type": "object",
   "required": ["schema_version", "sensor_info", "capabilities", "episodes"],
   "properties": {
@@ -47,6 +47,118 @@
         }
       }
     },
+    "sensor_profile": {
+      "type": "object",
+      "description": "v0.7: Sensor physical properties metadata — enables cross-sensor comparability and unit calibration. All fields optional (null is valid). Designed to be compatible with TacEva intrinsic property evaluation metrics.",
+      "properties": {
+        "sensor_type": {
+          "type": ["string", "null"],
+          "description": "Sensor type identifier (e.g. 'gelsight_mini', 'digit', 'paxini_nova')"
+        },
+        "manufacturer": {
+          "type": ["string", "null"],
+          "description": "Sensor manufacturer name"
+        },
+        "model": {
+          "type": ["string", "null"],
+          "description": "Sensor model identifier"
+        },
+        "elastomer": {
+          "type": "object",
+          "description": "Elastomer (skin) physical properties — the primary factor in force-deformation mapping",
+          "properties": {
+            "material": {
+              "type": ["string", "null"],
+              "description": "Elastomer material name (e.g. 'dragon_skin_10', 'eco_flex_00-30')"
+            },
+            "modulus_pa": {
+              "type": ["number", "null"],
+              "description": "Young's modulus in Pascals. Critical for converting deformation to force.",
+              "minimum": 0
+            },
+            "thickness_mm": {
+              "type": ["number", "null"],
+              "description": "Elastomer thickness in millimeters",
+              "minimum": 0
+            },
+            "friction_coefficient": {
+              "type": ["number", "null"],
+              "description": "Coefficient of friction (static or dynamic, specify in source)",
+              "minimum": 0
+            },
+            "source": {
+              "type": ["string", "null"],
+              "description": "Data provenance: literature DOI, 'self_calibrated', 'manufacturer_spec', or 'unknown'"
+            }
+          }
+        },
+        "optical": {
+          "type": "object",
+          "description": "Optical system properties",
+          "properties": {
+            "light_source": {
+              "type": ["string", "null"],
+              "description": "Light source type (e.g. 'led_ring', 'led_array')"
+            },
+            "led_wavelength_nm": {
+              "type": ["number", "null"],
+              "description": "LED peak wavelength in nanometers",
+              "minimum": 0
+            }
+          }
+        },
+        "calibration": {
+          "type": "object",
+          "description": "Force-deformation calibration parameters",
+          "properties": {
+            "method": {
+              "type": ["string", "null"],
+              "enum": ["literature", "self_calibrated", "manufacturer_spec", "none", null],
+              "description": "Calibration method"
+            },
+            "reference_doi": {
+              "type": ["string", "null"],
+              "description": "DOI of the calibration reference publication"
+            },
+            "pixel_to_force_coefficient": {
+              "type": ["number", "null"],
+              "description": "Linear pixel-to-force conversion coefficient",
+              "minimum": 0
+            },
+            "pixel_to_force_unit": {
+              "type": ["string", "null"],
+              "description": "Unit of the conversion coefficient (e.g. 'N/pixel')",
+              "default": "N/pixel"
+            }
+          }
+        },
+        "notes": {
+          "type": ["string", "null"],
+          "description": "Additional notes about sensor properties or calibration"
+        }
+      }
+    },
+    "feature_metadata": {
+      "type": "object",
+      "description": "v0.7: Per-feature semantic metadata — computation, physical meaning, units, force correlation, calibration dependencies",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "feature_id": { "type": "integer" },
+          "category": { "type": "string", "enum": ["deformation", "gradient", "force_semantic", "temporal"] },
+          "computation": { "type": "string" },
+          "physical_semantics": { "type": "string" },
+          "si_unit": { "type": ["string", "null"] },
+          "raw_unit": { "type": "string" },
+          "force_correlation": { "type": "string", "enum": ["direct", "high", "moderate", "low", "indirect"] },
+          "requires_calibration": { "type": "boolean" },
+          "calibration_depends_on": { "type": "array", "items": { "type": "string" } },
+          "deprecated": { "type": "boolean" },
+          "deprecated_since": { "type": "string" },
+          "replacement": { "type": "string" }
+        }
+      }
+    },
     "capabilities": {
       "type": "object",
       "required": ["contact"],
@@ -54,6 +166,7 @@
         "contact": { "type": "boolean" },
         "contact_region": { "type": "boolean" },
         "force_magnitude": { "type": "boolean" },
+        "deformation_magnitude_peak": { "type": "boolean" },
         "force_direction": { "type": "boolean" },
         "slip_event": { "type": "boolean" },
         "slip_direction": { "type": "boolean" },
@@ -91,6 +204,7 @@
                 "contact": { "type": "boolean" },
                 "contact_region": { "type": "string" },
                 "force_magnitude": { "type": "number", "minimum": 0, "maximum": 1 },
+                "deformation_magnitude_peak": { "type": "number", "minimum": 0 },
                 "force_direction": {
                   "type": "array",
                   "items": { "type": "number" },

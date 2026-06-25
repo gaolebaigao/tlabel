@@ -6,6 +6,7 @@ TLabel Format v2 数据结构 — 统一触觉标注容器
 
 import json
 import copy
+import warnings
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 
@@ -41,7 +42,15 @@ class TLabelFrame:
 
     @property
     def force_magnitude(self) -> float:
-        return self.tlabel_v2.get("force_magnitude", 0.0)
+        val = self.tlabel_v2.get("force_magnitude", 0.0)
+        if val != self.tlabel_v2.get("deformation_magnitude", None):
+            warnings.warn(
+                "force_magnitude is deprecated since v0.7.0 — it is an uncalibrated alias of deformation_magnitude. "
+                "Use deformation_magnitude_peak instead, or apply calibration via sensor_profile.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        return val
 
     @property
     def is_modified(self) -> bool:
@@ -141,16 +150,18 @@ class TLabelData:
                  sensor_info: Dict,
                  episode_info: Dict,
                  capabilities: Dict,
-                 schema_version: str = "0.4.0",
+                 schema_version: str = "0.7.0",
                  sensor_id: Optional[str] = None,
-                 calibration_params: Optional[Dict] = None):
+                 calibration_params: Optional[Dict] = None,
+                 sensor_profile: Optional[Dict] = None):
         self.frames = frames
         self.sensor_info = sensor_info
         self.episode_info = episode_info
         self.capabilities = capabilities
         self.schema_version = schema_version
-        self.sensor_id = sensor_id  # 新增：传感器标识（如 "left_gripper"）
-        self.calibration_params = calibration_params or {}  # 新增：标定参数
+        self.sensor_id = sensor_id  # 传感器标识（如 "left_gripper"）
+        self.calibration_params = calibration_params or {}  # 标定参数
+        self.sensor_profile = sensor_profile  # v0.7: 传感器物理属性元数据
         self._predict_results = None  # v0.5.0: 预标注结果缓存（供UI高亮）
 
     @property
@@ -465,13 +476,22 @@ class TLabelData:
             "temporal_deformation_rate", "contact_transition",
         ]
 
+        # v0.7: 加载特征元数据
+        try:
+            from tlabel.features_meta import get_feature_metadata_summary
+            feature_metadata = get_feature_metadata_summary()
+        except ImportError:
+            feature_metadata = None
+
         return {
             "schema_version": self.schema_version,
             "format": "tlabel_v2",
             "tlabel_dimensions": 22,
             "feature_names": FEATURE_NAMES,
+            "feature_metadata": feature_metadata,
             "sensor": self.sensor_info,
             "sensor_id": self.sensor_id,
+            "sensor_profile": self.sensor_profile,
             "calibration": self.calibration_params if self.calibration_params else None,
             "episode": {
                 **self.episode_info,

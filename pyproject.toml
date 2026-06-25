@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tlabel"
-version = "0.6.2"
+version = "0.7.0"
 description = "TouchLabel AI - Tactile Data Annotation Toolkit"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -12,7 +12,7 @@ license = {text = "MIT"}
 authors = [
     {name = "Niuzu Tech", email = "luoxi@touchlabelai.cn"},
 ]
-keywords = ["tactile", "annotation", "robotics", "GelSight", "PaXini", "touch", "ToucHD", "AnyTouch", "DIGIT"]
+keywords = ["tactile", "annotation", "robotics", "GelSight", "PaXini", "touch"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
@@ -33,7 +33,6 @@ dependencies = [
 gelsight = ["opencv-python>=4.0"]
 paxini = ["h5py>=3.0"]
 daimon = ["pyarrow>=10.0", "opencv-python>=4.0", "scipy>=1.7"]
-touchd = ["opencv-python>=4.0", "scipy>=1.7"]
 ml = ["scikit-learn>=1.0", "joblib>=1.0"]
 all = ["opencv-python>=4.0", "h5py>=3.0", "pyarrow>=10.0", "scipy>=1.7", "pillow>=9.0", "scikit-learn>=1.0", "joblib>=1.0"]
 dev = ["pytest", "jupyter"]
