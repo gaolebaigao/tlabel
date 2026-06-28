@@ -1,216 +1,353 @@
 # TLabel Format Specification
 
-**Version:** 0.2.0  
-**Status:** Draft  
-**Last Updated:** 2026-05-27
+**Version:** 0.8.0  
+**Status:** Active  
+**Last Updated:** 2026-06-28
 
 ---
 
 ## Overview
 
-TLabel Format is a cross-sensor tactile annotation schema that uses capability declarations to manage sensor heterogeneity. Instead of forcing all sensors into a single representation, TLabel allows each sensor adapter to declare which semantic dimensions it can annotate, producing compatible but not identical output.
+TLabel Format is a **sensor-agnostic tactile annotation schema** designed to unify the output of diverse tactile sensors into a common representation. Rather than forcing all sensors into a single raw-data format, TLabel operates at the **annotation level**: each sensor adapter declares which semantic dimensions it can annotate, producing compatible but heterogeneous output.
 
-## Core Design Principles
+### Design Principles
 
-1. **Capability Declaration**: Each adapter explicitly declares which dimensions it supports. Unsupported dimensions are omitted from output — never fabricated.
-2. **Semantic Level Unification**: TLabel unifies at the annotation level (contact, force, slip), not at the raw signal level. Different sensors capture different aspects of the same phenomena.
+1. **Capability Declaration**: Each adapter explicitly declares which dimensions it supports. Unsupported dimensions are omitted — never fabricated.
+2. **Semantic-Level Unification**: TLabel unifies at the annotation level (contact, slip, deformation), not at the raw signal level.
 3. **Schema-Versioned**: All files carry a `schema_version` field, enabling backward-compatible evolution.
+4. **Pixel-Space Honesty**: Features are computed in pixel space. Names that imply force (e.g. `force_magnitude`) are being deprecated in favor of honest names (e.g. `deformation_magnitude`). Calibration via `sensor_profile` bridges the gap to physical units.
 
-## Schema Structure
+---
 
-### Top-Level
+## Top-Level Structure
 
 ```json
 {
-  "schema_version": "0.2.0",
-  "sensor_info": { ... },
+  "schema_version": "0.8.0",
+  "format": "tlabel_v2",
+  "tlabel_dimensions": 22,
+  "feature_names": ["contact", "deformation_magnitude", ...],
+  "feature_metadata": { ... },
+  "sensor": { ... },
+  "sensor_id": "left_gripper",
+  "sensor_profile": { ... },
+  "calibration": { ... },
+  "episode": { ... },
   "capabilities": { ... },
-  "episodes": [ ... ]
+  "frames": [ ... ]
 }
 ```
 
-### sensor_info
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `schema_version` | string | ✅ | Semver format `X.Y.Z` |
+| `format` | string | ✅ | Always `"tlabel_v2"` |
+| `tlabel_dimensions` | int | ✅ | Number of annotation dimensions (currently 22) |
+| `feature_names` | string[] | ✅ | Ordered list of all 22 dimension keys |
+| `feature_metadata` | object | ✅ | Per-feature metadata (computation, semantics, units) — see §Feature Metadata |
+| `sensor` | object | ✅ | Sensor identification — see §Sensor Info |
+| `sensor_id` | string | ❌ | Instance identifier (e.g. `"left_gripper"`, `"finger_2"`) |
+| `sensor_profile` | object | ❌ | Physical properties for calibration — see §Sensor Profile |
+| `calibration` | object | ❌ | Force-deformation calibration parameters |
+| `episode` | object | ✅ | Episode-level metadata — see §Episode Info |
+| `capabilities` | object | ✅ | Dimension support declaration — see §Capabilities |
+| `frames` | array | ✅ | Array of frame annotations — see §Frame Structure |
 
-Describes the sensor hardware and adapter software:
+---
+
+## Sensor Info
+
+Identifies the sensor hardware and the adapter that processed the data.
 
 ```json
 {
-  "sensor_info": {
-    "sensor_name": "Daimon-Infinity",
+  "sensor": {
+    "sensor_name": "GelSight Mini",
     "sensor_type": "vision_based",
-    "manufacturer": "Daimon",
-    "model": "Infinity",
-    "resolution": "640x480",
+    "manufacturer": "GelSight Inc.",
+    "model": "Mini",
+    "resolution": "320x240",
     "frame_rate": 30,
-    "adapter_name": "tlabel-daimon",
-    "adapter_version": "0.2.0"
+    "adapter_name": "gelsight",
+    "adapter_version": "0.8.0"
   }
 }
 ```
 
-### capabilities
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `sensor_name` | string | ✅ | Product name |
+| `sensor_type` | string | ✅ | One of: `"vision_based"`, `"distributed_array"`, `"hybrid"` |
+| `manufacturer` | string | ❌ | Manufacturer name |
+| `model` | string | ❌ | Model identifier |
+| `resolution` | string | ❌ | Sensor resolution |
+| `frame_rate` | number | ❌ | Frames per second |
+| `adapter_name` | string | ✅ | TLabel adapter identifier |
+| `adapter_version` | string | ✅ | Adapter version (semver) |
 
-Boolean declarations for each semantic dimension:
+---
 
-| Dimension | Type | Description |
-|-----------|------|-------------|
-| `contact` | bool | Binary contact detection |
-| `contact_region` | bool | Spatial location of contact |
-| `force_magnitude` | bool | Normalized force magnitude |
-| `force_direction` | bool | Force direction vector |
-| `slip_event` | bool | Binary slip detection |
-| `slip_direction` | bool | Slip direction vector |
-| `manipulation_phase` | bool | Phase classification (approach/contact/lift/hold/place/release) |
-| `texture` | bool | Surface texture classification |
-| `whole_hand_coordination` | bool | Multi-finger coordination patterns |
-| `object_deformation` | bool | Object deformation detection |
+## Sensor Profile (v0.7+)
+
+Physical properties of the sensor's elastomer and optical system. Enables cross-sensor comparability and unit calibration. **All fields are optional** — `null` is valid.
+
+```json
+{
+  "sensor_profile": {
+    "sensor_type": "gelsight_mini",
+    "manufacturer": "GelSight Inc.",
+    "model": "Mini",
+    "elastomer": {
+      "material": "dragon_skin_10",
+      "modulus_pa": 690000,
+      "thickness_mm": 3.0,
+      "friction_coefficient": 0.5,
+      "source": "manufacturer_spec"
+    },
+    "optical": {
+      "light_source": "led_ring",
+      "led_wavelength_nm": 470
+    },
+    "calibration": {
+      "method": "literature",
+      "reference_doi": "10.1109/LRA.2020.3045678",
+      "pixel_to_force_coefficient": 0.0012,
+      "pixel_to_force_unit": "N/pixel"
+    },
+    "notes": "Calibration from Wu et al. 2021"
+  }
+}
+```
+
+### Elastomer Properties
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `material` | string | Material name (e.g. `"dragon_skin_10"`, `"eco_flex_00-30"`) |
+| `modulus_pa` | number | Young's modulus in Pascals — critical for deformation→force conversion |
+| `thickness_mm` | number | Elastomer thickness in mm |
+| `friction_coefficient` | number | Coefficient of friction |
+| `source` | string | Provenance: literature DOI, `"self_calibrated"`, `"manufacturer_spec"`, `"unknown"` |
+
+### Calibration Parameters
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `method` | string | `"literature"`, `"self_calibrated"`, `"manufacturer_spec"`, `"none"` |
+| `reference_doi` | string | DOI of calibration reference |
+| `pixel_to_force_coefficient` | number | Linear conversion coefficient |
+| `pixel_to_force_unit` | string | Unit of conversion (default: `"N/pixel"`) |
+
+---
+
+## The 22 Annotation Dimensions
+
+### Category 1: Deformation (IDs 1-5)
+
+| # | Key | Unit | Calib? | Computation |
+|---|-----|------|--------|-------------|
+| 1 | `contact` | dimensionless | No | Binary: 1.0 if contact detected, else 0.0 |
+| 2 | `deformation_magnitude` | arbitrary_unit | Yes | `sqrt(mean(R² + G² + B²))` of background-subtracted differential image |
+| 3 | `force_magnitude` | arbitrary_unit | Yes | **DEPRECATED (v0.7)** — alias of `deformation_magnitude`. Use `deformation_magnitude_peak` |
+| 4 | `force_peak` | arbitrary_unit | Yes | `max(|gray|)` where gray = mean(R,G,B) of differential |
+| 5 | `force_direction` | degree | Yes | `arctan2(weighted_mean_gy, weighted_mean_gx)` intensity-weighted gradient direction |
+
+### Category 2: Gradient (IDs 6-9)
+
+| # | Key | Unit | Calib? | Computation |
+|---|-----|------|--------|-------------|
+| 6 | `slip_entropy` | dimensionless | No | Shannon entropy of grayscale deformation distribution (32 bins) |
+| 7 | `slip_event` | dimensionless | No | `min(var(gradient_angle)/100, 1.0)` — angular variance heuristic |
+| 8 | `texture_energy` | arbitrary_unit | No | `mean(gray²)` of differential image |
+| 9 | `edge_density` | dimensionless | No | Fraction of pixels with gradient above 90th percentile |
+
+### Category 3: Force Semantic (IDs 10-18)
+
+| # | Key | Unit | Calib? | Computation |
+|---|-----|------|--------|-------------|
+| 10 | `contact_area` | dimensionless | Yes | `mean(|gray| > 2·std(gray))` — fraction above 2σ threshold |
+| 11 | `centroid_x` | dimensionless | No | Column-wise center of mass of deformation, normalized [0,1] |
+| 12 | `normal_field_magnitude` | arbitrary_unit | Yes | RMS of RGB differential (pixel-space, not actual force) |
+| 13 | `normal_field_variance` | arbitrary_unit | No | `var(‖∇gray‖)` — spatial variance of gradient magnitude |
+| 14 | `shear_field_magnitude` | arbitrary_unit | Yes | `sqrt(mean(|R_gx|)² + mean(|G_gy|)²)` from channel-separated gradients |
+| 15 | `shear_field_direction` | degree | Yes | `arctan2(mean(|G_gy|), mean(|R_gx|))` in image coordinates |
+| 16 | `delta_force_normal` | arbitrary_unit | Yes | Frame-to-frame Δ in `normal_field_magnitude` |
+| 17 | `delta_force_shear` | arbitrary_unit | Yes | Frame-to-frame Δ in `shear_field_magnitude` |
+| 18 | `friction_cone_ratio` | dimensionless | Yes | `shear_magnitude / normal_magnitude` (clamped max 10.0) |
+
+### Category 4: Temporal (IDs 19-22)
+
+| # | Key | Unit | Calib? | Computation |
+|---|-----|------|--------|-------------|
+| 19 | `optical_flow_magnitude` | pixel/frame | No | `mean(magnitude)` of Farneback dense optical flow |
+| 20 | `optical_flow_direction` | degree | No | `mean(angle)` of Farneback dense optical flow |
+| 21 | `temporal_deformation_rate` | arbitrary_unit/s | Yes | `|deformation_t - deformation_{t-1}| / dt` |
+| 22 | `contact_transition` | dimensionless | No | `min(1.0, |contact_t - contact_{t-1}| + |Δcontact_area|·5)` |
+
+### Replacement Dimension
+
+| # | Key | Unit | Calib? | Computation |
+|---|-----|------|--------|-------------|
+| 3' | `deformation_magnitude_peak` | arbitrary_unit | Yes | Same as `deformation_magnitude`, transparently named |
+
+---
+
+## Frame Structure
+
+```json
+{
+  "frame_idx": 0,
+  "timestamp_s": 0.0,
+  "is_first": true,
+  "is_last": false,
+  "tlabel_v2": {
+    "contact": 1.0,
+    "deformation_magnitude": 0.234,
+    "...(all 22 dimensions)...": 0.0
+  },
+  "manipulation_phase": "stable_contact",
+  "confidence": 0.95,
+  "sensor_specific": {},
+  "patches": []
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `frame_idx` | int | ✅ | Original frame number from source data |
+| `timestamp_s` | float | ✅ | Timestamp in seconds |
+| `is_first` | bool | ✅ | True if first frame in episode |
+| `is_last` | bool | ✅ | True if last frame in episode |
+| `tlabel_v2` | object | ✅ | The 22-dimension annotation values |
+| `manipulation_phase` | string | ✅ | Phase label — see valid values below |
+| `confidence` | float | ✅ | Annotation confidence [0, 1] |
+| `sensor_specific` | object | ❌ | Sensor-specific raw data (if preserved) |
+| `patches` | array | ❌ | Modification history — see §Patch & Cascade |
+
+### Valid Manipulation Phases
+
+| Phase | Description |
+|-------|-------------|
+| `idle` | No contact |
+| `initial_contact` | First contact detected |
+| `stable_contact` | Sustained contact |
+| `slip` | Slip event in progress |
+| `release` | Contact releasing |
+| `re_contact` | Re-contact after release |
+| `approach` | Approaching object |
+| `retract` | Withdrawing from object |
+| `grasp` | Active grasping |
+| `transport` | Moving object |
+| `hold` | Maintaining grip |
+
+---
+
+## Episode Info
+
+```json
+{
+  "episode": {
+    "episode_id": "ep_001",
+    "task": "grasp_cube",
+    "object": "wooden_cube_5cm",
+    "num_frames": 150,
+    "duration_s": 5.0,
+    "stats": {
+      "contact_frames": 120,
+      "contact_ratio": 0.8,
+      "slip_frames": 5,
+      "slip_ratio": 0.033,
+      "modified_frames": 0
+    },
+    "episode_label": {
+      "outcome": "success",
+      "manipulation_type": "grasp",
+      "difficulty": "medium"
+    }
+  }
+}
+```
+
+### Episode Label (v0.4+)
+
+| Field | Valid Values | Description |
+|-------|-------------|-------------|
+| `outcome` | `success` / `partial` / `failure` / `inconclusive` | Task result |
+| `manipulation_type` | `grasp` / `pinch` / `poke` / `slide` / `push` / `pull` / `tap` / `lift` / `place` / `other` | Manipulation type |
+| `difficulty` | `easy` / `medium` / `hard` | Task difficulty |
+
+---
+
+## Capabilities
 
 ```json
 {
   "capabilities": {
     "contact": true,
-    "contact_region": true,
+    "contact_region": false,
     "force_magnitude": true,
+    "deformation_magnitude_peak": true,
     "force_direction": true,
     "slip_event": true,
-    "slip_direction": true,
+    "slip_direction": false,
     "manipulation_phase": true,
-    "texture": true,
+    "texture": false,
     "whole_hand_coordination": false,
     "object_deformation": false
   }
 }
 ```
 
-### episodes
+`contact` is **required** (must be `true`). All other capabilities are optional.
 
-Array of annotated episodes. Each episode contains metadata and per-frame annotations:
+---
+
+## Patch & Cascade System (v0.3+)
+
+### Patch Record
 
 ```json
 {
-  "episodes": [
-    {
-      "episode_id": "ep_001",
-      "task": "pick_place",
-      "object": "plastic_bottle",
-      "metadata": {
-        "duration_s": 12.5,
-        "num_frames": 375
-      },
-      "frames": [ ... ]
-    }
+  "field": "contact",
+  "old_value": 0.0,
+  "new_value": 1.0,
+  "cascade": [
+    {"field": "force_magnitude", "old_value": 0.0, "new_value": 0.15},
+    {"field": "manipulation_phase", "old_value": "idle", "new_value": "initial_contact"}
   ]
 }
 ```
 
-### Per-Frame Annotation
+### Cascade Rules
 
-Only dimensions declared in `capabilities` appear in frame output:
-
-```json
-{
-  "frame_idx": 42,
-  "timestamp_s": 1.4,
-  "contact": true,
-  "contact_region": "fingertip_left",
-  "force_magnitude": 0.72,
-  "force_direction": [0.1, -0.3, 0.95],
-  "slip_event": false,
-  "slip_direction": null,
-  "manipulation_phase": "hold",
-  "texture": "smooth_plastic"
-}
-```
-
-## Semantic Dimension Definitions
-
-### contact
-- **Type**: boolean
-- **True when**: Any detectable contact between sensor and object
-- **False when**: No contact or signal below noise floor
-
-### contact_region
-- **Type**: string (enum)
-- **Values**: Sensor-specific regions (e.g., "fingertip_left", "palm_center", "taxel_group_3")
-- **Note**: Region names are sensor-dependent; TLabel does not enforce a universal spatial vocabulary
-
-### force_magnitude
-- **Type**: float [0.0, 1.0]
-- **Normalized**: Sensor's maximum measurable force = 1.0
-- **Note**: Not in Newtons — cross-sensor force comparison requires calibration metadata
-
-### force_direction
-- **Type**: [float, float, float]
-- **Format**: Unit vector in sensor-local coordinate frame
-- **Note**: Coordinate frame convention must be documented in sensor_info
-
-### slip_event
-- **Type**: boolean
-- **True when**: Detectable relative motion between sensor surface and contact object
-- **Detection method**: Sensor-specific (optical flow for vision-based, threshold for array)
-
-### slip_direction
-- **Type**: [float, float, float] or null
-- **Format**: Unit vector indicating slip direction in sensor-local frame
-- **null when**: No slip detected
-
-### manipulation_phase
-- **Type**: string (enum)
-- **Values**: "approach" | "contact" | "lift" | "hold" | "place" | "release"
-- **Transition rules**: Sequential, but "hold" may repeat; "release" may transition to "approach"
-
-### texture
-- **Type**: string
-- **Format**: Descriptive label (e.g., "smooth_plastic", "rough_cloth", "metal_grid")
-- **Note**: Not a standardized taxonomy — labels reflect sensor resolution limits
-
-### whole_hand_coordination
-- **Type**: object or null
-- **Format**: Multi-finger contact state pattern
-- **null when**: Sensor is single-finger or coordination cannot be determined
-
-### object_deformation
-- **Type**: object or null
-- **Format**: Deformation magnitude and type
-- **null when**: Sensor cannot detect deformation (e.g., low-resolution arrays)
-
-## Sensor Type Categories
-
-TLabel recognizes three broad sensor categories:
-
-| Category | Typical Capabilities | Examples |
-|----------|---------------------|----------|
-| **vision_based** | contact, contact_region, slip_event, slip_direction, texture, manipulation_phase | GelSight, DIGIT, Daimon-Infinity |
-| **distributed_array** | contact, contact_region, force_magnitude, force_direction, whole_hand_coordination | PaXini PXCap, tactile gloves |
-| **hybrid** | All dimensions (potentially) | Next-generation multi-modal sensors |
-
-## Validation Rules
-
-A TLabel annotation file is valid if and only if:
-
-1. `schema_version` is present and matches a known version
-2. `capabilities` declares at least 1 dimension as `true`
-3. Every field in `frames` that is declared `true` in `capabilities` is present and non-null
-4. No field appears in `frames` that is declared `false` in `capabilities`
-5. `force_magnitude` values are in [0.0, 1.0]
-6. `force_direction` and `slip_direction` (when present) are unit vectors (‖v‖ ∈ [0.99, 1.01])
-7. `manipulation_phase` values are from the defined enum
-
-## Versioning
-
-TLabel follows semantic versioning:
-- **Major**: Breaking changes to schema structure
-- **Minor**: New optional dimensions or fields
-- **Patch**: Documentation or clarification updates
-
-## Relationship to Other Standards
-
-| Standard | Level | TLabel's Relationship |
-|----------|-------|----------------------|
-| LeRobot | Raw data format | TLabel annotations can augment LeRobot episodes |
-| Open X-Embodiment | Task-level metadata | TLabel provides per-frame tactile detail |
-| RoboMimic | Demonstration format | TLabel annotations are compatible with RoboMimic HDF5 |
+| Trigger | Condition | Cascade Actions |
+|---------|-----------|-----------------|
+| `contact` → 0 | Contact released | Zero: `force_magnitude`, `force_peak`, `slip_event`, `delta_force_normal`, `delta_force_shear`, `contact_area`, `contact_transition`; phase → `idle` |
+| `slip_event` > 0.5 + no contact | Slip without contact | Set `contact` → 1.0; if phase = `idle`, upgrade to `slip` |
+| `force_magnitude` > 0 + no contact | Force without contact | Set `contact` → 1.0 |
 
 ---
 
-*This specification is released under MIT License. Feedback and contributions welcome.*
+## Export Formats
+
+| Format | Extension | Use Case |
+|--------|-----------|----------|
+| JSON | `.json` | Human-readable, full metadata |
+| CSV | `.csv` | pandas/R analysis, flat table |
+| HDF5 | `.h5` / `.hdf5` | Scientific computing, large datasets |
+| FTP-1 Zarr | `.zarr` | FTP-1 foundation model fine-tuning |
+| LeRobot | directory | HuggingFace LeRobot ecosystem |
+
+---
+
+## Version History
+
+| Version | Date | Key Changes |
+|---------|------|-------------|
+| 0.8.0 | 2026-06-28 | FTP-1/MTTS Zarr export; 21 functional areas; 7 sensor registry |
+| 0.7.0 | 2026-06-23 | `sensor_profile` + `feature_metadata`; `force_magnitude` deprecated → `deformation_magnitude_peak` |
+| 0.6.0 | 2026-06-18 | Unit standardization; physical quantity semantics |
+| 0.5.0 | 2026-06-10 | AI pre-annotation engine; HMM phase detection; temporal post-processing |
+| 0.4.0 | 2026-06-05 | Interactive Panel UI; Episode labels; Quality scoring; Batch processing |
+| 0.3.0 | 2026-06-01 | Patch & cascade system; batch correction |
+| 0.2.0 | 2026-05-27 | Initial format specification; capability declaration system |

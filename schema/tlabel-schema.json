@@ -1,146 +1,34 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "TLabel Annotation Format",
-  "version": "0.7.0",
-  "description": "Schema for TLabel cross-sensor tactile annotation files — v0.7 adds sensor_profile and feature metadata",
+  "version": "0.8.0",
+  "description": "Schema for TLabel cross-sensor tactile annotation files — v0.8 aligns with code: tlabel_v2 dict, sensor_profile, feature_metadata, episode labels",
   "type": "object",
-  "required": ["schema_version", "sensor_info", "capabilities", "episodes"],
+  "required": ["schema_version", "format", "sensor", "capabilities", "frames"],
   "properties": {
     "schema_version": {
       "type": "string",
       "pattern": "^0\\.[0-9]+\\.[0-9]+$",
-      "description": "TLabel schema version"
+      "description": "TLabel schema version (semver)"
     },
-    "sensor_info": {
-      "type": "object",
-      "required": ["sensor_name", "sensor_type", "adapter_name", "adapter_version"],
-      "properties": {
-        "sensor_name": {
-          "type": "string",
-          "description": "Sensor product name"
-        },
-        "sensor_type": {
-          "type": "string",
-          "enum": ["vision_based", "distributed_array", "hybrid"],
-          "description": "Sensor category"
-        },
-        "manufacturer": {
-          "type": "string"
-        },
-        "model": {
-          "type": "string"
-        },
-        "resolution": {
-          "type": "string"
-        },
-        "frame_rate": {
-          "type": "number",
-          "minimum": 1
-        },
-        "adapter_name": {
-          "type": "string",
-          "description": "TLabel adapter identifier"
-        },
-        "adapter_version": {
-          "type": "string",
-          "description": "Adapter version (semver)"
-        }
-      }
+    "format": {
+      "type": "string",
+      "const": "tlabel_v2",
+      "description": "Format identifier, always 'tlabel_v2'"
     },
-    "sensor_profile": {
-      "type": "object",
-      "description": "v0.7: Sensor physical properties metadata — enables cross-sensor comparability and unit calibration. All fields optional (null is valid). Designed to be compatible with TacEva intrinsic property evaluation metrics.",
-      "properties": {
-        "sensor_type": {
-          "type": ["string", "null"],
-          "description": "Sensor type identifier (e.g. 'gelsight_mini', 'digit', 'paxini_nova')"
-        },
-        "manufacturer": {
-          "type": ["string", "null"],
-          "description": "Sensor manufacturer name"
-        },
-        "model": {
-          "type": ["string", "null"],
-          "description": "Sensor model identifier"
-        },
-        "elastomer": {
-          "type": "object",
-          "description": "Elastomer (skin) physical properties — the primary factor in force-deformation mapping",
-          "properties": {
-            "material": {
-              "type": ["string", "null"],
-              "description": "Elastomer material name (e.g. 'dragon_skin_10', 'eco_flex_00-30')"
-            },
-            "modulus_pa": {
-              "type": ["number", "null"],
-              "description": "Young's modulus in Pascals. Critical for converting deformation to force.",
-              "minimum": 0
-            },
-            "thickness_mm": {
-              "type": ["number", "null"],
-              "description": "Elastomer thickness in millimeters",
-              "minimum": 0
-            },
-            "friction_coefficient": {
-              "type": ["number", "null"],
-              "description": "Coefficient of friction (static or dynamic, specify in source)",
-              "minimum": 0
-            },
-            "source": {
-              "type": ["string", "null"],
-              "description": "Data provenance: literature DOI, 'self_calibrated', 'manufacturer_spec', or 'unknown'"
-            }
-          }
-        },
-        "optical": {
-          "type": "object",
-          "description": "Optical system properties",
-          "properties": {
-            "light_source": {
-              "type": ["string", "null"],
-              "description": "Light source type (e.g. 'led_ring', 'led_array')"
-            },
-            "led_wavelength_nm": {
-              "type": ["number", "null"],
-              "description": "LED peak wavelength in nanometers",
-              "minimum": 0
-            }
-          }
-        },
-        "calibration": {
-          "type": "object",
-          "description": "Force-deformation calibration parameters",
-          "properties": {
-            "method": {
-              "type": ["string", "null"],
-              "enum": ["literature", "self_calibrated", "manufacturer_spec", "none", null],
-              "description": "Calibration method"
-            },
-            "reference_doi": {
-              "type": ["string", "null"],
-              "description": "DOI of the calibration reference publication"
-            },
-            "pixel_to_force_coefficient": {
-              "type": ["number", "null"],
-              "description": "Linear pixel-to-force conversion coefficient",
-              "minimum": 0
-            },
-            "pixel_to_force_unit": {
-              "type": ["string", "null"],
-              "description": "Unit of the conversion coefficient (e.g. 'N/pixel')",
-              "default": "N/pixel"
-            }
-          }
-        },
-        "notes": {
-          "type": ["string", "null"],
-          "description": "Additional notes about sensor properties or calibration"
-        }
-      }
+    "tlabel_dimensions": {
+      "type": "integer",
+      "const": 22,
+      "description": "Number of annotation dimensions"
+    },
+    "feature_names": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Ordered list of the 22 dimension keys in tlabel_v2"
     },
     "feature_metadata": {
       "type": "object",
-      "description": "v0.7: Per-feature semantic metadata — computation, physical meaning, units, force correlation, calibration dependencies",
+      "description": "Per-feature semantic metadata (computation, semantics, units, calibration deps)",
       "additionalProperties": {
         "type": "object",
         "properties": {
@@ -156,6 +44,97 @@
           "deprecated": { "type": "boolean" },
           "deprecated_since": { "type": "string" },
           "replacement": { "type": "string" }
+        },
+        "required": ["feature_id", "category", "computation", "physical_semantics", "raw_unit", "force_correlation", "requires_calibration"]
+      }
+    },
+    "sensor": {
+      "type": "object",
+      "required": ["sensor_name", "sensor_type", "adapter_name", "adapter_version"],
+      "properties": {
+        "sensor_name": { "type": "string", "description": "Sensor product name" },
+        "sensor_type": { "type": "string", "enum": ["vision_based", "distributed_array", "hybrid"], "description": "Sensor category" },
+        "manufacturer": { "type": "string" },
+        "model": { "type": "string" },
+        "resolution": { "type": "string" },
+        "frame_rate": { "type": "number", "minimum": 1 },
+        "adapter_name": { "type": "string", "description": "TLabel adapter identifier" },
+        "adapter_version": { "type": "string", "description": "Adapter version (semver)" }
+      }
+    },
+    "sensor_id": {
+      "type": ["string", "null"],
+      "description": "Instance identifier (e.g. 'left_gripper', 'finger_2')"
+    },
+    "sensor_profile": {
+      "type": ["object", "null"],
+      "description": "v0.7+: Sensor physical properties — elastomer, optical, calibration. All fields optional.",
+      "properties": {
+        "sensor_type": { "type": ["string", "null"] },
+        "manufacturer": { "type": ["string", "null"] },
+        "model": { "type": ["string", "null"] },
+        "elastomer": {
+          "type": ["object", "null"],
+          "properties": {
+            "material": { "type": ["string", "null"] },
+            "modulus_pa": { "type": ["number", "null"], "minimum": 0 },
+            "thickness_mm": { "type": ["number", "null"], "minimum": 0 },
+            "friction_coefficient": { "type": ["number", "null"], "minimum": 0 },
+            "source": { "type": ["string", "null"] }
+          }
+        },
+        "optical": {
+          "type": ["object", "null"],
+          "properties": {
+            "light_source": { "type": ["string", "null"] },
+            "led_wavelength_nm": { "type": ["number", "null"], "minimum": 0 }
+          }
+        },
+        "calibration": {
+          "type": ["object", "null"],
+          "properties": {
+            "method": { "type": ["string", "null"], "enum": ["literature", "self_calibrated", "manufacturer_spec", "none", null] },
+            "reference_doi": { "type": ["string", "null"] },
+            "pixel_to_force_coefficient": { "type": ["number", "null"], "minimum": 0 },
+            "pixel_to_force_unit": { "type": ["string", "null"], "default": "N/pixel" }
+          }
+        },
+        "notes": { "type": ["string", "null"] }
+      }
+    },
+    "calibration": {
+      "type": ["object", "null"],
+      "description": "Legacy calibration params (prefer sensor_profile.calibration)"
+    },
+    "episode": {
+      "type": "object",
+      "required": ["episode_id", "task"],
+      "properties": {
+        "episode_id": { "type": "string" },
+        "task": { "type": "string" },
+        "object": { "type": ["string", "null"] },
+        "num_frames": { "type": "integer" },
+        "duration_s": { "type": "number" },
+        "stats": {
+          "type": "object",
+          "properties": {
+            "contact_frames": { "type": "integer" },
+            "contact_ratio": { "type": "number", "minimum": 0, "maximum": 1 },
+            "slip_frames": { "type": "integer" },
+            "slip_ratio": { "type": "number", "minimum": 0, "maximum": 1 },
+            "modified_frames": { "type": "integer" }
+          }
+        },
+        "episode_label": {
+          "type": ["object", "null"],
+          "properties": {
+            "outcome": { "type": "string", "enum": ["success", "partial", "failure", "inconclusive"] },
+            "manipulation_type": { "type": "string", "enum": ["grasp", "pinch", "poke", "slide", "push", "pull", "tap", "lift", "place", "other"] },
+            "difficulty": { "type": "string", "enum": ["easy", "medium", "hard"] },
+            "notes": { "type": "string" },
+            "annotator": { "type": "string" },
+            "verified": { "type": "boolean" }
+          }
         }
       }
     },
@@ -177,68 +156,70 @@
       },
       "additionalProperties": false
     },
-    "episodes": {
+    "frames": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["episode_id", "task", "frames"],
+        "required": ["frame_idx", "timestamp_s", "tlabel_v2", "manipulation_phase"],
         "properties": {
-          "episode_id": { "type": "string" },
-          "task": { "type": "string" },
-          "object": { "type": "string" },
-          "metadata": {
+          "frame_idx": { "type": "integer" },
+          "timestamp_s": { "type": "number" },
+          "is_first": { "type": "boolean" },
+          "is_last": { "type": "boolean" },
+          "tlabel_v2": {
             "type": "object",
+            "description": "The 22-dimension annotation values for this frame",
             "properties": {
-              "duration_s": { "type": "number" },
-              "num_frames": { "type": "integer" }
-            }
+              "contact": { "type": "number", "minimum": 0, "maximum": 1 },
+              "deformation_magnitude": { "type": "number", "minimum": 0 },
+              "force_magnitude": { "type": "number", "minimum": 0, "description": "DEPRECATED: alias of deformation_magnitude" },
+              "force_peak": { "type": "number", "minimum": 0 },
+              "force_direction": { "type": "number" },
+              "slip_entropy": { "type": "number", "minimum": 0 },
+              "slip_event": { "type": "number", "minimum": 0, "maximum": 1 },
+              "texture_energy": { "type": "number", "minimum": 0 },
+              "edge_density": { "type": "number", "minimum": 0 },
+              "contact_area": { "type": "number", "minimum": 0 },
+              "centroid_x": { "type": "number" },
+              "normal_field_magnitude": { "type": "number", "minimum": 0 },
+              "normal_field_variance": { "type": "number", "minimum": 0 },
+              "shear_field_magnitude": { "type": "number", "minimum": 0 },
+              "shear_field_direction": { "type": "number" },
+              "delta_force_normal": { "type": "number" },
+              "delta_force_shear": { "type": "number" },
+              "friction_cone_ratio": { "type": "number", "minimum": 0 },
+              "optical_flow_magnitude": { "type": "number", "minimum": 0 },
+              "optical_flow_direction": { "type": "number" },
+              "temporal_deformation_rate": { "type": "number" },
+              "contact_transition": { "type": "number", "minimum": 0, "maximum": 1 }
+            },
+            "additionalProperties": false
           },
-          "frames": {
+          "manipulation_phase": {
+            "type": "string",
+            "enum": ["idle", "initial_contact", "stable_contact", "slip", "release", "re_contact", "approach", "retract", "grasp", "transport", "hold"]
+          },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "sensor_specific": { "type": "object" },
+          "patches": {
             "type": "array",
             "items": {
               "type": "object",
-              "required": ["frame_idx", "timestamp_s"],
+              "required": ["field", "old_value", "new_value"],
               "properties": {
-                "frame_idx": { "type": "integer" },
-                "timestamp_s": { "type": "number" },
-                "contact": { "type": "boolean" },
-                "contact_region": { "type": "string" },
-                "force_magnitude": { "type": "number", "minimum": 0, "maximum": 1 },
-                "deformation_magnitude_peak": { "type": "number", "minimum": 0 },
-                "force_direction": {
+                "field": { "type": "string" },
+                "old_value": {},
+                "new_value": {},
+                "cascade": {
                   "type": "array",
-                  "items": { "type": "number" },
-                  "minItems": 3,
-                  "maxItems": 3
-                },
-                "slip_event": { "type": "boolean" },
-                "slip_direction": {
-                  "oneOf": [
-                    {
-                      "type": "array",
-                      "items": { "type": "number" },
-                      "minItems": 3,
-                      "maxItems": 3
-                    },
-                    { "type": "null" }
-                  ]
-                },
-                "manipulation_phase": {
-                  "type": "string",
-                  "enum": ["idle", "initial_contact", "stable_contact", "slip", "release", "re_contact", "approach", "retract", "grasp", "transport", "hold"]
-                },
-                "texture": { "type": "string" },
-                "whole_hand_coordination": {
-                  "oneOf": [
-                    { "type": "object" },
-                    { "type": "null" }
-                  ]
-                },
-                "object_deformation": {
-                  "oneOf": [
-                    { "type": "object" },
-                    { "type": "null" }
-                  ]
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "field": { "type": "string" },
+                      "old_value": {},
+                      "new_value": {}
+                    }
+                  }
                 }
               }
             }
