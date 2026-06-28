@@ -30,9 +30,29 @@ We deliberately avoid forcing all sensors into a common raw representation. Inst
 
 Not all sensors can measure all 22 dimensions. Rather than filling gaps with zeros (which would be misleading), TLabel uses a capabilities dictionary where each sensor declares what it can and cannot provide.
 
-### 2.3 Pixel-Space Honesty
+### 2.3 Pixel-Space Honesty & Per-Feature Transparency
 
-Many tactile force measurements are actually pixel-space deformations merely correlated with force. TLabel is explicit about this: dimensions like normal_field_magnitude and shear_field_magnitude are computed in pixel space and reported in arbitrary_unit. Only when sensor_profile provides calibration parameters can these be converted to physical units.
+Many tactile force measurements are actually pixel-space deformations merely correlated with force. TLabel is explicit about this: dimensions like `normal_field_magnitude` and `shear_field_magnitude` are computed in pixel space and reported in `arbitrary_unit`. Only when `sensor_profile` provides calibration parameters can these be converted to physical units.
+
+To make this honesty **actionable** (not just philosophical), every feature in a TLabel file carries two metadata fields:
+
+| Field | Purpose | Example Values |
+|-------|---------|----------------|
+| `raw_unit` | The actual physical unit of the raw numeric value | `pixel`, `pixel_intensity`, `dimensionless`, `radian`, `arbitrary_unit`, or SI units when calibration is available |
+| `physical_semantics` | What the feature physically represents, using `category:detail` convention | `force_proxy:proportional_to_normal_displacement`, `geometry:contact_patch_area`, `motion:slip_direction` |
+
+**Why these two fields matter:**
+
+A user who opens a `.tlabel` file and sees `feature_5: 0.3` should immediately be able to answer:
+1. **What is this number?** → `raw_unit: "pixel_intensity"` tells them it's not Newtons
+2. **What does it mean physically?** → `physical_semantics: "force_proxy:proportional_to_X_displacement"` tells them it's correlated with force but not calibrated
+
+Without these fields, users are forced to:
+- Guess whether `force_x = 0.3` means 0.3 N or 0.3 pixel intensity
+- Read the full annotation spec to understand what each feature represents
+- Potentially misuse uncalibrated values as calibrated measurements, leading to incorrect model behavior
+
+These fields prevent the most common user mistake in tactile data processing: **confusing arbitrary units with physical units**.
 
 ### 2.4 Physical Consistency via Cascade Rules
 
@@ -56,6 +76,26 @@ contact_area, centroid_x, normal_field_magnitude, normal_field_variance, shear_f
 
 ### 3.4 Temporal (IDs 19-22)
 optical_flow_magnitude, optical_flow_direction, temporal_deformation_rate, contact_transition
+
+### 3.5 Per-Feature Metadata Schema
+
+Each feature in the 22-dimensional vector is accompanied by `raw_unit` and `physical_semantics` metadata. Below are representative examples (full table in annotation-spec.md):
+
+| ID | Feature Name | raw_unit | physical_semantics |
+|----|-------------|----------|-------------------|
+| 1 | contact | dimensionless | geometry:binary_contact_state |
+| 2 | deformation_magnitude | pixel | geometry:gel_deformation_depth |
+| 5 | force_peak | arbitrary_unit | force_proxy:max_normal_displacement |
+| 11 | normal_field_magnitude | pixel_intensity | force_proxy:proportional_to_normal_displacement |
+| 13 | shear_field_magnitude | pixel_intensity | force_proxy:proportional_to_lateral_displacement |
+| 22 | contact_transition | dimensionless | temporal:contact_state_change_flag |
+
+**Design rationale:**
+
+- Features derived from pixel-space computations (RGB differentials, spatial gradients) are honestly labeled as `pixel_intensity` or `arbitrary_unit`, never as SI units
+- Features that are purely geometric (pixel counts, coordinates) use `pixel` or `dimensionless`
+- When a sensor provides calibration parameters via `sensor_profile`, the toolkit can optionally convert `arbitrary_unit` features to SI units, at which point `raw_unit` is updated to reflect the calibrated unit (e.g., `mN`)
+- This design ensures that even without calibration, the data file is **self-describing**: a downstream consumer can determine feature suitability for their task without external documentation
 
 ---
 
