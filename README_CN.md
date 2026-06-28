@@ -26,6 +26,22 @@
 
 ## 🆕 更新亮点
 
+### v0.8.0 — FTP-1 / MTTS 导出
+**标注数据一键导出为 FTP-1 的 MTTS Zarr 格式，直接用于触觉基础模型微调。**
+- 🚀 **FTP-1 转换器**：`tlabel_to_ftp1()` / `batch_to_ftp1()`，一行代码导出 Zarr
+- 🖐 **21 个功能区**：MTTS 形态感知触觉令牌空间（15 个手部区域 + 6 个腕部力矩通道）
+- 📡 **7 种传感器注册**：GelSight、GelSightMini、FreeTacMan、ViTaMIn、3DViTac、Contactile、BinaryContact
+- 🎨 **面板新增导出 Tab**：传感器选择、功能区可视化勾选、预设按钮、导出预览
+- 📦 **Zarr 后端**：追加模式支持多 Episode 数据集，自动图像缩放 224×224 + 归一化
+
+```python
+from tlabel import demo
+data = demo('gelsight')
+data.export_ftp1("output.zarr",
+    sensor_name="GelSightMini",
+    functional_areas=[0, 1])  # 拇指尖 + 食指尖
+```
+
 ### v0.5.0 — AI辅助预标注
 **让引擎帮你建议标签，你来审核修正——人在回路，不是黑箱。**
 - 🤖 **PredictEngine**：自动预测接触、滑移和操作阶段
@@ -123,6 +139,34 @@ data.export("output.csv")    # 平面CSV，pandas/Excel友好
 
 完整闭环：**加载 → 审核 → 修正 → 导出** 🔁
 
+### 导出到 FTP-1（基础模型就绪）
+
+```bash
+pip install tlabel[ftp1]   # 安装 zarr 依赖
+```
+
+```python
+# 标注数据 → FTP-1 Zarr 格式
+data.export_ftp1("output.zarr",
+    sensor_name="GelSightMini",
+    functional_areas=[0, 1])
+
+# 批量导出多个 Episode
+from tlabel.converters import batch_to_ftp1
+batch_to_ftp1(["ep1.json", "ep2.json"], "dataset.zarr",
+    sensor_name="GelSightMini",
+    functional_areas=[0, 1])
+
+# 预设配置
+from tlabel.converters import DEFAULT_AREA_MAPPINGS
+# "parallel_gripper": [0, 1]       夹爪
+# "three_finger": [0, 1, 2]        三指
+# "five_finger": [0, 1, 2, 3, 4]   五指
+# "dexterous_hand": list(range(15)) 灵巧手
+```
+
+导出的 Zarr 文件可直接用于 [FTP-1](https://github.com/michaelyuancb/ftp1-policy) 微调全球首个通用触觉基础模型。
+
 ---
 
 ## 🤖 AI预标注
@@ -173,12 +217,26 @@ data.review()
 
 > 力觉型传感器（帕西尼）没有光学图像→20维；图像型→完整22维；戴盟在没有视频文件时自动降级到20维。不会报错，不会出幺蛾子。
 
+### FTP-1 兼容传感器
+
+以下传感器可通过 `export_ftp1()` 直接导出为 [FTP-1](https://github.com/michaelyuancb/ftp1-policy) MTTS Zarr 格式：
+
+| 传感器 | 类型 | 默认尺寸 |
+|:-------|:-----|:---------:|
+| GelSight / GelSightMini | 图像 | (224, 224, 3) |
+| FreeTacMan | 图像 | (224, 224, 3) |
+| ViTaMIn | 图像 | (224, 224, 3) |
+| 3DViTac | 矩阵 | (12, 32) |
+| Contactile | 矩阵 | (12, 32) |
+| BinaryContact | 二值 | (1,) |
+
 ### 按传感器安装依赖
 
 ```bash
 pip install tlabel[gelsight]   # GelSight / DIGIT → opencv-python
 pip install tlabel[paxini]     # 帕西尼 → h5py
 pip install tlabel[daimon]     # 戴盟 → pyarrow + opencv-python
+pip install tlabel[ftp1]       # FTP-1/MTTS 导出 → zarr
 pip install tlabel[all]        # 全部安装
 ```
 
@@ -198,7 +256,7 @@ pip install tlabel[all]        # 全部安装
 - 🔗 **联动规则**：`contact`设为0 → 7个关联字段自动归零 + 阶段重置为`idle`
 - 🤖 **预标注集成**：在同一个面板中应用AI预测并审核修正
 - 🌐 **中英文切换**：右上角一键切换
-- 📤 **面板内导出**：JSON / CSV 一键导出
+- 📤 **面板内导出**：JSON / CSV / FTP-1 Zarr 一键导出
 
 ---
 
@@ -286,6 +344,7 @@ data.review()                    # Jupyter面板（中文）
 data.review(lang="en")           # 英文
 data.export("output.json")       # JSON（TLabel Format v2）
 data.export("output.csv")        # CSV
+data.export_ftp1("out.zarr")     # FTP-1 Zarr 格式
 ```
 
 ### 联动规则（contact → 0）
@@ -335,6 +394,9 @@ tlabel/
 │   ├── gelsight.py       # GelSight Mini / DIGIT
 │   ├── paxini.py         # 帕西尼 PXCap
 │   └── daimon.py         # 戴盟 DM-TacClaw（+视频解码）
+├── converters/
+│   ├── lerobot.py        # LeRobot 格式转换器
+│   └── ftp1.py           # FTP-1/MTTS Zarr 格式转换器
 ├── viewer/
 │   ├── panel.py          # Jupyter _repr_html_ 渲染
 │   └── templates.py      # HTML + JS + CSS 模板引擎

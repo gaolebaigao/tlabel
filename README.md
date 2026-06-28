@@ -26,6 +26,22 @@
 
 ## 🆕 What's New
 
+### v0.8.0 — FTP-1 / MTTS Export
+**Export labeled data directly to FTP-1's MTTS Zarr format for foundation model fine-tuning.**
+- 🚀 **FTP-1 Converter**: `tlabel_to_ftp1()` / `batch_to_ftp1()` — one-click export to Zarr
+- 🖐 **21 Functional Areas**: MTTS morphology-aware tactile token space (15 hand zones + 6 wrist torque channels)
+- 📡 **7 Sensor Registry**: GelSight, GelSightMini, FreeTacMan, ViTaMIn, 3DViTac, Contactile, BinaryContact
+- 🎨 **New Export Tab in Panel**: sensor selection, functional area picker with presets, export preview
+- 📦 **Zarr backend**: append mode for multi-episode datasets, auto image resize to 224×224 + normalization
+
+```python
+from tlabel import demo
+data = demo('gelsight')
+data.export_ftp1("output.zarr",
+    sensor_name="GelSightMini",
+    functional_areas=[0, 1])  # thumb tip + index fingertip
+```
+
 ### v0.5.0 — AI-Assisted Pre-Annotation
 **Let the engine suggest labels, then you review and correct — human-in-the-loop, not black-box.**
 - 🤖 **PredictEngine**: predict contact, slip, and manipulation phase automatically
@@ -123,6 +139,34 @@ data.export("output.csv")    # Flat CSV for pandas/Excel
 
 Full loop: **load → review → correct → export** 🔁
 
+### Export to FTP-1 (Foundation Model Ready)
+
+```bash
+pip install tlabel[ftp1]   # installs zarr
+```
+
+```python
+# Export labeled data → FTP-1 Zarr format
+data.export_ftp1("output.zarr",
+    sensor_name="GelSightMini",
+    functional_areas=[0, 1])
+
+# Batch export multiple episodes
+from tlabel.converters import batch_to_ftp1
+batch_to_ftp1(["ep1.json", "ep2.json"], "dataset.zarr",
+    sensor_name="GelSightMini",
+    functional_areas=[0, 1])
+
+# Preset configurations
+from tlabel.converters import DEFAULT_AREA_MAPPINGS
+# "parallel_gripper": [0, 1]
+# "three_finger": [0, 1, 2]
+# "five_finger": [0, 1, 2, 3, 4]
+# "dexterous_hand": list(range(15))
+```
+
+The exported Zarr files are directly compatible with [FTP-1](https://github.com/michaelyuancb/ftp1-policy) for fine-tuning the world's first general-purpose tactile foundation model.
+
 ---
 
 ## 🤖 AI Pre-Annotation
@@ -173,12 +217,26 @@ data.review()
 
 > Force-type sensors (PaXini) lack optical images → 20 dims. Image-type → full 22. Daimon gracefully degrades when no video is present. **No errors, no surprises.**
 
+### FTP-1 Compatible Sensors
+
+All sensors below can export directly to [FTP-1](https://github.com/michaelyuancb/ftp1-policy) MTTS Zarr format via `export_ftp1()`:
+
+| Sensor | Type | Default Shape |
+|:-------|:-----|:-------------:|
+| GelSight / GelSightMini | image | (224, 224, 3) |
+| FreeTacMan | image | (224, 224, 3) |
+| ViTaMIn | image | (224, 224, 3) |
+| 3DViTac | matrix | (12, 32) |
+| Contactile | matrix | (12, 32) |
+| BinaryContact | binary | (1,) |
+
 ### Per-Sensor Installation
 
 ```bash
 pip install tlabel[gelsight]   # GelSight / DIGIT → opencv-python
 pip install tlabel[paxini]     # PaXini → h5py
 pip install tlabel[daimon]     # Daimon → pyarrow + opencv-python
+pip install tlabel[ftp1]       # FTP-1/MTTS export → zarr
 pip install tlabel[all]        # Everything
 ```
 
@@ -198,7 +256,7 @@ pip install tlabel[all]        # Everything
 - 🔗 **Cascade rules**: set `contact=0` → 7 related fields auto-zero + phase resets to `idle`
 - 🤖 **Pre-annotation integration**: apply AI predictions, then review in the same panel
 - 🌐 **Bilingual toggle**: 中文 / English, one click top-right
-- 📤 **In-panel export**: JSON / CSV with one click
+- 📤 **In-panel export**: JSON / CSV / FTP-1 Zarr with one click
 
 ---
 
@@ -286,6 +344,7 @@ data.review()                    # Jupyter panel (Chinese)
 data.review(lang="en")           # English
 data.export("output.json")       # JSON (TLabel Format v2)
 data.export("output.csv")        # CSV
+data.export_ftp1("out.zarr")     # FTP-1 Zarr format
 ```
 
 ### Cascade Rules (contact → 0)
@@ -335,6 +394,9 @@ tlabel/
 │   ├── gelsight.py       # GelSight Mini / DIGIT
 │   ├── paxini.py         # PaXini PXCap
 │   └── daimon.py         # Daimon DM-TacClaw (+ video decoding)
+├── converters/
+│   ├── lerobot.py        # LeRobot format converter
+│   └── ftp1.py           # FTP-1/MTTS Zarr format converter
 ├── viewer/
 │   ├── panel.py          # Jupyter _repr_html_ renderer
 │   └── templates.py      # HTML + JS + CSS template engine

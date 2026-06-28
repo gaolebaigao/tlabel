@@ -304,6 +304,37 @@ class TLabelData:
         from tlabel.export.writer import export_data
         return export_data(self, output_path, format=format)
 
+    def export_ftp1(self, output_path: str, sensor_name: str = "GelSightMini",
+                    functional_areas=None, side: str = "right",
+                    group: str = "gripper", **kwargs) -> Dict:
+        """
+        导出为FTP-1/MTTS Zarr格式（触觉基础模型通用格式）。
+
+        Args:
+            output_path: 输出.zarr路径
+            sensor_name: FTP-1注册的传感器名（如"GelSightMini"、"Contactile"）
+            functional_areas: 功能区ID列表（如[0,1]表示拇指尖+食指尖）
+            side: "left" 或 "right"
+            group: 组名（如"gripper", "dexterous"）
+            **kwargs: 传递给tlabel_to_ftp1的额外参数
+
+        Returns:
+            导出统计信息dict
+
+        Example:
+            data.export_ftp1("output.zarr",
+                              sensor_name="GelSightMini",
+                              functional_areas=[0, 1])
+        """
+        from tlabel.converters.ftp1 import tlabel_to_ftp1
+        return tlabel_to_ftp1(
+            self, output_path,
+            sensor_name=sensor_name,
+            functional_areas=functional_areas,
+            side=side,
+            group=group,
+            **kwargs,
+        )
 
     # ============================================================
     # v0.4.0: Episode级标注

@@ -46,7 +46,7 @@ def generate_panel_html(
   <div style="display:flex;align-items:center;gap:10px;">
     <span style="font-size:20px;">🦞</span>
     <span style="font-size:16px;font-weight:700;color:#e85d75;" data-i18n="app.title">TLabel 触觉标注工具</span>
-    <span style="font-size:10px;color:#868e96;background:#e9ecef;padding:1px 6px;border-radius:4px;">v0.5.1</span>
+    <span style="font-size:10px;color:#868e96;background:#e9ecef;padding:1px 6px;border-radius:4px;">v0.8.0</span>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span style="font-size:12px;color:#868e96;" id="{tid}-sensor-info"></span>
@@ -72,6 +72,9 @@ def generate_panel_html(
   <button class="{tid}-tab" data-tab="stats" style="padding:10px 18px;border:none;background:transparent;
           color:#868e96;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;
           margin-bottom:-2px;" data-i18n="tab.stats">📈 统计</button>
+  <button class="{tid}-tab" data-tab="export" style="padding:10px 18px;border:none;background:transparent;
+          color:#868e96;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;
+          margin-bottom:-2px;" data-i18n="tab.export">🚀 导出</button>
 </div>
 
 <!-- ==================== TAB 1: Annotate ==================== -->
@@ -368,6 +371,103 @@ def generate_panel_html(
 </div>
 </div><!-- end panel-stats -->
 
+<!-- ==================== TAB 5: Export (FTP-1/MTTS) ==================== -->
+<div id="{tid}-panel-export" style="display:none;">
+<div style="padding:20px;">
+
+  <!-- FTP-1 Section -->
+  <div style="background:#fff;border-radius:10px;padding:20px;border:1px solid #e9ecef;margin-bottom:16px;">
+    <div style="font-size:14px;font-weight:700;color:#343a40;margin-bottom:4px;">
+      🚀 <span data-i18n="export.ftp1_title">FTP-1 / MTTS 格式导出</span>
+    </div>
+    <div style="font-size:12px;color:#868e96;margin-bottom:16px;" data-i18n="export.ftp1_desc">
+      导出为触觉基础模型 FTP-1 兼容的 MTTS Zarr 格式，可直接用于微调或推理。
+    </div>
+
+    <!-- Sensor Config -->
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+      <div style="flex:1;min-width:180px;">
+        <label style="font-size:11px;color:#868e96;display:block;margin-bottom:4px;" data-i18n="export.sensor_name">传感器名称</label>
+        <select id="{tid}-ftp1-sensor" style="width:100%;padding:6px 10px;border:1px solid #ced4da;border-radius:6px;font-size:12px;background:#fff;">
+          <option value="GelSightMini" selected>GelSightMini</option>
+          <option value="GelSight">GelSight</option>
+          <option value="FreeTacMan">FreeTacMan</option>
+          <option value="ViTaMIn">ViTaMIn</option>
+          <option value="3DViTac">3DViTac (matrix)</option>
+          <option value="Contactile">Contactile (matrix)</option>
+          <option value="BinaryContact">BinaryContact (binary)</option>
+        </select>
+      </div>
+      <div style="flex:1;min-width:120px;">
+        <label style="font-size:11px;color:#868e96;display:block;margin-bottom:4px;" data-i18n="export.side">安装位置</label>
+        <select id="{tid}-ftp1-side" style="width:100%;padding:6px 10px;border:1px solid #ced4da;border-radius:6px;font-size:12px;background:#fff;">
+          <option value="right" selected>Right (右手)</option>
+          <option value="left">Left (左手)</option>
+        </select>
+      </div>
+      <div style="flex:1;min-width:120px;">
+        <label style="font-size:11px;color:#868e96;display:block;margin-bottom:4px;" data-i18n="export.group">组名</label>
+        <select id="{tid}-ftp1-group" style="width:100%;padding:6px 10px;border:1px solid #ced4da;border-radius:6px;font-size:12px;background:#fff;">
+          <option value="gripper" selected>Gripper (夹爪)</option>
+          <option value="dexterous">Dexterous (灵巧手)</option>
+          <option value="wrist">Wrist (腕部)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Functional Area Mapping -->
+    <div style="background:#f8f9fa;border-radius:8px;padding:14px;margin-bottom:16px;">
+      <div style="font-size:12px;font-weight:600;color:#495057;margin-bottom:8px;" data-i18n="export.area_title">
+        🎯 功能区映射 (MTTS Functional Areas)
+      </div>
+      <div style="font-size:11px;color:#868e96;margin-bottom:10px;" data-i18n="export.area_desc">
+        选择此传感器对应的 MTTS 功能区槽位。夹爪通常映射为拇指尖(0)+食指尖(1)。
+      </div>
+      <div id="{tid}-ftp1-areas" style="display:flex;flex-wrap:wrap;gap:6px;">
+        <!-- Dynamically populated -->
+      </div>
+      <div style="margin-top:10px;display:flex;gap:8px;">
+        <button id="{tid}-ftp1-preset-gripper" style="padding:3px 10px;border-radius:4px;border:1px solid #e85d75;background:transparent;color:#e85d75;cursor:pointer;font-size:11px;" data-i18n="export.preset_gripper">预设: 夹爪 [0,1]</button>
+        <button id="{tid}-ftp1-preset-three" style="padding:3px 10px;border-radius:4px;border:1px solid #ced4da;background:transparent;color:#868e96;cursor:pointer;font-size:11px;" data-i18n="export.preset_three">预设: 三指 [0,1,2]</button>
+        <button id="{tid}-ftp1-preset-five" style="padding:3px 10px;border-radius:4px;border:1px solid #ced4da;background:transparent;color:#868e96;cursor:pointer;font-size:11px;" data-i18n="export.preset_five">预设: 五指 [0-4]</button>
+      </div>
+    </div>
+
+    <!-- Export Button -->
+    <div style="display:flex;align-items:center;gap:12px;">
+      <button id="{tid}-ftp1-export-btn" style="padding:8px 24px;border-radius:8px;border:none;background:linear-gradient(135deg,#e85d75,#d63384);color:#fff;font-weight:700;font-size:13px;cursor:pointer;box-shadow:0 2px 8px rgba(232,93,117,0.3);">
+        <span data-i18n="export.btn_export">📦 导出为 FTP-1 Zarr</span>
+      </button>
+      <span id="{tid}-ftp1-status" style="font-size:12px;color:#868e96;"></span>
+    </div>
+
+    <!-- Export Result -->
+    <div id="{tid}-ftp1-result" style="display:none;margin-top:14px;background:#f1f3f5;border-radius:8px;padding:14px;font-size:12px;">
+      <div style="font-weight:600;color:#343a40;margin-bottom:8px;" data-i18n="export.result_title">📋 导出结果</div>
+      <pre id="{tid}-ftp1-result-content" style="margin:0;font-family:monospace;font-size:11px;color:#495057;white-space:pre-wrap;"></pre>
+    </div>
+  </div>
+
+  <!-- FTP-1 Format Reference -->
+  <div style="background:#fff;border-radius:10px;padding:20px;border:1px solid #e9ecef;">
+    <div style="font-size:13px;font-weight:600;color:#343a40;margin-bottom:8px;" data-i18n="export.format_ref">
+      📖 MTTS Zarr 格式说明
+    </div>
+    <div style="font-size:11px;color:#495057;line-height:1.8;font-family:monospace;background:#f8f9fa;padding:12px;border-radius:6px;">
+      <div style="color:#868e96;">// 每个 side + group 包含 4 个 Zarr key:</div>
+      <div><span style="color:#e85d75;">right_tactile_data_gripper</span>: (T, N, H, W, 3) uint8 &nbsp;<span style="color:#868e96;">← 触觉图像</span></div>
+      <div><span style="color:#e85d75;">right_tactile_area_gripper</span>: (T, N) int32 &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#868e96;">← 功能区ID</span></div>
+      <div><span style="color:#e85d75;">right_tactile_sensor_gripper</span>: (T,) string &nbsp;&nbsp;&nbsp;<span style="color:#868e96;">← 传感器名</span></div>
+      <div><span style="color:#e85d75;">right_tactile_type_gripper</span>: (T,) string &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#868e96;">← image/matrix/binary</span></div>
+    </div>
+    <div style="font-size:11px;color:#868e96;margin-top:8px;" data-i18n="export.format_note">
+      💡 导出的 .zarr 文件可直接被 FTP-1 的 dataset_zarr.py 加载，用于模型微调。
+    </div>
+  </div>
+
+</div>
+</div><!-- end panel-export -->
+
 </div><!-- end root -->
 
 <script>
@@ -400,7 +500,13 @@ def generate_panel_html(
       'export.title': '导出数据', 'export.hint': '选择格式并点击对应按钮',
       'actions.exportFull': '💾 导出 JSON', 'actions.exportCSV': '📊 导出 CSV', 'actions.exportHDF5': '🔬 导出 HDF5',
       'export.success': '导出成功',
-      'tab.annotate': '📝 标注', 'tab.episode': '🎬 Episode', 'tab.quality': '📊 质量评分', 'tab.stats': '📈 统计',
+      'tab.annotate': '📝 标注', 'tab.episode': '🎬 Episode', 'tab.quality': '📊 质量评分', 'tab.stats': '📈 统计', 'tab.export': '🚀 导出',
+      'export.ftp1_title': 'FTP-1 / MTTS 格式导出', 'export.ftp1_desc': '导出为触觉基础模型 FTP-1 兼容的 MTTS Zarr 格式',
+      'export.sensor_name': '传感器名称', 'export.side': '安装位置', 'export.group': '组名',
+      'export.area_title': '🎯 功能区映射', 'export.area_desc': '选择传感器对应的 MTTS 功能区槽位',
+      'export.btn_export': '📦 导出为 FTP-1 Zarr', 'export.result_title': '📋 导出结果',
+      'export.format_ref': '📖 MTTS Zarr 格式说明', 'export.format_note': '💡 导出的 .zarr 文件可直接被 FTP-1 加载',
+      'export.preset_gripper': '预设: 夹爪 [0,1]', 'export.preset_three': '预设: 三指 [0,1,2]', 'export.preset_five': '预设: 五指 [0-4]',
       'episode.title': 'Episode 级标注', 'episode.desc': '为整个交互Episode添加语义标注，描述操作任务的整体结果和属性。标注结果会写入 episode_info 并随数据一起导出。',
       'episode.outcome': '操作结果', 'episode.outcomeDefault': '— 未标注 —',
       'episode.manipType': '操作类型', 'episode.manipTypeDefault': '— 未标注 —',
@@ -467,7 +573,13 @@ def generate_panel_html(
       'export.title': 'Export', 'export.hint': 'Choose format',
       'actions.exportFull': '💾 JSON', 'actions.exportCSV': '📊 CSV', 'actions.exportHDF5': '🔬 HDF5',
       'export.success': 'Exported',
-      'tab.annotate': '📝 Annotate', 'tab.episode': '🎬 Episode', 'tab.quality': '📊 Quality', 'tab.stats': '📈 Stats',
+      'tab.annotate': '📝 Annotate', 'tab.episode': '🎬 Episode', 'tab.quality': '📊 Quality', 'tab.stats': '📈 Stats', 'tab.export': '🚀 Export',
+      'export.ftp1_title': 'FTP-1 / MTTS Format Export', 'export.ftp1_desc': 'Export to FTP-1 compatible MTTS Zarr format',
+      'export.sensor_name': 'Sensor Name', 'export.side': 'Side', 'export.group': 'Group',
+      'export.area_title': '🎯 Functional Area Mapping', 'export.area_desc': 'Select MTTS functional area slots for this sensor',
+      'export.btn_export': '📦 Export as FTP-1 Zarr', 'export.result_title': '📋 Export Result',
+      'export.format_ref': '📖 MTTS Zarr Format Reference', 'export.format_note': '💡 Exported .zarr can be loaded directly by FTP-1',
+      'export.preset_gripper': 'Preset: Gripper [0,1]', 'export.preset_three': 'Preset: 3-Finger [0,1,2]', 'export.preset_five': 'Preset: 5-Finger [0-4]',
       'episode.title': 'Episode Annotation', 'episode.desc': 'Add semantic labels for the entire interaction episode. Results are saved to episode_info and exported with data.',
       'episode.outcome': 'Outcome', 'episode.outcomeDefault': '— Not labeled —',
       'episode.manipType': 'Manipulation Type', 'episode.manipTypeDefault': '— Not labeled —',
@@ -545,6 +657,7 @@ def generate_panel_html(
     'episode': document.getElementById(tid + '-panel-episode'),
     'quality': document.getElementById(tid + '-panel-quality'),
     'stats': document.getElementById(tid + '-panel-stats'),
+    'export': document.getElementById(tid + '-panel-export'),
   }};
 
   function switchTab(tabName) {{
@@ -870,6 +983,93 @@ def generate_panel_html(
     setTimeout(() => {{ el.style.display = 'none'; }}, 3000);
   }}
 
+  // ===== FTP-1/MTTS Export Panel =====
+  const FTP1_AREAS = {{
+    0: 'Thumb Tip', 1: 'Index Tip', 2: 'Middle Tip', 3: 'Ring Tip', 4: 'Pinky Tip',
+    5: 'Thumb Pad', 6: 'Index Pad', 7: 'Middle Pad', 8: 'Ring Pad', 9: 'Pinky Pad',
+    10: 'Thenar', 11: 'Hypothenar', 12: 'Palm Center', 13: 'Proximal Phalanx', 14: 'Dorsum',
+    15: 'Wrist FX', 16: 'Wrist FY', 17: 'Wrist FZ', 18: 'Wrist TX', 19: 'Wrist TY', 20: 'Wrist TZ'
+  }};
+  let selectedAreas = [0, 1]; // Default: gripper
+
+  function initFTP1Areas() {{
+    const container = document.getElementById(tid + '-ftp1-areas');
+    if (!container) return;
+    container.innerHTML = '';
+    for (let id = 0; id <= 20; id++) {{
+      const checked = selectedAreas.includes(id) ? 'checked' : '';
+      const active = selectedAreas.includes(id) ? 'background:#e85d75;color:#fff;border-color:#e85d75;' : '';
+      const label = document.createElement('label');
+      label.style.cssText = 'display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:4px;border:1px solid #ced4da;font-size:11px;cursor:pointer;user-select:none;transition:all 0.15s;' + active;
+      label.innerHTML = '<input type="checkbox" value="' + id + '" ' + checked + ' style="display:none;">' + id + ':' + FTP1_AREAS[id];
+      const cb = label.querySelector('input');
+      cb.addEventListener('change', function() {{
+        if (this.checked) {{
+          if (!selectedAreas.includes(id)) selectedAreas.push(id);
+          label.style.background = '#e85d75'; label.style.color = '#fff'; label.style.borderColor = '#e85d75';
+        }} else {{
+          selectedAreas = selectedAreas.filter(a => a !== id);
+          label.style.background = ''; label.style.color = ''; label.style.borderColor = '#ced4da';
+        }}
+        selectedAreas.sort((a,b) => a-b);
+      }});
+      container.appendChild(label);
+    }}
+  }}
+
+  function setAreaPreset(areas, btnId) {{
+    selectedAreas = [...areas];
+    initFTP1Areas();
+    // Update preset button styles
+    ['gripper','three','five'].forEach(p => {{
+      const b = document.getElementById(tid + '-ftp1-preset-' + p);
+      if (b) {{ b.style.borderColor = '#ced4da'; b.style.color = '#868e96'; b.style.background = 'transparent'; }}
+    }});
+    const activeBtn = document.getElementById(tid + '-ftp1-preset-' + btnId);
+    if (activeBtn) {{ activeBtn.style.borderColor = '#e85d75'; activeBtn.style.color = '#e85d75'; activeBtn.style.background = 'transparent'; }}
+  }}
+
+  function handleFTP1Export() {{
+    const sensor = document.getElementById(tid + '-ftp1-sensor').value;
+    const side = document.getElementById(tid + '-ftp1-side').value;
+    const group = document.getElementById(tid + '-ftp1-group').value;
+    const status = document.getElementById(tid + '-ftp1-status');
+    const resultDiv = document.getElementById(tid + '-ftp1-result');
+    const resultContent = document.getElementById(tid + '-ftp1-result-content');
+
+    if (selectedAreas.length === 0) {{
+      status.textContent = currentLang === 'zh-CN' ? '⚠️ 请至少选择一个功能区' : '⚠️ Select at least one functional area';
+      return;
+    }}
+
+    status.textContent = currentLang === 'zh-CN' ? '⏳ 正在准备导出...' : '⏳ Preparing export...';
+
+    // Generate export summary (actual Zarr writing requires Python backend)
+    const nFrames = (data.frames || []).length;
+    const areaNames = selectedAreas.map(a => FTP1_AREAS[a] || ('Area_' + a));
+    const summary = {{
+      sensor_name: sensor,
+      side: side,
+      group: group,
+      functional_areas: selectedAreas,
+      functional_area_names: areaNames,
+      time_steps: nFrames,
+      num_slots: selectedAreas.length,
+      data_shape: '[' + nFrames + ', ' + selectedAreas.length + ', 224, 224, 3]',
+      zarr_keys: [
+        side + '_tactile_data_' + group,
+        side + '_tactile_area_' + group,
+        side + '_tactile_sensor_' + group,
+        side + '_tactile_type_' + group,
+      ],
+      python_command: 'data.export_ftp1("output.zarr",\\n  sensor_name="' + sensor + '",\\n  functional_areas=' + JSON.stringify(selectedAreas) + ',\\n  side="' + side + '",\\n  group="' + group + '")'
+    }};
+
+    status.textContent = currentLang === 'zh-CN' ? '✅ 导出预览已生成' : '✅ Export preview ready';
+    resultDiv.style.display = 'block';
+    resultContent.textContent = JSON.stringify(summary, null, 2);
+  }}
+
   // ===== Lang Toggle =====
   function toggleLang() {{
     currentLang = currentLang === 'zh-CN' ? 'en' : 'zh-CN';
@@ -1077,6 +1277,16 @@ def generate_panel_html(
   document.getElementById(tid + '-btn-export-hdf5').addEventListener('click', exportHDF5);
   document.getElementById(tid + '-btn-episode-apply').addEventListener('click', applyEpisodeLabel);
 
+  // FTP-1 Export Panel events
+  const ftp1ExportBtn = document.getElementById(tid + '-ftp1-export-btn');
+  if (ftp1ExportBtn) ftp1ExportBtn.addEventListener('click', handleFTP1Export);
+  const ftp1PresetGripper = document.getElementById(tid + '-ftp1-preset-gripper');
+  if (ftp1PresetGripper) ftp1PresetGripper.addEventListener('click', () => setAreaPreset([0, 1], 'gripper'));
+  const ftp1PresetThree = document.getElementById(tid + '-ftp1-preset-three');
+  if (ftp1PresetThree) ftp1PresetThree.addEventListener('click', () => setAreaPreset([0, 1, 2], 'three'));
+  const ftp1PresetFive = document.getElementById(tid + '-ftp1-preset-five');
+  if (ftp1PresetFive) ftp1PresetFive.addEventListener('click', () => setAreaPreset([0, 1, 2, 3, 4], 'five'));
+
   // ===== Dark Mode =====
   let isDark = false;
   const rootEl = document.getElementById(tid + '-root');
@@ -1184,11 +1394,12 @@ def generate_panel_html(
   initEpisodeForm();
   renderQuality();
   renderDescribe();
+  initFTP1Areas();
 
   window['_tlabel_' + tid] = {{
     prevFrame, nextFrame, jumpTo, batchPatch, undo,
     exportJSON, exportCSV, exportHDF5, toggleLang,
-    applyEpisodeLabel, switchTab
+    applyEpisodeLabel, switchTab, handleFTP1Export, setAreaPreset
   }};
 }})();
 </script>"""

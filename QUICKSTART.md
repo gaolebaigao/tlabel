@@ -12,6 +12,7 @@ pip install tlabel
 pip install tlabel[gelsight]   # GelSight / DIGIT → opencv-python
 pip install tlabel[paxini]     # PaXini → h5py
 pip install tlabel[vtouch]      # VTouch → h5py
+pip install tlabel[ftp1]        # FTP-1/MTTS 导出 → zarr
 pip install tlabel[all]        # 安装全部可选依赖
 ```
 
@@ -40,6 +41,7 @@ data.review()
 > - 🎬 **Episode Tab**：操作结果、操作类型、难度等级等语义标注
 > - 📊 **质量评分 Tab**：4维度数据质量评估
 > - 📈 **统计 Tab**：类似 pandas describe() 的统计摘要
+> - 🚀 **导出 Tab**：FTP-1/MTTS Zarr 格式导出，传感器选择+功能区映射
 > - 🌙 右上角 **D 键**切换暗色模式
 > - 🌍 右上角 **EN 按钮**切换中英文
 
@@ -152,7 +154,72 @@ data.export("output", format="json")
 data.export("output", format="csv")
 ```
 
-## 7. VTouch 数据格式
+## 7. FTP-1 / MTTS 导出（v0.8.0 新增）
+
+TLabel v0.8.0 支持将标注数据一键导出为 [FTP-1](https://github.com/michaelyuancb/ftp1-policy) 的 MTTS Zarr 格式，可直接用于触觉基础模型微调。
+
+### 安装依赖
+
+```bash
+pip install tlabel[ftp1]   # 需要 zarr>=2.16
+```
+
+### Python API 导出
+
+```python
+import tlabel
+
+data = tlabel.demo('gelsight')
+
+# 单传感器导出
+data.export_ftp1("output.zarr",
+    sensor_name="GelSightMini",
+    functional_areas=[0, 1])  # 拇指尖 + 食指尖
+
+# 批量导出多个 Episode
+from tlabel.converters import batch_to_ftp1
+batch_to_ftp1(["ep1.json", "ep2.json"], "dataset.zarr",
+    sensor_name="GelSightMini",
+    functional_areas=[0, 1])
+```
+
+### 面板导出
+
+在标注面板中点击 **「🚀导出」Tab**：
+1. 选择传感器类型（GelSight/GelSightMini/FreeTacMan 等 7 种）
+2. 勾选功能区（或用预设按钮一键配置）
+3. 点击「导出 Zarr」，面板会生成 Python 命令供执行
+
+### 预设配置
+
+| 预设名称 | 功能区 | 说明 |
+|---------|--------|------|
+| parallel_gripper | [0, 1] | 平行夹爪（拇指尖+食指尖）|
+| three_finger | [0, 1, 2] | 三指手 |
+| five_finger | [0, 1, 2, 3, 4] | 五指手 |
+| dexterous_hand | 0-14 | 灵巧手（全部手部区域）|
+
+### 支持的传感器
+
+| 传感器 | 模态 | 数据格式 |
+|:-------|:-----|:--------|
+| GelSight / GelSightMini | image | uint8 RGB, 224×224 |
+| FreeTacMan / ViTaMIn | image | uint8 RGB, 224×224 |
+| 3DViTac / Contactile | matrix | float32 阵列 |
+| BinaryContact | binary | float32 |
+
+### MTTS Zarr 输出格式
+
+导出的 Zarr 文件包含以下 4 个 key：
+
+```
+<side>_tactile_data_<group>:   (T, N, *shape)   # 触觉数据
+<side>_tactile_area_<group>:   (T, N)            # 功能区 ID
+<side>_tactile_sensor_<group>: (T,)               # 传感器名称
+<side>_tactile_type_<group>:   (T,)               # 类型: image/matrix/binary
+```
+
+## 8. VTouch 数据格式
 
 VTouch 是支持力度图像的触觉传感器格式：
 
@@ -169,7 +236,7 @@ print(data)
 data.review()
 ```
 
-## 8. 统计与质量评估
+## 9. 统计与质量评估
 
 ### 统计摘要
 

@@ -1,5 +1,48 @@
 # Changelog
 
+## [0.8.0] - 2026-06-28
+
+### Added
+- **FTP-1/MTTS 格式导出** — 触觉基础模型通用数据接口
+  - `tlabel/converters/ftp1.py` — 完整转换器，支持Zarr格式导出
+  - `data.export_ftp1()` — 一行代码导出FTP-1兼容格式
+  - 21个MTTS功能区定义（手部15 + 力矩6）
+  - 7种已知传感器注册（GelSight/GelSightMini/FreeTacMan/ViTAMIn/3DViTac/Contactile/BinaryContact）
+  - 4种功能区预设映射（夹爪/三指/五指/灵巧手）
+  - 支持image/matrix/binary三种触觉模态
+  - 自动图像缩放至224×224 + uint8/float32归一化
+  - 支持追加模式（多Episode合并到同一Zarr）
+  - `batch_to_ftp1()` — 批量导出工具
+- **UI 新增"导出"Tab** — 面板新增🚀导出标签
+  - FTP-1传感器选择器（7种传感器下拉）
+  - 功能区映射可视化配置（21个可勾选槽位）
+  - 3种预设按钮（夹爪/三指/五指）
+  - 安装位置/组名选择器
+  - 导出结果预览（含Python命令生成）
+  - MTTS Zarr格式参考文档
+
+### Changed
+- Version bump: 0.7.0 → 0.8.0
+
+### FTP-1 Zarr 输出格式
+```
+right_tactile_data_gripper:   (T, N, H, W, 3) uint8   # 触觉图像
+right_tactile_area_gripper:   (T, N) int32             # 功能区ID
+right_tactile_sensor_gripper: (T,) string              # 传感器名
+right_tactile_type_gripper:   (T,) string              # image/matrix/binary
+```
+
+### 用法示例
+```python
+from tlabel import demo
+
+data = demo('gelsight')
+data.export_ftp1("output.zarr",
+                  sensor_name="GelSightMini",
+                  functional_areas=[0, 1],  # 拇指尖+食指尖
+                  side="right")
+```
+
 ## [0.6.2] - 2026-06-24
 
 ### Added
