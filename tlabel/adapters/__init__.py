@@ -14,4 +14,5 @@ AVAILABLE_ADAPTERS = {
     "daimon": "Daimon DM-TacClaw (.parquet / LeRobot)",
     "tlabel": "TLabel Format JSON (.json)",
     "touchd": "ToucHD-Force (AnyTouch 2, ICLR 2026) — 目录",
+    "ycb_slide": "YCB-Slide / MidasTouch (CoRL 2022) — 目录",
 }
