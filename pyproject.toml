@@ -40,6 +40,9 @@ dev = ["pytest", "jupyter"]
 
 [project.urls]
 Homepage = "https://github.com/liesliy/tlabel"
+"Bug Reports" = "https://github.com/liesliy/tlabel/issues"
+"Discussions" = "https://github.com/liesliy/tlabel/discussions"
+"User Survey" = "https://github.com/liesliy/tlabel/blob/main/USER_SURVEY.md"
 
 [tool.setuptools.packages.find]
 include = ["tlabel*"]
