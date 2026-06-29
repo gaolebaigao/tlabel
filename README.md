@@ -26,6 +26,15 @@
 
 ## 🆕 What's New
 
+### v0.9.0 — Interactive Panel Phase 1 + Exporter Plugin Registry
+**Professional tactile annotation experience with rich visualization and extensible export pipeline.**
+- 🎨 **Pseudo GelSight Visualization**: Real-time tactile contact heatmap with radial gradient and force rings
+- ⌨️ **Keyboard Shortcuts**: Space (toggle annotation), ←→ (frame navigation), ↑↓ (label adjust)
+- 📊 **Timeline Range Selection**: Click-to-jump + drag-to-select frame ranges for batch editing
+- 🤖 **AI Pre-Annotation**: One-click auto-label with confidence threshold control
+- 📦 **Unified Export Center**: Single tab for all formats — JSON, CSV, HDF5, FTP-1, LeRobot, RLDS(stub), ROS2(stub)
+- 🔌 **Exporter Plugin Registry**: `ExporterBase` + dynamic `register()`/`unregister()` — add new formats as subclasses
+
 ### v0.8.0 — FTP-1 / MTTS Export
 **Export labeled data directly to FTP-1's MTTS Zarr format for foundation model fine-tuning.**
 - 🚀 **FTP-1 Converter**: `tlabel_to_ftp1()` / `batch_to_ftp1()` — one-click export to Zarr

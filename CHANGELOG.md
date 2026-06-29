@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.9.0] - 2026-06-29
+
+### Added
+- **Panel Phase 1 — 5 major UI/UX features**
+  - Pseudo GelSight tactile image visualization (Canvas-based heatmap with radial gradient)
+  - Keyboard shortcuts: Space=toggle, ←→=frame nav, ↑↓=label adjust
+  - Timeline click-to-jump + drag-to-select for frame range editing
+  - AI pre-annotation button with confidence threshold
+  - Unified Export Center tab (replaces scattered export buttons)
+- **Exporter Plugin Registry** (`tlabel/export/registry.py`, 760 lines)
+  - `ExporterBase` abstract base class
+  - `ExporterSpec` / `ExportField` self-describing metadata
+  - `ExporterRegistry` with dynamic `register()` / `unregister()`
+  - 7 built-in formats: JSON, CSV, HDF5, FTP-1, LeRobot, RLDS(stub), ROS2(stub)
+  - `to_dict()` serialization for UI form rendering
+  - `list_targets()` for format-specific metadata (e.g. sensor lists)
+  - Fully backward compatible with legacy `export_data()` API
+
+### Changed
+- Version bump: 0.8.0 → 0.9.0
+- Keywords: added MTTS-1, panel, visualization
+
 ## [0.8.0] - 2026-06-28
 
 ### Added
