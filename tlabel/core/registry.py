@@ -58,7 +58,7 @@ def auto_detect_format(file_path: str) -> Optional[str]:
             pass
         return None
 
-    # 目录路径: 检测是否为Daimon episode目录或ToucHD目录
+    # 目录路径: 检测是否为Daimon episode目录或ToucHD目录或YCB-Slide目录
     from pathlib import Path
     p = Path(file_path)
     if p.is_dir():
@@ -67,6 +67,13 @@ def auto_detect_format(file_path: str) -> Optional[str]:
         # ToucHD-Force: 含all_data_direction.json
         if (p / "all_data_direction.json").exists():
             return "touchd"
+        # YCB-Slide: 含 synced_data.npy (real) 或 tactile_data.pkl (sim)
+        if list(p.rglob("synced_data.npy")):
+            return "ycb_slide"
+        if list(p.rglob("tactile_data.pkl")) and any(
+            d.name.isdigit() for d in p.rglob("*") if d.is_dir()
+        ):
+            return "ycb_slide"
 
     return None
 
@@ -101,5 +108,11 @@ def _ensure_adapters():
         try:
             from tlabel.adapters.touchd import ToucHDAdapter
             register_adapter("touchd", ToucHDAdapter)
+        except ImportError:
+            pass
+    if "ycb_slide" not in _ADAPTERS:
+        try:
+            from tlabel.adapters.ycb_slide import YCBSlideAdapter
+            register_adapter("ycb_slide", YCBSlideAdapter)
         except ImportError:
             pass
