@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tlabel"
-version = "0.8.0"
+version = "0.9.0"
 description = "TouchLabel AI - Tactile Data Annotation Toolkit"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -12,7 +12,7 @@ license = {text = "MIT"}
 authors = [
     {name = "Niuzu Tech", email = "luoxi@touchlabelai.cn"},
 ]
-keywords = ["tactile", "annotation", "robotics", "GelSight", "PaXini", "touch", "FTP-1", "MTTS"]
+keywords = ["tactile", "annotation", "robotics", "GelSight", "PaXini", "touch", "FTP-1", "MTTS", "MTTS-1", "panel", "visualization"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
