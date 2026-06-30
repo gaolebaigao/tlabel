@@ -26,6 +26,10 @@
 
 ## 🆕 What's New
 
+### v0.10.1 — YCB-Slide Sim Data Fix
+- 🔧 **Auto-detect nested directories**: Handle Google Drive download quirk where sim data has extra nesting level (e.g., `004_sugar_box/004_sugar_box/00/`)
+- ✅ Verified PKL structure: `gelposes_meas`, `gelposes`, `camposes`, `mNoise` fields
+
 ### v0.10.0 — YCB-Slide Adapter (MidasTouch)
 **Convert CMU RPL's YCB-Slide tactile manipulation dataset to the unified TLabel format.**
 - 📂 **Auto-detect** YCB-Slide real & sim data from directory structure
@@ -33,6 +37,39 @@
 - 📐 **6-DoF pose** tracking for both DIGIT sensor and manipulated objects
 - 🔄 **Real + Sim** data in a single adapter (`split='real'` / `'sim'` / `'all'`)
 - 📦 Validated on the full YCB-Slide dataset (10 objects × 5 sequences = 182,983 frames)
+
+
+
+#### Usage Example
+
+```python
+from tlabel import load
+
+# Load real data
+data = load('/path/to/ycb_slide/real', format='ycb_slide', split='real')
+
+# Load sim data (supports Google Drive nested directory structure)
+data = load('/path/to/ycb_slide/sim', format='ycb_slide', split='sim')
+
+# Load both
+data = load('/path/to/ycb_slide', format='ycb_slide', split='all')
+```
+
+**Supported directory structures:**
+
+```
+# Real data:
+<object>/dataset_X/synced_data.npy
+<object>/dataset_X/digit/*.jpg
+
+# Sim data (standard):
+<object>/XX/tactile_data.pkl
+<object>/XX/tactile_images/*.jpg
+
+# Sim data (Google Drive download, auto-detected):
+<object>/<object>/XX/tactile_data.pkl
+<object>/<object>/XX/tactile_images/*.jpg
+```
 
 ### v0.9.0 — Interactive Panel Phase 1 + Exporter Plugin Registry
 **Professional tactile annotation experience with rich visualization and extensible export pipeline.**
