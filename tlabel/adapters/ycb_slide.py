@@ -580,9 +580,19 @@ class YCBSlideAdapter(BaseAdapter):
         for obj_dir in obj_dirs:
             object_name = obj_dir.name
 
+            # 检测并处理 Google Drive 下载时多一层同名子目录的情况
+            # 例如: 004_sugar_box/004_sugar_box/00/ 而不是 004_sugar_box/00/
+            actual_obj_dir = obj_dir
+            same_name_subdirs = [
+                d for d in obj_dir.iterdir()
+                if d.is_dir() and d.name == obj_dir.name
+            ]
+            if len(same_name_subdirs) == 1:
+                actual_obj_dir = same_name_subdirs[0]
+
             # 找到轨迹目录 (00, 01, ...)
             traj_dirs = sorted([
-                d for d in obj_dir.iterdir()
+                d for d in actual_obj_dir.iterdir()
                 if d.is_dir() and d.name.isdigit()
             ])
 
