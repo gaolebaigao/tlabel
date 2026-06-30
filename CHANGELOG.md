@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.10.0] - 2026-06-29
+
+### Added
+- **YCB-Slide Adapter** (`tlabel/adapters/ycb_slide.py`) — CMU RPL MidasTouch (CoRL 2022) dataset support
+  - Supports both **real** data (`synced_data.npy`) and **simulated** data (`tactile_data.pkl`)
+  - Auto-detection: recognizes YCB-Slide directory structure (`synced_data.npy` or `tactile_data.pkl` patterns)
+  - Extracts 22-dim TLabel v2 features from DIGIT tactile images (background subtraction, contact detection)
+  - Preserves sensor/object poses (6-DoF: position + quaternion)
+  - Manipulation phase inference (approach → stable_contact → slip → release)
+  - `pip install tlabel[ycb_slide]` for sim data support (requires `dill`)
+- Auto-detect YCB-Slide directories in `tlabel.load()` format detection
+- Loader error messages now include `format='ycb_slide'` hint
+
+### Usage
+```python
+import tlabel
+
+# Auto-detect from directory
+data = tlabel.load("dataset/real")
+
+# Explicit format
+data = tlabel.load("dataset/real", format="ycb_slide")
+
+# Specific object + dataset
+data = tlabel.load("dataset/real", format="ycb_slide", trajectory_id=0)
+```
+
 ## [0.9.0] - 2026-06-29
 
 ### Added

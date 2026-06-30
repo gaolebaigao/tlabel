@@ -16,7 +16,7 @@
 
 ![TLabel Panel Demo](docs/demo_panel_v050.png)
 
-**GelSight · DIGIT · PaXini · Daimon — one tool, one format, all sensors**
+**GelSight · DIGIT · PaXini · Daimon · YCB-Slide — one tool, one format, all sensors**
 
 [🚀 Quick Start](#-quick-start) · [🤖 AI Pre-Annotation](#-ai-pre-annotation) · [📊 Benchmark](#-benchmark) · [📖 Docs](#-supported-sensors) · [🤝 Contributing](#-contributing)
 
@@ -25,6 +25,14 @@
 ---
 
 ## 🆕 What's New
+
+### v0.10.0 — YCB-Slide Adapter (MidasTouch)
+**Convert CMU RPL's YCB-Slide tactile manipulation dataset to the unified TLabel format.**
+- 📂 **Auto-detect** YCB-Slide real & sim data from directory structure
+- 🖐 **DIGIT sensor** support with image-based 22-dim feature extraction
+- 📐 **6-DoF pose** tracking for both DIGIT sensor and manipulated objects
+- 🔄 **Real + Sim** data in a single adapter (`split='real'` / `'sim'` / `'all'`)
+- 📦 Validated on the full YCB-Slide dataset (10 objects × 5 sequences = 182,983 frames)
 
 ### v0.9.0 — Interactive Panel Phase 1 + Exporter Plugin Registry
 **Professional tactile annotation experience with rich visualization and extensible export pipeline.**
@@ -85,7 +93,7 @@ data.export_ftp1("output.zarr",
 | Annotation tools assume vision, not touch | **Built for tactile from day one** |
 
 **TLabel is the only tool that:**
-- ✅ Supports 4+ tactile sensor families out of the box
+- ✅ Supports 5+ tactile sensor families out of the box
 - ✅ Provides a unified 22-dimension annotation schema
 - ✅ Offers AI-assisted pre-annotation with human-in-the-loop
 - ✅ Ships an interactive visual Panel for Jupyter
