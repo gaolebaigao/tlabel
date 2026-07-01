@@ -569,3 +569,4 @@ class UniVTACAdapter(BaseAdapter):
         if contact > 0.5 and slip > 0.5:
             return 0.6
         return 0.75
+
