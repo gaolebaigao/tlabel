@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tlabel"
-version = "0.2.0a8"
+version = "0.10.2"
 description = "TouchLabel AI - Tactile Data Annotation Toolkit"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -12,7 +12,7 @@ license = {text = "MIT"}
 authors = [
     {name = "Niuzu Tech", email = "luoxi@touchlabelai.cn"},
 ]
-keywords = ["tactile", "annotation", "robotics", "GelSight", "PaXini", "touch"]
+keywords = ["tactile", "annotation", "robotics", "GelSight", "PaXini", "touch", "FTP-1", "MTTS", "MTTS-1", "panel", "visualization"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
@@ -32,13 +32,18 @@ dependencies = [
 [project.optional-dependencies]
 gelsight = ["opencv-python>=4.0"]
 paxini = ["h5py>=3.0"]
-daimon = ["pyarrow>=10.0", "opencv-python>=4.0"]
 univtac = ["h5py>=3.0"]
-all = ["opencv-python>=4.0", "h5py>=3.0", "pyarrow>=10.0"]
+daimon = ["pyarrow>=10.0", "opencv-python>=4.0", "scipy>=1.7"]
+ftp1 = ["zarr>=2.16"]
+ml = ["scikit-learn>=1.0", "joblib>=1.0"]
+all = ["opencv-python>=4.0", "h5py>=3.0", "pyarrow>=10.0", "scipy>=1.7", "pillow>=9.0", "scikit-learn>=1.0", "joblib>=1.0", "zarr>=2.16"]
 dev = ["pytest", "jupyter"]
 
 [project.urls]
 Homepage = "https://github.com/liesliy/tlabel"
+"Bug Reports" = "https://github.com/liesliy/tlabel/issues"
+"Discussions" = "https://github.com/liesliy/tlabel/discussions"
+"User Survey" = "https://github.com/liesliy/tlabel/blob/main/USER_SURVEY.md"
 
 [tool.setuptools.packages.find]
 include = ["tlabel*"]
