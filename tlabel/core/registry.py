@@ -44,36 +44,28 @@ def auto_detect_format(file_path: str) -> Optional[str]:
                 return None  # 文件不存在时无法判断内容格式
             with open(file_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            # 优先检测 TLabel Format（有 schema_version + frames）
-            if "schema_version" in data and "frames" in data:
+            if "schema_version" in data and "sensor" in data:
+                sensor_type = data.get("sensor", {}).get("type", "")
+                if "taxel" in sensor_type or "paxini" in str(data.get("sensor", {})):
+                    return "paxini"
                 return "tlabel"
+            if "frames" in data and "channels" in data:
+                return "daimon"
             if "episodes" in data:
                 return "tlabel"
             # Daimon info.json
             if "robot_type" in data and "codebase_version" in data:
                 return "daimon"
-            if "frames" in data and "channels" in data:
-                return "daimon"
         except (json.JSONDecodeError, UnicodeDecodeError, OSError):
             pass
         return None
 
-    # 目录路径: 检测是否为Daimon episode目录或ToucHD目录或YCB-Slide目录
+    # 目录路径: 检测是否为Daimon episode目录
     from pathlib import Path
     p = Path(file_path)
     if p.is_dir():
         if (p / "meta" / "info.json").exists() or list(p.glob("data/chunk-*/file-*.parquet")):
             return "daimon"
-        # ToucHD-Force: 含all_data_direction.json
-        if (p / "all_data_direction.json").exists():
-            return "touchd"
-        # YCB-Slide: 含 synced_data.npy (real) 或 tactile_data.pkl (sim)
-        if list(p.rglob("synced_data.npy")):
-            return "ycb_slide"
-        if list(p.rglob("tactile_data.pkl")) and any(
-            d.name.isdigit() for d in p.rglob("*") if d.is_dir()
-        ):
-            return "ycb_slide"
 
     return None
 
@@ -98,21 +90,28 @@ def _ensure_adapters():
             register_adapter("daimon", DaimonAdapter)
         except ImportError:
             pass
-    if "tlabel" not in _ADAPTERS:
+    if "univtac" not in _ADAPTERS:
         try:
-            from tlabel.adapters.tlabel_format import TLabelAdapter
-            register_adapter("tlabel", TLabelAdapter)
+            from tlabel.adapters.univtac import UniVTACAdapter
+            register_adapter("univtac", UniVTACAdapter)
         except ImportError:
             pass
-    if "touchd" not in _ADAPTERS:
-        try:
-            from tlabel.adapters.touchd import ToucHDAdapter
-            register_adapter("touchd", ToucHDAdapter)
-        except ImportError:
-            pass
-    if "ycb_slide" not in _ADAPTERS:
-        try:
-            from tlabel.adapters.ycb_slide import YCBSlideAdapter
-            register_adapter("ycb_slide", YCBSlideAdapter)
-        except ImportError:
-            pass
+
+
+def _detect_hdf5_variant(file_path: str) -> str:
+    """区分 HDF5 文件的传感器来源（PaXini vs UniVTAC）
+
+    UniVTAC 特征: 包含 tactile/left_gsmini 或 tactile/right_gsmini
+    PaXini 特征: 其他结构
+    """
+    try:
+        import h5py
+        with h5py.File(file_path, 'r') as f:
+            # UniVTAC 特征检测
+            if 'tactile' in f:
+                tactile_keys = list(f['tactile'].keys())
+                if any('gsmini' in k for k in tactile_keys):
+                    return "univtac"
+        return "paxini"
+    except (ImportError, Exception):
+        return "paxini"
