@@ -20,7 +20,7 @@ def load(file_path: Union[str, Path],
     
     参数:
         file_path: 数据文件路径
-        format: 强制指定格式 ("gelsight" / "paxini" / "daimon" / "tlabel")
+        format: 强制指定格式 ("gelsight" / "paxini" / "daimon" / "tlabel" / "touchd" / "univtac" / "vtouch" / "ycb_slide")
         trajectory_id: 轨迹ID（GelSight数据集可选）
         **kwargs: 传递给适配器的额外参数
     
@@ -31,6 +31,8 @@ def load(file_path: Union[str, Path],
         data = tlabel.load("gelsight_01.pkl")
         data = tlabel.load("paxini.h5", trajectory_id=0)
         data = tlabel.load("annotations.json")
+        data = tlabel.load("vtouch_data.h5")
+        data = tlabel.load("ycb_slide_dir/")
     """
     path = Path(file_path)
     if not path.exists():
@@ -44,20 +46,28 @@ def load(file_path: Union[str, Path],
     if fmt is None:
         raise ValueError(
             f"无法识别文件格式: {file_path}\n"
-            f"支持的格式: .pkl (GelSight/DIGIT), .h5/.hdf5 (帕西尼), .parquet/目录 (戴盟)\n"
+            f"支持的格式:\n"
+            f"  .pkl         — GelSight / DIGIT\n"
+            f"  .h5 / .hdf5  — PaXini / UniVTAC / VTouch (自动识别)\n"
+            f"  .parquet     — Daimon DM-TacClaw\n"
+            f"  .json        — TLabel Format / Daimon info.json\n"
+            f"  .npy         — YCB-Slide (synced_data.npy)\n"
+            f"  目录          — Daimon / ToucHD-Force / YCB-Slide (自动识别)\n"
             f"可手动指定: tlabel.load(path, format='gelsight')"
         )
 
     adapter_cls = get_adapter(fmt)
     if adapter_cls is None:
-        available = list(k for k in ["gelsight", "paxini", "daimon", "univtac"] if get_adapter(k))
+        available = [k for k in ["gelsight", "paxini", "daimon", "tlabel", "touchd", "univtac", "vtouch", "ycb_slide"] if get_adapter(k)]
         raise ImportError(
             f"适配器 '{fmt}' 不可用（可能缺少依赖）\n"
             f"当前可用: {available or '无'}\n"
-            f"GelSight: pip install numpy opencv-python\n"
-            f"帕西尼: pip install h5py numpy\n"
-            f"戴盟: pip install pyarrow numpy\n"
-            f"UniVTAC: pip install h5py numpy"
+            f"GelSight/DIGIT: pip install numpy opencv-python\n"
+            f"PaXini: pip install h5py numpy\n"
+            f"Daimon: pip install pyarrow numpy\n"
+            f"UniVTAC: pip install h5py numpy\n"
+            f"VTouch: pip install h5py numpy opencv-python\n"
+            f"YCB-Slide: pip install numpy opencv-python"
         )
 
     adapter = adapter_cls()

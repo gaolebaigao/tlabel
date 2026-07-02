@@ -15,4 +15,6 @@ AVAILABLE_ADAPTERS = {
     "tlabel": "TLabel Format JSON (.json)",
     "touchd": "ToucHD-Force (AnyTouch 2, ICLR 2026) — 目录",
     "univtac": "UniVTAC Cross-Dataset (.hdf5 / .h5)",
+    "vtouch": "VTouch 白虎视触觉 (.h5 / .hdf5)",
+    "ycb_slide": "YCB-Slide CMU DIGIT滑动触觉 (.npy / 目录)",
 }

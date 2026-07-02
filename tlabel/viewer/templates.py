@@ -465,6 +465,71 @@ def generate_panel_html(
     </div>
   </div>
 
+
+  <!-- LeRobot Section -->
+  <div style="background:#fff;border-radius:10px;padding:20px;border:1px solid #e9ecef;margin-bottom:16px;">
+    <div style="font-size:14px;font-weight:700;color:#343a40;margin-bottom:4px;">
+      🤖 <span data-i18n="export.lerobot_title">LeRobot 格式导出</span>
+    </div>
+    <div style="font-size:12px;color:#868e96;margin-bottom:16px;" data-i18n="export.lerobot_desc">
+      将标注写回 LeRobot 数据集的 Parquet 文件，更新 meta/info.json。
+    </div>
+
+    <!-- LeRobot Config -->
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+      <div style="flex:1;min-width:180px;">
+        <label style="font-size:11px;color:#868e96;display:block;margin-bottom:4px;" data-i18n="export.lerobot_tactile_field">触觉字段名</label>
+        <input type="text" id="{tid}-lerobot-tactile-field" value="observation.tactile"
+               style="width:100%;padding:6px 10px;border:1px solid #ced4da;border-radius:6px;font-size:12px;background:#fff;"
+               placeholder="observation.tactile">
+      </div>
+      <div style="flex:1;min-width:180px;">
+        <label style="font-size:11px;color:#868e96;display:block;margin-bottom:4px;" data-i18n="export.lerobot_action_field">动作字段名</label>
+        <input type="text" id="{tid}-lerobot-action-field" value="action"
+               style="width:100%;padding:6px 10px;border:1px solid #ced4da;border-radius:6px;font-size:12px;background:#fff;"
+               placeholder="action">
+      </div>
+      <div style="flex:1;min-width:120px;display:flex;align-items:flex-end;">
+        <label style="font-size:11px;color:#868e96;display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" id="{tid}-lerobot-overwrite" style="width:14px;height:14px;">
+          <span data-i18n="export.lerobot_overwrite">覆盖已有字段</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Export Button -->
+    <div style="display:flex;align-items:center;gap:12px;">
+      <button id="{tid}-lerobot-export-btn" style="padding:8px 24px;border-radius:8px;border:none;background:linear-gradient(135deg,#4dabf7,#3b82f6);color:#fff;font-weight:700;font-size:13px;cursor:pointer;box-shadow:0 2px 8px rgba(77,171,247,0.3);">
+        <span data-i18n="export.lerobot_btn">📦 导出为 LeRobot Parquet</span>
+      </button>
+      <span id="{tid}-lerobot-status" style="font-size:12px;color:#868e96;"></span>
+    </div>
+
+    <!-- Export Result -->
+    <div id="{tid}-lerobot-result" style="display:none;margin-top:14px;background:#f1f3f5;border-radius:8px;padding:14px;font-size:12px;">
+      <div style="font-weight:600;color:#343a40;margin-bottom:8px;" data-i18n="export.result_title">📋 导出结果</div>
+      <pre id="{tid}-lerobot-result-content" style="margin:0;font-family:monospace;font-size:11px;color:#495057;white-space:pre-wrap;"></pre>
+    </div>
+  </div>
+
+  <!-- LeRobot Format Reference -->
+  <div style="background:#fff;border-radius:10px;padding:20px;border:1px solid #e9ecef;">
+    <div style="font-size:13px;font-weight:600;color:#343a40;margin-bottom:8px;" data-i18n="export.lerobot_ref">
+      📖 LeRobot 格式说明
+    </div>
+    <div style="font-size:11px;color:#495057;line-height:1.8;font-family:monospace;background:#f8f9fa;padding:12px;border-radius:6px;">
+      <div style="color:#868e96;">// LeRobot dataset 目录结构:</div>
+      <div><span style="color:#4dabf7;">meta/</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#868e96;">← 元信息目录</span></div>
+      <div>  <span style="color:#4dabf7;">info.json</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#868e96;">← 数据集元信息（自动更新）</span></div>
+      <div><span style="color:#4dabf7;">data/</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#868e96;">← 数据目录</span></div>
+      <div>  <span style="color:#4dabf7;">chunk-000/</span></div>
+      <div>    <span style="color:#4dabf7;">episode_000000.parquet</span> <span style="color:#868e96;">← 标注写入此文件</span></div>
+    </div>
+    <div style="font-size:11px;color:#868e96;margin-top:8px;" data-i18n="export.lerobot_note">
+      💡 导出会将 TLabel 标注结果写入 LeRobot 数据集的 Parquet 文件中。
+    </div>
+  </div>
+
 </div>
 </div><!-- end panel-export -->
 
@@ -507,6 +572,14 @@ def generate_panel_html(
       'export.btn_export': '📦 导出为 FTP-1 Zarr', 'export.result_title': '📋 导出结果',
       'export.format_ref': '📖 MTTS Zarr 格式说明', 'export.format_note': '💡 导出的 .zarr 文件可直接被 FTP-1 加载',
       'export.preset_gripper': '预设: 夹爪 [0,1]', 'export.preset_three': '预设: 三指 [0,1,2]', 'export.preset_five': '预设: 五指 [0-4]',
+      'export.lerobot_title': 'LeRobot 格式导出',
+      'export.lerobot_desc': '将标注写回 LeRobot 数据集的 Parquet 文件，更新 meta/info.json。',
+      'export.lerobot_tactile_field': '触觉字段名',
+      'export.lerobot_action_field': '动作字段名',
+      'export.lerobot_overwrite': '覆盖已有字段',
+      'export.lerobot_btn': '📦 导出为 LeRobot Parquet',
+      'export.lerobot_ref': '📖 LeRobot 格式说明',
+      'export.lerobot_note': '💡 导出会将 TLabel 标注结果写入 LeRobot 数据集的 Parquet 文件中',
       'episode.title': 'Episode 级标注', 'episode.desc': '为整个交互Episode添加语义标注，描述操作任务的整体结果和属性。标注结果会写入 episode_info 并随数据一起导出。',
       'episode.outcome': '操作结果', 'episode.outcomeDefault': '— 未标注 —',
       'episode.manipType': '操作类型', 'episode.manipTypeDefault': '— 未标注 —',
@@ -580,6 +653,14 @@ def generate_panel_html(
       'export.btn_export': '📦 Export as FTP-1 Zarr', 'export.result_title': '📋 Export Result',
       'export.format_ref': '📖 MTTS Zarr Format Reference', 'export.format_note': '💡 Exported .zarr can be loaded directly by FTP-1',
       'export.preset_gripper': 'Preset: Gripper [0,1]', 'export.preset_three': 'Preset: 3-Finger [0,1,2]', 'export.preset_five': 'Preset: 5-Finger [0-4]',
+      'export.lerobot_title': 'LeRobot Format Export',
+      'export.lerobot_desc': 'Write annotations back to LeRobot dataset Parquet files, update meta/info.json.',
+      'export.lerobot_tactile_field': 'Tactile Field',
+      'export.lerobot_action_field': 'Action Field',
+      'export.lerobot_overwrite': 'Overwrite existing',
+      'export.lerobot_btn': '📦 Export as LeRobot Parquet',
+      'export.lerobot_ref': '📖 LeRobot Format Reference',
+      'export.lerobot_note': '💡 Export writes TLabel annotations into LeRobot dataset Parquet files',
       'episode.title': 'Episode Annotation', 'episode.desc': 'Add semantic labels for the entire interaction episode. Results are saved to episode_info and exported with data.',
       'episode.outcome': 'Outcome', 'episode.outcomeDefault': '— Not labeled —',
       'episode.manipType': 'Manipulation Type', 'episode.manipTypeDefault': '— Not labeled —',
@@ -1070,6 +1151,33 @@ def generate_panel_html(
     resultContent.textContent = JSON.stringify(summary, null, 2);
   }}
 
+
+  // ===== LeRobot Export =====
+  function handleLeRobotExport() {{
+    const tactileField = document.getElementById(tid + '-lerobot-tactile-field').value || 'observation.tactile';
+    const actionField = document.getElementById(tid + '-lerobot-action-field').value || 'action';
+    const overwrite = document.getElementById(tid + '-lerobot-overwrite').checked;
+    const status = document.getElementById(tid + '-lerobot-status');
+    const resultDiv = document.getElementById(tid + '-lerobot-result');
+    const resultContent = document.getElementById(tid + '-lerobot-result-content');
+
+    status.textContent = currentLang === 'zh-CN' ? '⏳ 正在准备导出...' : '⏳ Preparing export...';
+
+    const nFrames = (data.frames || []).length;
+    const summary = {{
+      format: 'lerobot',
+      tactile_field: tactileField,
+      action_field: actionField,
+      overwrite: overwrite,
+      frames: nFrames,
+      python_command: 'from tlabel.converters.lerobot import tlabel_to_lerobot\n\ntlabel_to_lerobot(\n  "annotations.json",\n  "lerobot_dataset/",\n  tactile_field="' + tactileField + '",\n  action_field="' + actionField + '",\n  overwrite=' + str(overwrite) + ',\n)'
+    }};
+
+    status.textContent = currentLang === 'zh-CN' ? '✅ 导出预览已生成' : '✅ Export preview ready';
+    resultDiv.style.display = 'block';
+    resultContent.textContent = JSON.stringify(summary, null, 2);
+  }}
+
   // ===== Lang Toggle =====
   function toggleLang() {{
     currentLang = currentLang === 'zh-CN' ? 'en' : 'zh-CN';
@@ -1286,6 +1394,9 @@ def generate_panel_html(
   if (ftp1PresetThree) ftp1PresetThree.addEventListener('click', () => setAreaPreset([0, 1, 2], 'three'));
   const ftp1PresetFive = document.getElementById(tid + '-ftp1-preset-five');
   if (ftp1PresetFive) ftp1PresetFive.addEventListener('click', () => setAreaPreset([0, 1, 2, 3, 4], 'five'));
+  const lerobotExportBtn = document.getElementById(tid + '-lerobot-export-btn');
+  if (lerobotExportBtn) lerobotExportBtn.addEventListener('click', handleLeRobotExport);
+
 
   // ===== Dark Mode =====
   let isDark = false;

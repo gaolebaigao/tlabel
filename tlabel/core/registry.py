@@ -30,13 +30,20 @@ def auto_detect_format(file_path: str) -> Optional[str]:
 
     if path.endswith(".pkl") or path.endswith(".pickle"):
         return "gelsight"
+    if path.endswith(".npy"):
+        return "ycb_slide"
     if path.endswith(".h5") or path.endswith(".hdf5"):
-        # Distinguish PaXini vs UniVTAC by checking internal structure
+        # Distinguish PaXini / UniVTAC / VTouch by checking internal structure
         try:
             import h5py
             with h5py.File(file_path, 'r') as f:
-                if 'tactile' in f and 'left_gsmini' in f['tactile']:
-                    return "univtac"
+                # VTouch: tactile/hand_left or tactile/hand_right
+                if 'tactile' in f:
+                    tactile_keys = list(f['tactile'].keys())
+                    if any('gsmini' in k for k in tactile_keys):
+                        return "univtac"
+                    if any(k.startswith('hand_') for k in tactile_keys):
+                        return "vtouch"
             return "paxini"
         except (ImportError, Exception):
             return "paxini"
@@ -66,7 +73,7 @@ def auto_detect_format(file_path: str) -> Optional[str]:
             pass
         return None
 
-    # 目录路径: 检测是否为Daimon episode目录或ToucHD目录
+    # 目录路径: 检测是否为Daimon episode目录、ToucHD目录或YCB-Slide目录
     from pathlib import Path
     p = Path(file_path)
     if p.is_dir():
@@ -75,6 +82,12 @@ def auto_detect_format(file_path: str) -> Optional[str]:
         # ToucHD-Force: 含all_data_direction.json
         if (p / "all_data_direction.json").exists():
             return "touchd"
+        # YCB-Slide: real/<object>/dataset_X/synced_data.npy 或 sim/<object>/XX/tactile_data.pkl
+        if any(p.glob("*/synced_data.npy")) or any(p.glob("*/tactile_data.pkl")):
+            return "ycb_slide"
+        # YCB-Slide 子目录本身
+        if (p / "synced_data.npy").exists() or (p / "tactile_data.pkl").exists():
+            return "ycb_slide"
 
     return None
 
@@ -115,5 +128,17 @@ def _ensure_adapters():
         try:
             from tlabel.adapters.univtac import UniVTACAdapter
             register_adapter("univtac", UniVTACAdapter)
+        except ImportError:
+            pass
+    if "vtouch" not in _ADAPTERS:
+        try:
+            from tlabel.adapters.vtouch import VTouchAdapter
+            register_adapter("vtouch", VTouchAdapter)
+        except ImportError:
+            pass
+    if "ycb_slide" not in _ADAPTERS:
+        try:
+            from tlabel.adapters.ycb_slide import YCBSlideAdapter
+            register_adapter("ycb_slide", YCBSlideAdapter)
         except ImportError:
             pass
