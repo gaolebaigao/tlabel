@@ -1,0 +1,217 @@
+{
+  "schema_version": "0.2.0",
+  "sensor_info": {
+    "sensor_name": "GelSight-Mini",
+    "sensor_type": "vision_based",
+    "manufacturer": "GelSight",
+    "model": "Mini",
+    "resolution": "320x240",
+    "frame_rate": 30,
+    "adapter_name": "tlabel-gelsight",
+    "adapter_version": "0.12.0"
+  },
+  "capabilities": {
+    "contact": true,
+    "contact_region": true,
+    "force_magnitude": true,
+    "force_direction": true,
+    "slip_event": true,
+    "slip_direction": true,
+    "manipulation_phase": true,
+    "texture": true,
+    "whole_hand_coordination": false,
+    "object_deformation": false
+  },
+  "episodes": [
+    {
+      "episode_id": "demo_with_images_001",
+      "task": "pick_place",
+      "object": "plastic_bottle",
+      "metadata": {
+        "duration_s": 3.0,
+        "num_frames": 90,
+        "has_images": true
+      },
+      "frames": [
+        {
+          "frame_idx": 0,
+          "timestamp_s": 0.0,
+          "contact": false,
+          "contact_region": null,
+          "force_magnitude": 0.0,
+          "force_direction": null,
+          "slip_event": false,
+          "slip_direction": null,
+          "manipulation_phase": "approach",
+          "texture": null,
+          "image_path": "images/frame_0000.png"
+        },
+        {
+          "frame_idx": 9,
+          "timestamp_s": 0.3,
+          "contact": false,
+          "contact_region": null,
+          "force_magnitude": 0.0,
+          "force_direction": null,
+          "slip_event": false,
+          "slip_direction": null,
+          "manipulation_phase": "approach",
+          "texture": null,
+          "image_path": "images/frame_0009.png"
+        },
+        {
+          "frame_idx": 18,
+          "timestamp_s": 0.6,
+          "contact": true,
+          "contact_region": "fingertip_left",
+          "force_magnitude": 0.49,
+          "force_direction": [
+            0.1,
+            -0.2,
+            0.97
+          ],
+          "slip_event": false,
+          "slip_direction": null,
+          "manipulation_phase": "hold",
+          "texture": "smooth_plastic",
+          "image_path": "images/frame_0018.png"
+        },
+        {
+          "frame_idx": 27,
+          "timestamp_s": 0.8999999999999999,
+          "contact": true,
+          "contact_region": "fingertip_left",
+          "force_magnitude": 0.51,
+          "force_direction": [
+            0.1,
+            -0.2,
+            0.97
+          ],
+          "slip_event": false,
+          "slip_direction": null,
+          "manipulation_phase": "hold",
+          "texture": "smooth_plastic",
+          "image_path": "images/frame_0027.png"
+        },
+        {
+          "frame_idx": 36,
+          "timestamp_s": 1.2,
+          "contact": true,
+          "contact_region": "fingertip_left",
+          "force_magnitude": 0.53,
+          "force_direction": [
+            0.1,
+            -0.2,
+            0.97
+          ],
+          "slip_event": false,
+          "slip_direction": null,
+          "manipulation_phase": "hold",
+          "texture": "smooth_plastic",
+          "image_path": "images/frame_0036.png"
+        },
+        {
+          "frame_idx": 45,
+          "timestamp_s": 1.5,
+          "contact": true,
+          "contact_region": "fingertip_left",
+          "force_magnitude": 0.55,
+          "force_direction": [
+            0.1,
+            -0.2,
+            0.97
+          ],
+          "slip_event": false,
+          "slip_direction": null,
+          "manipulation_phase": "hold",
+          "texture": "smooth_plastic",
+          "image_path": "images/frame_0045.png"
+        },
+        {
+          "frame_idx": 54,
+          "timestamp_s": 1.7999999999999998,
+          "contact": true,
+          "contact_region": "fingertip_left",
+          "force_magnitude": 0.5700000000000001,
+          "force_direction": [
+            0.1,
+            -0.2,
+            0.97
+          ],
+          "slip_event": true,
+          "slip_direction": [
+            0.85,
+            0.35,
+            0.4
+          ],
+          "manipulation_phase": "slip",
+          "texture": "smooth_plastic",
+          "image_path": "images/frame_0054.png"
+        },
+        {
+          "frame_idx": 63,
+          "timestamp_s": 2.1,
+          "contact": true,
+          "contact_region": "fingertip_left",
+          "force_magnitude": 0.5900000000000001,
+          "force_direction": [
+            0.1,
+            -0.2,
+            0.97
+          ],
+          "slip_event": true,
+          "slip_direction": [
+            0.85,
+            0.35,
+            0.4
+          ],
+          "manipulation_phase": "slip",
+          "texture": "smooth_plastic",
+          "image_path": "images/frame_0063.png"
+        },
+        {
+          "frame_idx": 72,
+          "timestamp_s": 2.4,
+          "contact": true,
+          "contact_region": "fingertip_left",
+          "force_magnitude": 0.61,
+          "force_direction": [
+            0.1,
+            -0.2,
+            0.97
+          ],
+          "slip_event": true,
+          "slip_direction": [
+            0.85,
+            0.35,
+            0.4
+          ],
+          "manipulation_phase": "slip",
+          "texture": "smooth_plastic",
+          "image_path": "images/frame_0072.png"
+        },
+        {
+          "frame_idx": 81,
+          "timestamp_s": 2.6999999999999997,
+          "contact": true,
+          "contact_region": "fingertip_left",
+          "force_magnitude": 0.63,
+          "force_direction": [
+            0.1,
+            -0.2,
+            0.97
+          ],
+          "slip_event": true,
+          "slip_direction": [
+            0.85,
+            0.35,
+            0.4
+          ],
+          "manipulation_phase": "slip",
+          "texture": "smooth_plastic",
+          "image_path": "images/frame_0081.png"
+        }
+      ]
+    }
+  ]
+}
