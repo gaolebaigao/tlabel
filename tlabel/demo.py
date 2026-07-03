@@ -16,6 +16,52 @@ _DEMO_DIR = Path(__file__).parent / "demo_data"
 AVAILABLE_SENSORS = ["gelsight", "digit", "paxini", "daimon", "touchd", "gelsight_images"]
 
 
+def _generate_synthetic_tactile_images(num_frames: int = 10) -> list:
+    """生成合成触觉图像（用于demo演示）"""
+    import numpy as np
+    
+    images = []
+    for i in range(num_frames):
+        # 创建320x240灰度图像
+        img = np.zeros((240, 320), dtype=np.uint8)
+        
+        # 添加高斯噪声模拟传感器噪声
+        noise = np.random.normal(0, 10, img.shape).astype(np.uint8)
+        img = np.clip(img.astype(np.int16) + noise, 0, 255).astype(np.uint8)
+        
+        # 根据帧阶段添加不同的接触区域
+        phase = i / num_frames
+        
+        if phase < 0.3:  # approach
+            # 小圆形接触区域，逐渐增大
+            radius = int(20 + phase * 50)
+            cv2 = None
+            try:
+                import cv2
+                cv2.circle(img, (160, 120), radius, 180, -1)
+            except:
+                pass
+        elif phase < 0.7:  # contact
+            # 大圆形接触区域
+            try:
+                import cv2
+                cv2.circle(img, (160, 120), 60, 200, -1)
+            except:
+                pass
+        else:  # slip
+            # 接触区域偏移，模拟滑动
+            try:
+                import cv2
+                offset_x = int((phase - 0.7) * 100)
+                cv2.circle(img, (160 + offset_x, 120), 50, 180, -1)
+            except:
+                pass
+        
+        images.append(img)
+    
+    return images
+
+
 def demo(sensor: Optional[str] = None, **kwargs) -> TLabelData:
     """
     加载内置Demo数据集，快速体验TLabel标注面板
@@ -55,8 +101,22 @@ def demo(sensor: Optional[str] = None, **kwargs) -> TLabelData:
     with open(demo_file, "r") as f:
         raw = json.load(f)
 
+    # 如果是gelsight_images，生成合成图像
+    synthetic_images = None
+    if sensor == "gelsight_images":
+        try:
+            num_frames = len(raw.get("frames", []))
+            synthetic_images = _generate_synthetic_tactile_images(num_frames)
+        except Exception:
+            pass
+
     frames = []
-    for fd in raw.get("frames", []):
+    for idx, fd in enumerate(raw.get("frames", [])):
+        # 如果有合成图像，使用合成图像
+        image_data = None
+        if synthetic_images and idx < len(synthetic_images):
+            image_data = synthetic_images[idx]
+        
         frame = TLabelFrame(
             frame_idx=fd["frame_idx"],
             timestamp_s=fd["timestamp_s"],
@@ -64,7 +124,7 @@ def demo(sensor: Optional[str] = None, **kwargs) -> TLabelData:
             manipulation_phase=fd.get("manipulation_phase", "idle"),
             confidence=fd.get("confidence", 1.0),
             sensor_specific=fd.get("sensor_specific"),
-            image=fd.get("image"),  # v0.12: 支持图像数据
+            image=image_data,  # v0.12: 支持图像数据
             image_path=fd.get("image_path"),  # v0.12: 支持图像路径
         )
         frames.append(frame)
