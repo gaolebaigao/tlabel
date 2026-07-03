@@ -490,6 +490,91 @@ class TLabelData:
 
         return result
 
+    # ============================================================
+    # v0.7.0: 数据增强
+    # ============================================================
+
+    def augment(self, methods: list, params: dict = None, seed: int = None) -> 'TLabelData':
+        """
+        对当前数据应用增强，返回新的TLabelData实例 / Apply augmentation, return new TLabelData
+
+        内部将帧级标注转为 (T, 22) 特征矩阵，经 AugmentEngine 增强后，
+        回写到新 TLabelData 的帧级 tlabel_v2 字典中。元数据全部保持不变。
+
+        Args:
+            methods: 增强方法名列表，可选:
+                'time_warp'     — 时序弹性扭曲
+                'noise_inject'  — 高斯噪声注入
+                'random_crop'   — 随机时间窗口裁剪
+                'force_scale'   — 力 magnitude 缩放
+                'frame_dropout' — 随机帧丢弃
+            params: 各方法的参数覆盖，如 {'time_warp': {'sigma': 0.2}}
+            seed: 主随机种子，用于整体复现
+
+        Returns:
+            新的 TLabelData 实例，features 已增强，元数据不变
+
+        用法:
+            augmented = data.augment(['time_warp', 'noise_inject'])
+            augmented = data.augment(['force_scale'], params={'force_scale': {'factor_range': (0.5, 1.5)}})
+        """
+        import copy
+        import numpy as np
+        from tlabel.augment.engine import AugmentEngine
+
+        if not methods:
+            raise ValueError("methods list cannot be empty")
+
+        # 验证方法名
+        for m in methods:
+            if m not in AugmentEngine.AVAILABLE_METHODS:
+                available = list(AugmentEngine.AVAILABLE_METHODS.keys())
+                raise ValueError(
+                    f"Unknown augmentation method '{m}'. Available: {available}"
+                )
+
+        if not self.frames:
+            raise ValueError("Cannot augment empty TLabelData (no frames)")
+
+        # 提取22维特征矩阵 (T, D)
+        feature_keys = list(self.frames[0].tlabel_v2.keys())
+        features = np.array(
+            [[frame.tlabel_v2.get(k, 0.0) for k in feature_keys] for frame in self.frames],
+            dtype=np.float64,
+        )
+
+        # 执行增强
+        augmented_features = AugmentEngine.augment(features, methods, params, seed=seed)
+
+        # 构建新的 TLabelData（深拷贝帧以隔离原始数据）
+        new_frames = []
+        for i, frame in enumerate(self.frames):
+            new_tlabel_v2 = dict(frame.tlabel_v2)  # 浅拷贝字典
+            for j, key in enumerate(feature_keys):
+                new_tlabel_v2[key] = float(augmented_features[i, j])
+            new_frame = TLabelFrame(
+                frame_idx=frame.frame_idx,
+                timestamp_s=frame.timestamp_s,
+                tlabel_v2=new_tlabel_v2,
+                manipulation_phase=frame.manipulation_phase,
+                confidence=frame.confidence,
+                sensor_specific=copy.deepcopy(frame.sensor_specific) if frame.sensor_specific else None,
+            )
+            new_frame.patches = list(frame.patches)  # 保留 patch 历史
+            new_frames.append(new_frame)
+
+        new_data = TLabelData(
+            frames=new_frames,
+            sensor_info=copy.deepcopy(self.sensor_info),
+            episode_info=copy.deepcopy(self.episode_info),
+            capabilities=copy.deepcopy(self.capabilities),
+            schema_version=self.schema_version,
+            sensor_id=self.sensor_id,
+            calibration_params=copy.deepcopy(self.calibration_params) if self.calibration_params else None,
+            sensor_profile=copy.deepcopy(self.sensor_profile) if self.sensor_profile else None,
+        )
+        return new_data
+
     def to_dict(self) -> Dict:
         """转换为字典"""
         contact_count = sum(1 for f in self.frames if f.contact > 0.5)

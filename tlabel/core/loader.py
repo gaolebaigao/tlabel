@@ -1,7 +1,7 @@
 """
-tlabel.load() — 统一加载入口
+tlabel.load() -- unified loading entry point
 
-自动识别文件格式，调用对应适配器，返回TLabelData。
+Auto-detects file format, calls the corresponding adapter, returns TLabelData.
 """
 
 from pathlib import Path
@@ -16,58 +16,61 @@ def load(file_path: Union[str, Path],
          trajectory_id: Optional[int] = None,
          **kwargs) -> TLabelData:
     """
-    加载触觉数据文件，自动识别格式并转换为TLabel Format v2
-    
-    参数:
-        file_path: 数据文件路径
-        format: 强制指定格式 ("gelsight" / "paxini" / "daimon" / "tlabel" / "touchd" / "univtac" / "vtouch" / "ycb_slide")
-        trajectory_id: 轨迹ID（GelSight数据集可选）
-        **kwargs: 传递给适配器的额外参数
-    
-    返回:
-        TLabelData — 统一标注容器
-    
-    用法:
+    Load tactile data file, auto-detect format and convert to TLabel Format v2
+
+    Args:
+        file_path: Data file path
+        format: Force format ("gelsight"/"paxini"/"daimon"/"tlabel"/"touchd"/"univtac"/"vtouch"/"ycb_slide"/"tacquad")
+        trajectory_id: Trajectory ID (for GelSight dataset)
+        **kwargs: Extra args passed to adapter
+
+    Returns:
+        TLabelData -- unified annotation container
+
+    Usage:
         data = tlabel.load("gelsight_01.pkl")
         data = tlabel.load("paxini.h5", trajectory_id=0)
         data = tlabel.load("annotations.json")
         data = tlabel.load("vtouch_data.h5")
         data = tlabel.load("ycb_slide_dir/")
+        data = tlabel.load("tacquad_dir/", format="tacquad")
     """
     path = Path(file_path)
     if not path.exists():
-        raise FileNotFoundError(f"文件不存在: {file_path}")
+        raise FileNotFoundError(f"File not found: {file_path}")
 
-    # 确保适配器已注册
     _ensure_adapters()
 
-    # 自动检测格式
     fmt = format or auto_detect_format(str(path))
     if fmt is None:
         raise ValueError(
-            f"无法识别文件格式: {file_path}\n"
-            f"支持的格式:\n"
-            f"  .pkl         — GelSight / DIGIT\n"
-            f"  .h5 / .hdf5  — PaXini / UniVTAC / VTouch (自动识别)\n"
-            f"  .parquet     — Daimon DM-TacClaw\n"
-            f"  .json        — TLabel Format / Daimon info.json\n"
-            f"  .npy         — YCB-Slide (synced_data.npy)\n"
-            f"  目录          — Daimon / ToucHD-Force / YCB-Slide (自动识别)\n"
-            f"可手动指定: tlabel.load(path, format='gelsight')"
+            f"Cannot detect format: {file_path}\n"
+            f"Supported formats:\n"
+            f"  .pkl         -- GelSight / DIGIT\n"
+            f"  .h5 / .hdf5  -- PaXini / UniVTAC / VTouch (auto-detect)\n"
+            f"  .parquet     -- Daimon DM-TacClaw\n"
+            f"  .json        -- TLabel Format / Daimon info.json\n"
+            f"  .npy         -- YCB-Slide (synced_data.npy)\n"
+            f"  directory    -- Daimon / ToucHD-Force / YCB-Slide / TacQuad (auto-detect)\n"
+            f"You can specify: tlabel.load(path, format='gelsight')"
         )
 
     adapter_cls = get_adapter(fmt)
     if adapter_cls is None:
-        available = [k for k in ["gelsight", "paxini", "daimon", "tlabel", "touchd", "univtac", "vtouch", "ycb_slide"] if get_adapter(k)]
+        available = [k for k in [
+            "gelsight", "paxini", "daimon", "tlabel",
+            "touchd", "univtac", "vtouch", "ycb_slide", "tacquad"
+        ] if get_adapter(k)]
         raise ImportError(
-            f"适配器 '{fmt}' 不可用（可能缺少依赖）\n"
-            f"当前可用: {available or '无'}\n"
+            f"Adapter '{fmt}' unavailable (missing dependencies)\n"
+            f"Available: {available or 'none'}\n"
             f"GelSight/DIGIT: pip install numpy opencv-python\n"
             f"PaXini: pip install h5py numpy\n"
             f"Daimon: pip install pyarrow numpy\n"
             f"UniVTAC: pip install h5py numpy\n"
             f"VTouch: pip install h5py numpy opencv-python\n"
-            f"YCB-Slide: pip install numpy opencv-python"
+            f"YCB-Slide: pip install numpy opencv-python\n"
+            f"TacQuad: pip install numpy opencv-python"
         )
 
     adapter = adapter_cls()
