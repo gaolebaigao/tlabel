@@ -13,7 +13,7 @@ from tlabel.core.types import TLabelData, TLabelFrame
 _DEMO_DIR = Path(__file__).parent / "demo_data"
 
 # 可用的Demo传感器列表
-AVAILABLE_SENSORS = ["gelsight", "digit", "paxini", "daimon", "touchd"]
+AVAILABLE_SENSORS = ["gelsight", "digit", "paxini", "daimon", "touchd", "gelsight_images"]
 
 
 def demo(sensor: Optional[str] = None, **kwargs) -> TLabelData:
@@ -21,8 +21,9 @@ def demo(sensor: Optional[str] = None, **kwargs) -> TLabelData:
     加载内置Demo数据集，快速体验TLabel标注面板
 
     参数:
-        sensor: 传感器类型，可选 "gelsight" / "digit" / "paxini" / "daimon" / "touchd"
+        sensor: 传感器类型，可选 "gelsight" / "digit" / "paxini" / "daimon" / "touchd" / "gelsight_images"
                 不传则默认加载 gelsight demo
+                "gelsight_images" 会加载带触觉图像的demo数据
 
     返回:
         TLabelData — 可直接 review() / export()
@@ -32,6 +33,7 @@ def demo(sensor: Optional[str] = None, **kwargs) -> TLabelData:
         data = tlabel.demo()              # 默认GelSight demo
         data = tlabel.demo('digit')       # DIGIT demo
         data = tlabel.demo('touchd')      # ToucHD-Force demo
+        data = tlabel.demo('gelsight_images')  # 带触觉图像的GelSight demo
         data.review()                     # Jupyter弹出面板
     """
     if sensor is None:
@@ -62,6 +64,8 @@ def demo(sensor: Optional[str] = None, **kwargs) -> TLabelData:
             manipulation_phase=fd.get("manipulation_phase", "idle"),
             confidence=fd.get("confidence", 1.0),
             sensor_specific=fd.get("sensor_specific"),
+            image=fd.get("image"),  # v0.12: 支持图像数据
+            image_path=fd.get("image_path"),  # v0.12: 支持图像路径
         )
         frames.append(frame)
 
