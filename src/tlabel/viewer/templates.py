@@ -1,0 +1,1947 @@
+"""
+TLabel面板模板生成器 — 生成Jupyter嵌入的HTML+JS+CSS
+
+核心设计：
+- Jupyter _repr_html_ 渲染
+- Canvas雷达图+彩色时间轴
+- 中英文切换
+- 帧详情编辑器+批量修正
+- Episode级标注表单（v0.4.2）
+- 数据质量评分仪表盘（v0.4.2）
+- 统计摘要 describe 表格（v0.4.2）
+"""
+
+import json
+from typing import Optional, Dict
+
+
+def generate_panel_html(
+    data_dict: dict,
+    lang: str = "auto",
+    instance_id: str = "tlabel",
+    episode_info: Optional[Dict] = None,
+    quality_score: Optional[Dict] = None,
+    describe_stats: Optional[Dict] = None,
+    predict_highlights: Optional[Dict] = None,
+    auto_label_summary: Optional[Dict] = None,
+) -> str:
+    """生成完整面板HTML"""
+    data_json = json.dumps(data_dict, ensure_ascii=False, default=str)
+    # v0.5.0: Inject predict highlight data
+    episode_json = json.dumps(episode_info or {}, ensure_ascii=False, default=str)
+    quality_json = json.dumps(quality_score or {}, ensure_ascii=False, default=str)
+    describe_json = json.dumps(describe_stats or {}, ensure_ascii=False, default=str)
+    predict_json = json.dumps(predict_highlights or {}, ensure_ascii=False, default=str)
+    autolabel_json = json.dumps(auto_label_summary or {}, ensure_ascii=False, default=str)
+    tid = instance_id
+
+    return f"""<!DOCTYPE html>
+<div id="{tid}-root" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+     max-width: 960px; margin: 0 auto; background: #f8f9fa; color: #343a40;
+     border-radius: 12px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.08);">
+
+<!-- Header -->
+<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;
+     background:linear-gradient(135deg,#e9ecef,#f1f3f5);border-bottom:1px solid #dee2e6;">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span style="font-size:20px;">🦞</span>
+    <span style="font-size:16px;font-weight:700;color:#e85d75;" data-i18n="app.title">TLabel 触觉标注工具</span>
+    <span style="font-size:10px;color:#868e96;background:#e9ecef;padding:1px 6px;border-radius:4px;">v0.11.0</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <span style="font-size:12px;color:#868e96;" id="{tid}-sensor-info"></span>
+    <button style="padding:4px 10px;border-radius:6px;border:1px solid #e85d75;background:transparent;
+                   color:#e85d75;cursor:pointer;font-size:12px;" id="{tid}-lang-btn">EN</button>
+    <span id="{tid}-predict-badge" style="display:none;font-size:11px;color:#e67700;background:#fff3bf;padding:2px 8px;border-radius:4px;cursor:help;" data-i18n-title="predict.badge.title">🤖 Predicted</span>
+    <button style="padding:4px 10px;border-radius:6px;border:1px solid #ced4da;background:transparent;
+                   color:#868e96;cursor:pointer;font-size:14px;" id="{tid}-dark-btn">🌙</button>
+  </div>
+</div>
+
+<!-- Tab Navigation -->
+<div style="display:flex;border-bottom:2px solid #dee2e6;padding:0 20px;background:#fff;" id="{tid}-tab-nav">
+  <button class="{tid}-tab" data-tab="annotate" style="padding:10px 18px;border:none;background:transparent;
+          color:#e85d75;font-weight:700;font-size:13px;cursor:pointer;border-bottom:2px solid #e85d75;
+          margin-bottom:-2px;" data-i18n="tab.annotate">📝 标注</button>
+  <button class="{tid}-tab" data-tab="episode" style="padding:10px 18px;border:none;background:transparent;
+          color:#868e96;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;
+          margin-bottom:-2px;" data-i18n="tab.episode">🎬 Episode</button>
+  <button class="{tid}-tab" data-tab="quality" style="padding:10px 18px;border:none;background:transparent;
+          color:#868e96;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;
+          margin-bottom:-2px;" data-i18n="tab.quality">📊 质量评分</button>
+  <button class="{tid}-tab" data-tab="stats" style="padding:10px 18px;border:none;background:transparent;
+          color:#868e96;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;
+          margin-bottom:-2px;" data-i18n="tab.stats">📈 统计</button>
+  <button class="{tid}-tab" data-tab="export" style="padding:10px 18px;border:none;background:transparent;
+          color:#868e96;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;
+          margin-bottom:-2px;" data-i18n="tab.export">🚀 导出</button>
+</div>
+
+<!-- ==================== TAB 1: Annotate ==================== -->
+<div id="{tid}-panel-annotate">
+
+<!-- Stats Bar -->
+<div style="display:flex;gap:16px;padding:10px 20px;background:#f1f3f5;font-size:12px;">
+  <span>📊 <span data-i18n="stats.frames">帧数</span>: <b id="{tid}-stat-frames">0</b></span>
+  <span>⏱ <span data-i18n="stats.duration">时长</span>: <b id="{tid}-stat-duration">0s</b></span>
+  <span>🟢 <span data-i18n="stats.contact">接触率</span>: <b id="{tid}-stat-contact">0%</b></span>
+  <span>🔴 <span data-i18n="stats.slip">滑移率</span>: <b id="{tid}-stat-slip">0%</b></span>
+  <span>✏️ <span data-i18n="stats.modified">已修正</span>: <b id="{tid}-stat-modified">0</b></span>
+</div>
+
+<!-- Timeline -->
+<div style="padding:12px 20px;background:#e9ecef;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+    <span style="font-size:12px;color:#868e96;" data-i18n="timeline.title">时间轴</span>
+    <span style="font-size:12px;color:#e85d75;" id="{tid}-frame-label">-</span>
+  </div>
+  <canvas id="{tid}-timeline" width="920" height="60" 
+          style="width:100%;height:60px;border-radius:8px;cursor:pointer;background:#fff;"></canvas>
+  <div style="display:flex;justify-content:center;gap:8px;margin-top:6px;">
+    <button id="{tid}-btn-prev"
+            style="padding:4px 12px;border-radius:6px;border:1px solid #ced4da;background:#fff;color:#495057;cursor:pointer;">◀</button>
+    <input type="number" id="{tid}-frame-input" min="0" style="width:60px;text-align:center;
+           border-radius:6px;border:1px solid #ced4da;background:#fff;color:#343a40;padding:2px 4px;">
+    <button id="{tid}-btn-next"
+            style="padding:4px 12px;border-radius:6px;border:1px solid #ced4da;background:#fff;color:#495057;cursor:pointer;">▶</button>
+  </div>
+</div>
+
+<!-- Tactile Image Sequence Visualization -->
+<div style="padding:12px 20px;background:#e9ecef;" id="{tid}-tactile-image-section">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+    <span style="font-size:12px;color:#868e96;" data-i18n="tactileImage.title">触觉图像序列</span>
+    <span style="font-size:11px;color:#e85d75;" id="{tid}-tactile-image-mode-label"></span>
+  </div>
+  <canvas id="{tid}-tactile_image_canvas" width="920" height="300"
+          style="width:100%;height:300px;border-radius:8px;background:#fff;display:block;"></canvas>
+  <!-- Playback Controls -->
+  <div style="display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap;" id="{tid}-tactile-image-controls">
+    <button id="{tid}-tactile-play-btn"
+            style="padding:4px 12px;border-radius:6px;border:1px solid #ced4da;background:#fff;color:#495057;cursor:pointer;font-size:12px;"
+            data-i18n="tactileImage.play">▶ 播放</button>
+    <span id="{tid}-tactile-frame-label" style="font-size:12px;color:#868e96;min-width:80px;">Frame 0 / 0</span>
+    <div style="flex:1;min-width:120px;position:relative;height:16px;cursor:pointer;" id="{tid}-tactile-progress-wrap">
+      <div style="position:absolute;top:6px;left:0;right:0;height:4px;background:#dee2e6;border-radius:2px;" id="{tid}-tactile-progress-bg"></div>
+      <div style="position:absolute;top:6px;left:0;height:4px;background:#e85d75;border-radius:2px;width:0%;" id="{tid}-tactile-progress-bar"></div>
+      <div style="position:absolute;top:3px;width:10px;height:10px;background:#e85d75;border-radius:50%;left:0%;transform:translateX(-50%);" id="{tid}-tactile-progress-thumb"></div>
+    </div>
+    <select id="{tid}-tactile-speed-select"
+            style="padding:2px 6px;border-radius:6px;border:1px solid #ced4da;background:#fff;color:#495057;font-size:11px;">
+      <option value="0.5">0.5x</option>
+      <option value="1" selected>1x</option>
+      <option value="2">2x</option>
+      <option value="5">5x</option>
+    </select>
+  </div>
+</div>
+
+<!-- Main Content: Radar + Detail -->
+<div style="display:flex;gap:16px;padding:16px 20px;">
+  <!-- Radar Chart -->
+  <div style="flex:1;background:#fff;border-radius:10px;padding:12px;border:1px solid #e9ecef;">
+    <div style="font-size:12px;color:#868e96;margin-bottom:4px;" data-i18n="chart.radar">22维特征</div>
+    <canvas id="{tid}-radar" width="360" height="340" style="width:100%;"></canvas>
+  </div>
+  <!-- Frame Detail -->
+  <div style="flex:1;background:#fff;border-radius:10px;padding:12px;border:1px solid #e9ecef;" id="{tid}-detail-panel">
+    <div style="font-size:12px;color:#868e96;margin-bottom:8px;" data-i18n="detail.title">帧详情</div>
+    <div id="{tid}-detail-content" style="font-size:13px;line-height:1.8;"></div>
+  </div>
+</div>
+
+<!-- Batch Patch -->
+<div style="padding:12px 20px;background:#f1f3f5;">
+  <div style="font-size:12px;color:#868e96;margin-bottom:6px;" data-i18n="batch.title">区间批量修正</div>
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+    <span data-i18n="batch.frameRange" style="font-size:12px;">帧范围：</span>
+    <input type="number" id="{tid}-batch-start" style="width:60px;border-radius:6px;border:1px solid #ced4da;
+           background:#fff;color:#343a40;padding:3px 6px;font-size:12px;" placeholder="0">
+    <span style="color:#adb5bd;">—</span>
+    <input type="number" id="{tid}-batch-end" style="width:60px;border-radius:6px;border:1px solid #ced4da;
+           background:#fff;color:#343a40;padding:3px 6px;font-size:12px;">
+    <select id="{tid}-batch-field" style="border-radius:6px;border:1px solid #ced4da;background:#fff;
+            color:#343a40;padding:3px 6px;font-size:12px;">
+      <option value="contact" data-i18n="batch.optContact">接触 (0/1)</option>
+      <option value="slip_event" data-i18n="batch.optSlip">滑移事件 (0/1)</option>
+      <option value="force_magnitude" data-i18n="batch.optForce">力度</option>
+      <option value="manipulation_phase" data-i18n="batch.optPhase">操作阶段</option>
+    </select>
+    <input type="text" id="{tid}-batch-value" style="width:80px;border-radius:6px;border:1px solid #ced4da;
+           background:#fff;color:#343a40;padding:3px 6px;font-size:12px;" placeholder="0">
+    <button id="{tid}-btn-batch"
+            style="padding:4px 12px;border-radius:6px;border:none;background:#e85d75;color:#fff;
+                   cursor:pointer;font-size:12px;" data-i18n="batch.apply">应用</button>
+    <button id="{tid}-btn-undo"
+            style="padding:4px 10px;border-radius:6px;border:1px solid #ced4da;background:#fff;
+                   color:#495057;cursor:pointer;font-size:12px;">↩</button>
+  </div>
+</div>
+
+<!-- Export Section -->
+<div style="padding:16px 20px;background:#fff;border-top:2px solid #e9ecef;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+    <span style="font-size:14px;font-weight:600;color:#343a40;" data-i18n="export.title"> 导出数据</span>
+    <span style="font-size:11px;color:#868e96;" data-i18n="export.hint">选择格式并点击对应按钮</span>
+  </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;">
+    <button id="{tid}-btn-export-json"
+            style="flex:1;min-width:120px;padding:10px 16px;border-radius:8px;border:none;
+                   background:linear-gradient(135deg,#e85d75,#d1495b);color:#fff;
+                   cursor:pointer;font-size:13px;font-weight:600;
+                   box-shadow:0 2px 6px rgba(232,93,117,0.3);" 
+            data-i18n="actions.exportFull">💾 导出 JSON</button>
+    <button id="{tid}-btn-export-csv"
+            style="flex:1;min-width:120px;padding:10px 16px;border-radius:8px;
+                   border:2px solid #e85d75;background:#fff;color:#e85d75;
+                   cursor:pointer;font-size:13px;font-weight:600;" 
+            data-i18n="actions.exportCSV">📊 导出 CSV</button>
+    <button id="{tid}-btn-export-hdf5"
+            style="flex:1;min-width:120px;padding:10px 16px;border-radius:8px;
+                   border:2px solid #495057;background:#fff;color:#495057;
+                   cursor:pointer;font-size:13px;font-weight:600;" 
+            data-i18n="actions.exportHDF5">🔬 导出 HDF5</button>
+  </div>
+  <div id="{tid}-export-status" style="margin-top:8px;font-size:11px;color:#868e96;display:none;"></div>
+</div>
+
+</div><!-- end panel-annotate -->
+
+<!-- ==================== TAB 2: Episode ==================== -->
+<div id="{tid}-panel-episode" style="display:none;">
+<div style="padding:20px;">
+
+  <div style="background:#fff;border-radius:10px;padding:20px;border:1px solid #e9ecef;margin-bottom:16px;">
+    <div style="font-size:14px;font-weight:700;color:#343a40;margin-bottom:16px;">
+      🎬 <span data-i18n="episode.title">Episode 级标注</span>
+    </div>
+    <div style="font-size:12px;color:#868e96;margin-bottom:16px;" data-i18n="episode.desc">
+      为整个交互Episode添加语义标注，描述操作任务的整体结果和属性。标注结果会写入 episode_info 并随数据一起导出。
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <!-- Outcome -->
+      <div>
+        <label style="font-size:12px;color:#495057;font-weight:600;display:block;margin-bottom:4px;" data-i18n="episode.outcome">操作结果</label>
+        <select id="{tid}-ep-outcome" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #ced4da;
+                background:#fff;color:#343a40;font-size:13px;">
+          <option value="" data-i18n="episode.outcomeDefault">— 未标注 —</option>
+          <option value="success" data-i18n="episode.outSuccess">✅ 成功 (success)</option>
+          <option value="failure" data-i18n="episode.outFailure">❌ 失败 (failure)</option>
+          <option value="aborted" data-i18n="episode.outAborted">⏹️ 中止 (aborted)</option>
+          <option value="partial" data-i18n="episode.outPartial">⚠️ 部分 (partial)</option>
+        </select>
+      </div>
+
+      <!-- Manipulation Type -->
+      <div>
+        <label style="font-size:12px;color:#495057;font-weight:600;display:block;margin-bottom:4px;" data-i18n="episode.manipType">操作类型</label>
+        <select id="{tid}-ep-manip-type" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #ced4da;
+                background:#fff;color:#343a40;font-size:13px;">
+          <option value="" data-i18n="episode.manipTypeDefault">— 未标注 —</option>
+          <option value="grasp" data-i18n="episode.mGrasp">🤏 抓取 (grasp)</option>
+          <option value="push" data-i18n="episode.mPush">👆 推 (push)</option>
+          <option value="pull" data-i18n="episode.mPull">👇 拉 (pull)</option>
+          <option value="tap" data-i18n="episode.mTap">👆 轻触 (tap)</option>
+          <option value="lift" data-i18n="episode.mLift">⬆️ 提起 (lift)</option>
+          <option value="place" data-i18n="episode.mPlace">⬇️ 放置 (place)</option>
+          <option value="rotate" data-i18n="episode.mRotate">🔄 旋转 (rotate)</option>
+          <option value="insert" data-i18n="episode.mInsert">🔩 插入 (insert)</option>
+        </select>
+      </div>
+
+      <!-- Difficulty -->
+      <div>
+        <label style="font-size:12px;color:#495057;font-weight:600;display:block;margin-bottom:4px;" data-i18n="episode.difficulty">难度等级</label>
+        <select id="{tid}-ep-difficulty" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #ced4da;
+                background:#fff;color:#343a40;font-size:13px;">
+          <option value="" data-i18n="episode.difficultyDefault">— 未标注 —</option>
+          <option value="easy" data-i18n="episode.dEasy">🟢 简单 (easy)</option>
+          <option value="medium" data-i18n="episode.dMedium">🟡 中等 (medium)</option>
+          <option value="hard" data-i18n="episode.dHard">🔴 困难 (hard)</option>
+        </select>
+      </div>
+
+      <!-- Operator (optional) -->
+      <div>
+        <label style="font-size:12px;color:#495057;font-weight:600;display:block;margin-bottom:4px;" data-i18n="episode.operator">标注人</label>
+        <input type="text" id="{tid}-ep-operator" data-i18n-placeholder="episode.operatorPh" placeholder="可选" style="width:100%;padding:8px 10px;border-radius:8px;
+               border:1px solid #ced4da;background:#fff;color:#343a40;font-size:13px;">
+      </div>
+    </div>
+
+    <!-- Notes -->
+    <div style="margin-top:16px;">
+      <label style="font-size:12px;color:#495057;font-weight:600;display:block;margin-bottom:4px;" data-i18n="episode.notes">备注</label>
+      <textarea id="{tid}-ep-notes" rows="3" data-i18n-placeholder="episode.notesPh" placeholder="记录操作细节、失败原因等..." 
+                style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #ced4da;
+                       background:#fff;color:#343a40;font-size:13px;resize:vertical;font-family:inherit;"></textarea>
+    </div>
+
+    <!-- Apply button -->
+    <div style="margin-top:16px;display:flex;gap:10px;align-items:center;">
+      <button id="{tid}-btn-episode-apply"
+              style="padding:8px 24px;border-radius:8px;border:none;background:#e85d75;color:#fff;
+                     cursor:pointer;font-size:13px;font-weight:600;
+                     box-shadow:0 2px 6px rgba(232,93,117,0.3);" data-i18n="episode.apply">✅ 保存Episode标注</button>
+      <span id="{tid}-episode-status" style="font-size:12px;color:#51cf66;display:none;"></span>
+    </div>
+  </div>
+
+  <!-- Episode Current Info -->
+  <div style="background:#fff;border-radius:10px;padding:16px;border:1px solid #e9ecef;">
+    <div style="font-size:12px;color:#868e96;margin-bottom:8px;" data-i18n="episode.currentInfo">当前Episode信息</div>
+    <div id="{tid}-episode-info-display" style="font-size:13px;line-height:1.8;color:#343a40;">
+    </div>
+  </div>
+
+</div>
+</div><!-- end panel-episode -->
+
+<!-- ==================== TAB 3: Quality ==================== -->
+<div id="{tid}-panel-quality" style="display:none;">
+<div style="padding:20px;">
+
+  <div style="background:#fff;border-radius:10px;padding:20px;border:1px solid #e9ecef;margin-bottom:16px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div style="font-size:14px;font-weight:700;color:#343a40;">
+        📊 <span data-i18n="quality.title">数据质量评分</span>
+      </div>
+      <div id="{tid}-quality-grade-badge" style="font-size:28px;font-weight:900;width:56px;height:56px;
+           border-radius:50%;display:flex;align-items:center;justify-content:center;
+           background:#e9ecef;color:#868e96;">-</div>
+    </div>
+
+    <div style="font-size:12px;color:#868e96;margin-bottom:16px;" data-i18n="quality.desc">
+      基于4个维度自动评估数据质量，对标国标《具身智能数据质量规范》。评分由 Python 引擎预计算。
+    </div>
+
+    <!-- Overall Score -->
+    <div style="text-align:center;margin-bottom:20px;">
+      <div style="font-size:48px;font-weight:900;color:#e85d75;" id="{tid}-quality-overall">--</div>
+      <div style="font-size:12px;color:#868e96;" data-i18n="quality.overallLabel">综合评分 (0-100)</div>
+    </div>
+
+    <!-- 4 Dimension Bars -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;" id="{tid}-quality-dims">
+      <!-- Physical Consistency -->
+      <div style="background:#f8f9fa;border-radius:8px;padding:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <span style="font-size:12px;font-weight:600;color:#495057;">🔧 <span data-i18n="quality.physical">物理一致性</span></span>
+          <span style="font-size:13px;font-weight:700;color:#e85d75;" id="{tid}-q-physical">--</span>
+        </div>
+        <div style="height:8px;background:#e9ecef;border-radius:4px;overflow:hidden;">
+          <div id="{tid}-q-physical-bar" style="height:100%;background:linear-gradient(90deg,#e85d75,#ff8fa3);border-radius:4px;width:0%;transition:width 0.5s;"></div>
+        </div>
+        <div style="font-size:10px;color:#868e96;margin-top:4px;" data-i18n="quality.physicalDesc">权重 30% · 联动规则满足度</div>
+      </div>
+
+      <!-- Temporal Smoothness -->
+      <div style="background:#f8f9fa;border-radius:8px;padding:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <span style="font-size:12px;font-weight:600;color:#495057;">📈 <span data-i18n="quality.temporal">时序平滑度</span></span>
+          <span style="font-size:13px;font-weight:700;color:#e85d75;" id="{tid}-q-temporal">--</span>
+        </div>
+        <div style="height:8px;background:#e9ecef;border-radius:4px;overflow:hidden;">
+          <div id="{tid}-q-temporal-bar" style="height:100%;background:linear-gradient(90deg,#4dabf7,#74c0fc);border-radius:4px;width:0%;transition:width 0.5s;"></div>
+        </div>
+        <div style="font-size:10px;color:#868e96;margin-top:4px;" data-i18n="quality.temporalDesc">权重 25% · 相邻帧突变检测</div>
+      </div>
+
+      <!-- Completeness -->
+      <div style="background:#f8f9fa;border-radius:8px;padding:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <span style="font-size:12px;font-weight:600;color:#495057;">📋 <span data-i18n="quality.completeness">完整性</span></span>
+          <span style="font-size:13px;font-weight:700;color:#e85d75;" id="{tid}-q-completeness">--</span>
+        </div>
+        <div style="height:8px;background:#e9ecef;border-radius:4px;overflow:hidden;">
+          <div id="{tid}-q-completeness-bar" style="height:100%;background:linear-gradient(90deg,#51cf66,#8ce99a);border-radius:4px;width:0%;transition:width 0.5s;"></div>
+        </div>
+        <div style="font-size:10px;color:#868e96;margin-top:4px;" data-i18n="quality.completenessDesc">权重 25% · 字段缺失/全零比例</div>
+      </div>
+
+      <!-- Coverage -->
+      <div style="background:#f8f9fa;border-radius:8px;padding:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <span style="font-size:12px;font-weight:600;color:#495057;">🎯 <span data-i18n="quality.coverage">覆盖率</span></span>
+          <span style="font-size:13px;font-weight:700;color:#e85d75;" id="{tid}-q-coverage">--</span>
+        </div>
+        <div style="height:8px;background:#e9ecef;border-radius:4px;overflow:hidden;">
+          <div id="{tid}-q-coverage-bar" style="height:100%;background:linear-gradient(90deg,#ffd43b,#ffe066);border-radius:4px;width:0%;transition:width 0.5s;"></div>
+        </div>
+        <div style="font-size:10px;color:#868e96;margin-top:4px;" data-i18n="quality.coverageDesc">权重 20% · 有意义标注占比</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Warnings -->
+  <div style="background:#fff;border-radius:10px;padding:16px;border:1px solid #e9ecef;">
+    <div style="font-size:12px;font-weight:600;color:#495057;margin-bottom:8px;">⚠️ <span data-i18n="quality.warnings">质量警告</span></div>
+    <div id="{tid}-quality-warnings" style="font-size:12px;line-height:1.8;color:#868e96;"></div>
+  </div>
+
+</div>
+</div><!-- end panel-quality -->
+
+<!-- ==================== TAB 4: Stats ==================== -->
+<div id="{tid}-panel-stats" style="display:none;">
+<div style="padding:20px;">
+
+  <div style="background:#fff;border-radius:10px;padding:20px;border:1px solid #e9ecef;margin-bottom:16px;">
+    <div style="font-size:14px;font-weight:700;color:#343a40;margin-bottom:4px;">
+      📈 <span data-i18n="stats.title">统计摘要 (describe)</span>
+    </div>
+    <div style="font-size:12px;color:#868e96;margin-bottom:16px;" data-i18n="stats.desc">
+      类 pandas.DataFrame.describe() 统计，由 Python 引擎预计算。
+    </div>
+    <div id="{tid}-describe-table" style="overflow-x:auto;"></div>
+  </div>
+
+</div>
+</div><!-- end panel-stats -->
+
+<!-- ==================== TAB 5: Export (FTP-1/MTTS) ==================== -->
+<div id="{tid}-panel-export" style="display:none;">
+<div style="padding:20px;">
+
+  <!-- FTP-1 Section -->
+  <div style="background:#fff;border-radius:10px;padding:20px;border:1px solid #e9ecef;margin-bottom:16px;">
+    <div style="font-size:14px;font-weight:700;color:#343a40;margin-bottom:4px;">
+      🚀 <span data-i18n="export.ftp1_title">FTP-1 / MTTS 格式导出</span>
+    </div>
+    <div style="font-size:12px;color:#868e96;margin-bottom:16px;" data-i18n="export.ftp1_desc">
+      导出为触觉基础模型 FTP-1 兼容的 MTTS Zarr 格式，可直接用于微调或推理。
+    </div>
+
+    <!-- Sensor Config -->
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+      <div style="flex:1;min-width:180px;">
+        <label style="font-size:11px;color:#868e96;display:block;margin-bottom:4px;" data-i18n="export.sensor_name">传感器名称</label>
+        <select id="{tid}-ftp1-sensor" style="width:100%;padding:6px 10px;border:1px solid #ced4da;border-radius:6px;font-size:12px;background:#fff;">
+          <option value="GelSightMini" selected>GelSightMini</option>
+          <option value="GelSight">GelSight</option>
+          <option value="FreeTacMan">FreeTacMan</option>
+          <option value="ViTaMIn">ViTaMIn</option>
+          <option value="3DViTac">3DViTac (matrix)</option>
+          <option value="Contactile">Contactile (matrix)</option>
+          <option value="BinaryContact">BinaryContact (binary)</option>
+        </select>
+      </div>
+      <div style="flex:1;min-width:120px;">
+        <label style="font-size:11px;color:#868e96;display:block;margin-bottom:4px;" data-i18n="export.side">安装位置</label>
+        <select id="{tid}-ftp1-side" style="width:100%;padding:6px 10px;border:1px solid #ced4da;border-radius:6px;font-size:12px;background:#fff;">
+          <option value="right" selected>Right (右手)</option>
+          <option value="left">Left (左手)</option>
+        </select>
+      </div>
+      <div style="flex:1;min-width:120px;">
+        <label style="font-size:11px;color:#868e96;display:block;margin-bottom:4px;" data-i18n="export.group">组名</label>
+        <select id="{tid}-ftp1-group" style="width:100%;padding:6px 10px;border:1px solid #ced4da;border-radius:6px;font-size:12px;background:#fff;">
+          <option value="gripper" selected>Gripper (夹爪)</option>
+          <option value="dexterous">Dexterous (灵巧手)</option>
+          <option value="wrist">Wrist (腕部)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Functional Area Mapping -->
+    <div style="background:#f8f9fa;border-radius:8px;padding:14px;margin-bottom:16px;">
+      <div style="font-size:12px;font-weight:600;color:#495057;margin-bottom:8px;" data-i18n="export.area_title">
+        🎯 功能区映射 (MTTS Functional Areas)
+      </div>
+      <div style="font-size:11px;color:#868e96;margin-bottom:10px;" data-i18n="export.area_desc">
+        选择此传感器对应的 MTTS 功能区槽位。夹爪通常映射为拇指尖(0)+食指尖(1)。
+      </div>
+      <div id="{tid}-ftp1-areas" style="display:flex;flex-wrap:wrap;gap:6px;">
+        <!-- Dynamically populated -->
+      </div>
+      <div style="margin-top:10px;display:flex;gap:8px;">
+        <button id="{tid}-ftp1-preset-gripper" style="padding:3px 10px;border-radius:4px;border:1px solid #e85d75;background:transparent;color:#e85d75;cursor:pointer;font-size:11px;" data-i18n="export.preset_gripper">预设: 夹爪 [0,1]</button>
+        <button id="{tid}-ftp1-preset-three" style="padding:3px 10px;border-radius:4px;border:1px solid #ced4da;background:transparent;color:#868e96;cursor:pointer;font-size:11px;" data-i18n="export.preset_three">预设: 三指 [0,1,2]</button>
+        <button id="{tid}-ftp1-preset-five" style="padding:3px 10px;border-radius:4px;border:1px solid #ced4da;background:transparent;color:#868e96;cursor:pointer;font-size:11px;" data-i18n="export.preset_five">预设: 五指 [0-4]</button>
+      </div>
+    </div>
+
+    <!-- Export Button -->
+    <div style="display:flex;align-items:center;gap:12px;">
+      <button id="{tid}-ftp1-export-btn" style="padding:8px 24px;border-radius:8px;border:none;background:linear-gradient(135deg,#e85d75,#d63384);color:#fff;font-weight:700;font-size:13px;cursor:pointer;box-shadow:0 2px 8px rgba(232,93,117,0.3);">
+        <span data-i18n="export.btn_export">📦 导出为 FTP-1 Zarr</span>
+      </button>
+      <span id="{tid}-ftp1-status" style="font-size:12px;color:#868e96;"></span>
+    </div>
+
+    <!-- Export Result -->
+    <div id="{tid}-ftp1-result" style="display:none;margin-top:14px;background:#f1f3f5;border-radius:8px;padding:14px;font-size:12px;">
+      <div style="font-weight:600;color:#343a40;margin-bottom:8px;" data-i18n="export.result_title">📋 导出结果</div>
+      <pre id="{tid}-ftp1-result-content" style="margin:0;font-family:monospace;font-size:11px;color:#495057;white-space:pre-wrap;"></pre>
+    </div>
+  </div>
+
+  <!-- FTP-1 Format Reference -->
+  <div style="background:#fff;border-radius:10px;padding:20px;border:1px solid #e9ecef;">
+    <div style="font-size:13px;font-weight:600;color:#343a40;margin-bottom:8px;" data-i18n="export.format_ref">
+      📖 MTTS Zarr 格式说明
+    </div>
+    <div style="font-size:11px;color:#495057;line-height:1.8;font-family:monospace;background:#f8f9fa;padding:12px;border-radius:6px;">
+      <div style="color:#868e96;">// 每个 side + group 包含 4 个 Zarr key:</div>
+      <div><span style="color:#e85d75;">right_tactile_data_gripper</span>: (T, N, H, W, 3) uint8 &nbsp;<span style="color:#868e96;">← 触觉图像</span></div>
+      <div><span style="color:#e85d75;">right_tactile_area_gripper</span>: (T, N) int32 &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#868e96;">← 功能区ID</span></div>
+      <div><span style="color:#e85d75;">right_tactile_sensor_gripper</span>: (T,) string &nbsp;&nbsp;&nbsp;<span style="color:#868e96;">← 传感器名</span></div>
+      <div><span style="color:#e85d75;">right_tactile_type_gripper</span>: (T,) string &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#868e96;">← image/matrix/binary</span></div>
+    </div>
+    <div style="font-size:11px;color:#868e96;margin-top:8px;" data-i18n="export.format_note">
+      💡 导出的 .zarr 文件可直接被 FTP-1 的 dataset_zarr.py 加载，用于模型微调。
+    </div>
+  </div>
+
+
+  <!-- LeRobot Section -->
+  <div style="background:#fff;border-radius:10px;padding:20px;border:1px solid #e9ecef;margin-bottom:16px;">
+    <div style="font-size:14px;font-weight:700;color:#343a40;margin-bottom:4px;">
+      🤖 <span data-i18n="export.lerobot_title">LeRobot 格式导出</span>
+    </div>
+    <div style="font-size:12px;color:#868e96;margin-bottom:16px;" data-i18n="export.lerobot_desc">
+      将标注写回 LeRobot 数据集的 Parquet 文件，更新 meta/info.json。
+    </div>
+
+    <!-- LeRobot Config -->
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+      <div style="flex:1;min-width:180px;">
+        <label style="font-size:11px;color:#868e96;display:block;margin-bottom:4px;" data-i18n="export.lerobot_tactile_field">触觉字段名</label>
+        <input type="text" id="{tid}-lerobot-tactile-field" value="observation.tactile"
+               style="width:100%;padding:6px 10px;border:1px solid #ced4da;border-radius:6px;font-size:12px;background:#fff;"
+               placeholder="observation.tactile">
+      </div>
+      <div style="flex:1;min-width:180px;">
+        <label style="font-size:11px;color:#868e96;display:block;margin-bottom:4px;" data-i18n="export.lerobot_action_field">动作字段名</label>
+        <input type="text" id="{tid}-lerobot-action-field" value="action"
+               style="width:100%;padding:6px 10px;border:1px solid #ced4da;border-radius:6px;font-size:12px;background:#fff;"
+               placeholder="action">
+      </div>
+      <div style="flex:1;min-width:120px;display:flex;align-items:flex-end;">
+        <label style="font-size:11px;color:#868e96;display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" id="{tid}-lerobot-overwrite" style="width:14px;height:14px;">
+          <span data-i18n="export.lerobot_overwrite">覆盖已有字段</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Export Button -->
+    <div style="display:flex;align-items:center;gap:12px;">
+      <button id="{tid}-lerobot-export-btn" style="padding:8px 24px;border-radius:8px;border:none;background:linear-gradient(135deg,#4dabf7,#3b82f6);color:#fff;font-weight:700;font-size:13px;cursor:pointer;box-shadow:0 2px 8px rgba(77,171,247,0.3);">
+        <span data-i18n="export.lerobot_btn">📦 导出为 LeRobot Parquet</span>
+      </button>
+      <span id="{tid}-lerobot-status" style="font-size:12px;color:#868e96;"></span>
+    </div>
+
+    <!-- Export Result -->
+    <div id="{tid}-lerobot-result" style="display:none;margin-top:14px;background:#f1f3f5;border-radius:8px;padding:14px;font-size:12px;">
+      <div style="font-weight:600;color:#343a40;margin-bottom:8px;" data-i18n="export.result_title">📋 导出结果</div>
+      <pre id="{tid}-lerobot-result-content" style="margin:0;font-family:monospace;font-size:11px;color:#495057;white-space:pre-wrap;"></pre>
+    </div>
+  </div>
+
+  <!-- LeRobot Format Reference -->
+  <div style="background:#fff;border-radius:10px;padding:20px;border:1px solid #e9ecef;">
+    <div style="font-size:13px;font-weight:600;color:#343a40;margin-bottom:8px;" data-i18n="export.lerobot_ref">
+      📖 LeRobot 格式说明
+    </div>
+    <div style="font-size:11px;color:#495057;line-height:1.8;font-family:monospace;background:#f8f9fa;padding:12px;border-radius:6px;">
+      <div style="color:#868e96;">// LeRobot dataset 目录结构:</div>
+      <div><span style="color:#4dabf7;">meta/</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#868e96;">← 元信息目录</span></div>
+      <div>  <span style="color:#4dabf7;">info.json</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#868e96;">← 数据集元信息（自动更新）</span></div>
+      <div><span style="color:#4dabf7;">data/</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#868e96;">← 数据目录</span></div>
+      <div>  <span style="color:#4dabf7;">chunk-000/</span></div>
+      <div>    <span style="color:#4dabf7;">episode_000000.parquet</span> <span style="color:#868e96;">← 标注写入此文件</span></div>
+    </div>
+    <div style="font-size:11px;color:#868e96;margin-top:8px;" data-i18n="export.lerobot_note">
+      💡 导出会将 TLabel 标注结果写入 LeRobot 数据集的 Parquet 文件中。
+    </div>
+  </div>
+
+</div>
+</div><!-- end panel-export -->
+
+</div><!-- end root -->
+
+<script>
+(function() {{
+  // ===== Data =====
+  const data = {data_json};
+  const episodeInfo = {episode_json};
+  const qualityData = {quality_json};
+  const describeData = {describe_json};
+  const predictHighlights = {predict_json};
+  const autoLabelSummary = {autolabel_json};
+  const tid = '{tid}';
+  let currentFrameIdx = 0;
+  let currentLang = (data.sensor_info && data.sensor_info.lang) || 'zh-CN';
+  let modifiedCount = 0;
+  const undoStack = [];
+
+  // ===== i18n =====
+  const I18N = {{
+    'zh-CN': {{
+      'app.title': 'TLabel 触觉标注工具',
+      'stats.frames': '帧数', 'stats.duration': '时长', 'stats.contact': '接触率',
+      'stats.slip': '滑移率', 'stats.modified': '已修正',
+      'timeline.title': '时间轴',
+      'chart.radar': '22维特征',
+      'detail.title': '帧详情',
+      'batch.title': '区间批量修正',
+      'batch.frameRange': '帧范围：',
+      'batch.apply': '应用',
+      'export.title': '导出数据', 'export.hint': '选择格式并点击对应按钮',
+      'actions.exportFull': '💾 导出 JSON', 'actions.exportCSV': '📊 导出 CSV', 'actions.exportHDF5': '🔬 导出 HDF5',
+      'export.success': '导出成功',
+      'tab.annotate': '📝 标注', 'tab.episode': '🎬 Episode', 'tab.quality': '📊 质量评分', 'tab.stats': '📈 统计', 'tab.export': '🚀 导出',
+      'export.ftp1_title': 'FTP-1 / MTTS 格式导出', 'export.ftp1_desc': '导出为触觉基础模型 FTP-1 兼容的 MTTS Zarr 格式',
+      'export.sensor_name': '传感器名称', 'export.side': '安装位置', 'export.group': '组名',
+      'export.area_title': '🎯 功能区映射', 'export.area_desc': '选择传感器对应的 MTTS 功能区槽位',
+      'export.btn_export': '📦 导出为 FTP-1 Zarr', 'export.result_title': '📋 导出结果',
+      'export.format_ref': '📖 MTTS Zarr 格式说明', 'export.format_note': '💡 导出的 .zarr 文件可直接被 FTP-1 加载',
+      'export.preset_gripper': '预设: 夹爪 [0,1]', 'export.preset_three': '预设: 三指 [0,1,2]', 'export.preset_five': '预设: 五指 [0-4]',
+      'export.lerobot_title': 'LeRobot 格式导出',
+      'export.lerobot_desc': '将标注写回 LeRobot 数据集的 Parquet 文件，更新 meta/info.json。',
+      'export.lerobot_tactile_field': '触觉字段名',
+      'export.lerobot_action_field': '动作字段名',
+      'export.lerobot_overwrite': '覆盖已有字段',
+      'export.lerobot_btn': '📦 导出为 LeRobot Parquet',
+      'export.lerobot_ref': '📖 LeRobot 格式说明',
+      'export.lerobot_note': '💡 导出会将 TLabel 标注结果写入 LeRobot 数据集的 Parquet 文件中',
+      'episode.title': 'Episode 级标注', 'episode.desc': '为整个交互Episode添加语义标注，描述操作任务的整体结果和属性。标注结果会写入 episode_info 并随数据一起导出。',
+      'episode.outcome': '操作结果', 'episode.outcomeDefault': '— 未标注 —',
+      'episode.manipType': '操作类型', 'episode.manipTypeDefault': '— 未标注 —',
+      'episode.difficulty': '难度等级', 'episode.difficultyDefault': '— 未标注 —',
+      'episode.operator': '标注人', 'episode.notes': '备注',
+      'episode.apply': '✅ 保存Episode标注',
+      'episode.currentInfo': '当前Episode信息',
+      'quality.title': '数据质量评分',
+      'quality.desc': '基于4个维度自动评估数据质量，对标国标《具身智能数据质量规范》。评分由 Python 引擎预计算。',
+      'quality.overallLabel': '综合评分 (0-100)',
+      'quality.physical': '物理一致性', 'quality.physicalDesc': '权重 30% · 联动规则满足度',
+      'quality.temporal': '时序平滑度', 'quality.temporalDesc': '权重 25% · 相邻帧突变检测',
+      'quality.completeness': '完整性', 'quality.completenessDesc': '权重 25% · 字段缺失/全零比例',
+      'quality.coverage': '覆盖率', 'quality.coverageDesc': '权重 20% · 有意义标注占比',
+      'quality.warnings': '质量警告',
+      'stats.title': '统计摘要 (describe)', 'stats.desc': '类 pandas.DataFrame.describe() 统计，由 Python 引擎预计算。',
+      'stats.noData': '暂无统计数据',
+      'batch.optContact': '接触 (0/1)', 'batch.optSlip': '滑移事件 (0/1)',
+      'batch.optForce': '力度', 'batch.optPhase': '操作阶段',
+      'episode.outSuccess': '✅ 成功 (success)', 'episode.outFailure': '❌ 失败 (failure)',
+      'episode.outAborted': '⏹️ 中止 (aborted)', 'episode.outPartial': '⚠️ 部分 (partial)',
+      'episode.mGrasp': '🤏 抓取 (grasp)', 'episode.mPush': '👆 推 (push)',
+      'episode.mPull': '👇 拉 (pull)', 'episode.mTap': '👆 轻触 (tap)',
+      'episode.mLift': '⬆️ 提起 (lift)', 'episode.mPlace': '⬇️ 放置 (place)',
+      'episode.mRotate': '🔄 旋转 (rotate)', 'episode.mInsert': '🔩 插入 (insert)',
+      'episode.dEasy': '🟢 简单 (easy)', 'episode.dMedium': '🟡 中等 (medium)',
+      'episode.dHard': '🔴 困难 (hard)',
+      'episode.operatorPh': '可选', 'episode.notesPh': '记录操作细节、失败原因等...',
+      'detail.contact': '接触', 'detail.slip': '滑移', 'detail.force': '力度',
+      'detail.deformation': '形变', 'detail.area': '面积', 'detail.entropy': '熵',
+      'detail.normal': '法向', 'detail.shear': '剪切',
+      'quality.noWarnings': '无质量警告',
+      'episode.saved': '已保存', 'episode.noLabels': '暂无Episode标注',
+      'predict.badge.title': 'AI预标注结果',
+      'predict.lowConf': '低置信度',
+      'predict.method': '方法',
+      'predict.smooth': '时序平滑',
+      'predict.hmm': 'HMM解码',
+      'predict.cascade': '联动修正',
+      // Stats i18n keys for describe table
+      'stats.count': '计数', 'stats.mean': '均值', 'stats.std': '标准差',
+      'stats.min': '最小值', 'stats.max': '最大值',
+      'stats.p25': '25%分位', 'stats.p50': '中位数', 'stats.p75': '75%分位',
+      // Radar chart i18n labels (dimension names)
+      'dim.contact': '接触', 'dim.deformation': '形变', 'dim.force': '力度',
+      'dim.force_peak': '峰值', 'dim.force_dir': '力向', 'dim.slip_entropy': '滑熵',
+      'dim.slip_event': '滑移', 'dim.texture': '纹理', 'dim.edge': '边缘',
+      'dim.contact_area': '面积', 'dim.centroid_x': '质心', 'dim.normal_mag': '法向',
+      'dim.normal_var': '法向变化', 'dim.shear_mag': '剪切', 'dim.shear_dir': '剪切向',
+      'dim.delta_fn': 'Δ法向', 'dim.delta_fs': 'Δ剪切', 'dim.friction': '摩擦',
+      'dim.flow_mag': '流速', 'dim.flow_dir': '流向', 'dim.deform_rate': '形变速',
+      'dim.transition': '相变',
+      // Tactile Image Sequence i18n
+      'tactileImage.title': '触觉图像序列',
+      'tactileImage.play': '播放',
+      'tactileImage.pause': '暂停',
+      'tactileImage.frame': '帧',
+      'tactileImage.noSpatialData': '该传感器无空间分辨率数据',
+      'tactileImage.matrixHeatmap': 'Matrix Heatmap Visualization',
+      'tactileImage.imageSequence': 'Image Sequence',
+      'tactileImage.sensorType': '传感器类型',
+      'tactileImage.availableData': '可用数据类型',
+      'tactileImage.noData': '无图像/矩阵数据',
+    }},
+    'en': {{
+      'app.title': 'TLabel Tactile Annotation',
+      'stats.frames': 'Frames', 'stats.duration': 'Duration', 'stats.contact': 'Contact',
+      'stats.slip': 'Slip', 'stats.modified': 'Modified',
+      'timeline.title': 'Timeline',
+      'chart.radar': '22-Dim Features',
+      'detail.title': 'Frame Detail',
+      'batch.title': 'Batch Patch',
+      'batch.frameRange': 'Range:',
+      'batch.apply': 'Apply',
+      'export.title': 'Export', 'export.hint': 'Choose format',
+      'actions.exportFull': '💾 JSON', 'actions.exportCSV': '📊 CSV', 'actions.exportHDF5': '🔬 HDF5',
+      'export.success': 'Exported',
+      'tab.annotate': '📝 Annotate', 'tab.episode': '🎬 Episode', 'tab.quality': '📊 Quality', 'tab.stats': '📈 Stats', 'tab.export': '🚀 Export',
+      'export.ftp1_title': 'FTP-1 / MTTS Format Export', 'export.ftp1_desc': 'Export to FTP-1 compatible MTTS Zarr format',
+      'export.sensor_name': 'Sensor Name', 'export.side': 'Side', 'export.group': 'Group',
+      'export.area_title': '🎯 Functional Area Mapping', 'export.area_desc': 'Select MTTS functional area slots for this sensor',
+      'export.btn_export': '📦 Export as FTP-1 Zarr', 'export.result_title': '📋 Export Result',
+      'export.format_ref': '📖 MTTS Zarr Format Reference', 'export.format_note': '💡 Exported .zarr can be loaded directly by FTP-1',
+      'export.preset_gripper': 'Preset: Gripper [0,1]', 'export.preset_three': 'Preset: 3-Finger [0,1,2]', 'export.preset_five': 'Preset: 5-Finger [0-4]',
+      'export.lerobot_title': 'LeRobot Format Export',
+      'export.lerobot_desc': 'Write annotations back to LeRobot dataset Parquet files, update meta/info.json.',
+      'export.lerobot_tactile_field': 'Tactile Field',
+      'export.lerobot_action_field': 'Action Field',
+      'export.lerobot_overwrite': 'Overwrite existing',
+      'export.lerobot_btn': '📦 Export as LeRobot Parquet',
+      'export.lerobot_ref': '📖 LeRobot Format Reference',
+      'export.lerobot_note': '💡 Export writes TLabel annotations into LeRobot dataset Parquet files',
+      'episode.title': 'Episode Annotation', 'episode.desc': 'Add semantic labels for the entire interaction episode. Results are saved to episode_info and exported with data.',
+      'episode.outcome': 'Outcome', 'episode.outcomeDefault': '— Not labeled —',
+      'episode.manipType': 'Manipulation Type', 'episode.manipTypeDefault': '— Not labeled —',
+      'episode.difficulty': 'Difficulty', 'episode.difficultyDefault': '— Not labeled —',
+      'episode.operator': 'Annotator', 'episode.notes': 'Notes',
+      'episode.apply': '✅ Save Episode Label',
+      'episode.currentInfo': 'Current Episode Info',
+      'quality.title': 'Data Quality Score',
+      'quality.desc': 'Auto-assessed data quality across 4 dimensions, aligned with national standard for embodied intelligence data quality.',
+      'quality.overallLabel': 'Overall Score (0-100)',
+      'quality.physical': 'Physical Consistency', 'quality.physicalDesc': '30% · Constraint satisfaction',
+      'quality.temporal': 'Temporal Smoothness', 'quality.temporalDesc': '25% · Adjacent frame jump detection',
+      'quality.completeness': 'Completeness', 'quality.completenessDesc': '25% · Missing/zero field ratio',
+      'quality.coverage': 'Coverage', 'quality.coverageDesc': '20% · Meaningful annotation ratio',
+      'quality.warnings': 'Quality Warnings',
+      'stats.title': 'Statistics (describe)', 'stats.desc': 'pandas-like describe() stats, pre-computed by Python engine.',
+      'stats.noData': 'No stats available',
+      'batch.optContact': 'Contact (0/1)', 'batch.optSlip': 'Slip event (0/1)',
+      'batch.optForce': 'Force', 'batch.optPhase': 'Phase',
+      'episode.outSuccess': '✅ Success', 'episode.outFailure': '❌ Failure',
+      'episode.outAborted': '⏹️ Aborted', 'episode.outPartial': '⚠️ Partial',
+      'episode.mGrasp': '🤏 Grasp', 'episode.mPush': '👆 Push',
+      'episode.mPull': '👇 Pull', 'episode.mTap': '👆 Tap',
+      'episode.mLift': '⬆️ Lift', 'episode.mPlace': '⬇️ Place',
+      'episode.mRotate': '🔄 Rotate', 'episode.mInsert': '🔩 Insert',
+      'episode.dEasy': '🟢 Easy', 'episode.dMedium': '🟡 Medium',
+      'episode.dHard': '🔴 Hard',
+      'episode.operatorPh': 'Optional', 'episode.notesPh': 'Operation details, failure reasons...',
+      'detail.contact': 'Contact', 'detail.slip': 'Slip', 'detail.force': 'Force',
+      'detail.deformation': 'Deform', 'detail.area': 'Area', 'detail.entropy': 'Entropy',
+      'detail.normal': 'Normal', 'detail.shear': 'Shear',
+      'quality.noWarnings': 'No quality warnings',
+      'episode.saved': 'Saved', 'episode.noLabels': 'No episode labels yet',
+      'predict.badge.title': 'AI Prediction Results',
+      'predict.lowConf': 'Low Confidence',
+      'predict.method': 'Method',
+      'predict.smooth': 'Temporal Smooth',
+      'predict.hmm': 'HMM Decode',
+      'predict.cascade': 'Cascade Fix',
+      // Stats i18n keys for describe table
+      'stats.count': 'count', 'stats.mean': 'mean', 'stats.std': 'std',
+      'stats.min': 'min', 'stats.max': 'max',
+      'stats.p25': '25%', 'stats.p50': '50%', 'stats.p75': '75%',
+      // Radar chart i18n labels (dimension names)
+      'dim.contact': 'Contact', 'dim.deformation': 'Deform', 'dim.force': 'Force',
+      'dim.force_peak': 'Peak', 'dim.force_dir': 'Force Dir', 'dim.slip_entropy': 'Slip Ent',
+      'dim.slip_event': 'Slip', 'dim.texture': 'Texture', 'dim.edge': 'Edge',
+      'dim.contact_area': 'Area', 'dim.centroid_x': 'Centroid', 'dim.normal_mag': 'Normal',
+      'dim.normal_var': 'Norm Var', 'dim.shear_mag': 'Shear', 'dim.shear_dir': 'Shear Dir',
+      'dim.delta_fn': 'ΔNormal', 'dim.delta_fs': 'ΔShear', 'dim.friction': 'Friction',
+      'dim.flow_mag': 'Flow', 'dim.flow_dir': 'Flow Dir', 'dim.deform_rate': 'Def Rate',
+      'dim.transition': 'Transition',
+      // Tactile Image Sequence i18n
+      'tactileImage.title': 'Tactile Image Sequence',
+      'tactileImage.play': 'Play',
+      'tactileImage.pause': 'Pause',
+      'tactileImage.frame': 'Frame',
+      'tactileImage.noSpatialData': 'This sensor has no spatial resolution data',
+      'tactileImage.matrixHeatmap': 'Matrix Heatmap Visualization',
+      'tactileImage.imageSequence': 'Image Sequence',
+      'tactileImage.sensorType': 'Sensor Type',
+      'tactileImage.availableData': 'Available Data',
+      'tactileImage.noData': 'No image/matrix data',
+    }}
+  }};
+
+  function t(key) {{ return (I18N[currentLang] || I18N['zh-CN'])[key] || key; }}
+
+  function applyI18n() {{
+    const lang = currentLang === 'zh-CN' ? 'zh-CN' : 'en';
+    document.querySelectorAll('[data-i18n]').forEach(el => {{
+      const key = el.getAttribute('data-i18n');
+      if (I18N[lang] && I18N[lang][key]) el.textContent = I18N[lang][key];
+    }});
+    // Also update placeholders
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {{
+      const key = el.getAttribute('data-i18n-placeholder');
+      if (I18N[lang] && I18N[lang][key]) el.placeholder = I18N[lang][key];
+    }});
+  }}
+
+  // ===== Tab Switching =====
+  const tabs = document.querySelectorAll('.{tid}-tab');
+  const panels = {{
+    'annotate': document.getElementById(tid + '-panel-annotate'),
+    'episode': document.getElementById(tid + '-panel-episode'),
+    'quality': document.getElementById(tid + '-panel-quality'),
+    'stats': document.getElementById(tid + '-panel-stats'),
+    'export': document.getElementById(tid + '-panel-export'),
+  }};
+
+  function switchTab(tabName) {{
+    tabs.forEach(btn => {{
+      const isActive = btn.getAttribute('data-tab') === tabName;
+      btn.style.color = isActive ? '#e85d75' : '#868e96';
+      btn.style.fontWeight = isActive ? '700' : '400';
+      btn.style.borderBottom = isActive ? '2px solid #e85d75' : '2px solid transparent';
+    }});
+    Object.keys(panels).forEach(k => {{
+      if (panels[k]) panels[k].style.display = k === tabName ? 'block' : 'none';
+    }});
+  }}
+
+  tabs.forEach(btn => {{
+    btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab')));
+  }});
+
+  // ===== Stats =====
+  function updateStats() {{
+    const frames = data.frames || [];
+    document.getElementById(tid + '-stat-frames').textContent = frames.length;
+    document.getElementById(tid + '-stat-duration').textContent = data.duration_s ? data.duration_s.toFixed(1) + 's' : '0s';
+    const contactCount = frames.filter(f => (f.tlabel_v2 || {{}}).contact > 0.5).length;
+    const slipCount = frames.filter(f => (f.tlabel_v2 || {{}}).slip_event > 0.5).length;
+    document.getElementById(tid + '-stat-contact').textContent = frames.length ? (contactCount / frames.length * 100).toFixed(1) + '%' : '0%';
+    document.getElementById(tid + '-stat-slip').textContent = frames.length ? (slipCount / frames.length * 100).toFixed(1) + '%' : '0%';
+    document.getElementById(tid + '-stat-modified').textContent = modifiedCount;
+    document.getElementById(tid + '-sensor-info').textContent = data.sensor_info ? data.sensor_info.type : '';
+  }}
+
+  // ===== Show Frame =====
+  function showFrame(idx) {{
+    const frames = data.frames || [];
+    if (idx < 0 || idx >= frames.length) return;
+    currentFrameIdx = idx;
+    const f = frames[idx];
+    const tv2 = f.tlabel_v2 || {{}};
+
+    // Frame label
+    document.getElementById(tid + '-frame-label').textContent = `Frame ${{f.frame_idx}} / ${{frames.length - 1}}`;
+
+    // Frame input
+    document.getElementById(tid + '-frame-input').value = f.frame_idx;
+
+    // Detail content
+    const detail = document.getElementById(tid + '-detail-content');
+    const phaseColors = {{ 'idle': '#adb5bd', 'initial_contact': '#4dabf7', 'stable_contact': '#51cf66', 'slip': '#ff6b6b', 'grasp': '#ffd43b', 'hold': '#845ef7' }};
+    const phaseColor = phaseColors[f.manipulation_phase] || '#adb5bd';
+    detail.innerHTML = `
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+        <span style="background:${{phaseColor}};color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">${{f.manipulation_phase}}</span>
+        <span style="font-size:11px;color:#868e96;">conf: ${{(f.confidence * 100).toFixed(0)}}%</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;">
+        <span>🟢 ${{t('detail.contact')}}: <b>${{tv2.contact !== undefined ? tv2.contact.toFixed(2) : '-'}}</b></span>
+        <span>🔴 ${{t('detail.slip')}}: <b>${{tv2.slip_event !== undefined ? tv2.slip_event.toFixed(2) : '-'}}</b></span>
+        <span>💪 ${{t('detail.force')}}: <b>${{tv2.force_magnitude !== undefined ? tv2.force_magnitude.toFixed(3) : '-'}}</b></span>
+        <span>📐 ${{t('detail.deformation')}}: <b>${{tv2.deformation_magnitude !== undefined ? tv2.deformation_magnitude.toFixed(3) : '-'}}</b></span>
+        <span>🧲 ${{t('detail.area')}}: <b>${{tv2.contact_area !== undefined ? tv2.contact_area.toFixed(3) : '-'}}</b></span>
+        <span>🌀 ${{t('detail.entropy')}}: <b>${{tv2.slip_entropy !== undefined ? tv2.slip_entropy.toFixed(3) : '-'}}</b></span>
+        <span>📊 ${{t('detail.normal')}}: <b>${{tv2.normal_field_magnitude !== undefined ? tv2.normal_field_magnitude.toFixed(3) : '-'}}</b></span>
+        <span>↗️ ${{t('detail.shear')}}: <b>${{tv2.shear_field_magnitude !== undefined ? tv2.shear_field_magnitude.toFixed(3) : '-'}}</b></span>
+      </div>
+    `;
+
+    // Radar
+    drawRadar(tv2);
+
+    // Timeline marker
+    drawTimeline();
+
+    // Sync tactile image viewer with main timeline
+    var tactileImgViewer = window['_tlabel_' + tid + '_tactileImg'];
+    if (tactileImgViewer) tactileImgViewer.seekFrame(idx);
+  }}
+
+  // ===== Radar Chart =====
+  // i18n keys for radar labels (mapped to dim.* keys in I18N)
+  const radarLabelKeys = ['dim.contact','dim.deformation','dim.force','dim.force_peak','dim.force_dir',
+    'dim.slip_entropy','dim.slip_event','dim.texture','dim.edge','dim.contact_area','dim.centroid_x',
+    'dim.normal_mag','dim.normal_var','dim.shear_mag','dim.shear_dir',
+    'dim.delta_fn','dim.delta_fs','dim.friction','dim.flow_mag','dim.flow_dir','dim.deform_rate','dim.transition'];
+  // Original keys for data access
+  const radarDataKeys = ['contact','deformation_magnitude','force_magnitude','force_peak','force_direction',
+    'slip_entropy','slip_event','texture_energy','edge_density','contact_area','centroid_x',
+    'normal_field_magnitude','normal_field_variance','shear_field_magnitude','shear_field_direction',
+    'delta_force_normal','delta_force_shear','friction_cone_ratio','optical_flow_magnitude',
+    'optical_flow_direction','temporal_deformation_rate','contact_transition'];
+
+  function drawRadar(tv2) {{
+    const canvas = document.getElementById(tid + '-radar');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+
+    const cx = W / 2, cy = H / 2, R = 130;
+    const n = radarLabelKeys.length;
+    const values = radarDataKeys.map(k => {{
+      const v = tv2[k] || 0;
+      return Math.min(Math.max(v, 0), 1);
+    }});
+
+    // Grid
+    for (let ring = 1; ring <= 4; ring++) {{
+      ctx.beginPath();
+      const r = R * ring / 4;
+      for (let i = 0; i <= n; i++) {{
+        const angle = (2 * Math.PI * (i % n) / n) - Math.PI / 2;
+        const x = cx + r * Math.cos(angle);
+        const y = cy + r * Math.sin(angle);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }}
+      ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+      ctx.stroke();
+    }}
+
+    // Spokes + labels
+    for (let i = 0; i < n; i++) {{
+      const angle = (2 * Math.PI * i / n) - Math.PI / 2;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + R * Math.cos(angle), cy + R * Math.sin(angle));
+      ctx.strokeStyle = 'rgba(0,0,0,0.04)';
+      ctx.stroke();
+      const labelR = R + 18;
+      const lx = cx + labelR * Math.cos(angle);
+      const ly = cy + labelR * Math.sin(angle);
+      const deg = ((angle * 180 / Math.PI) + 360) % 360;
+      ctx.textBaseline = 'middle';
+      if (deg > 5 && deg < 175) ctx.textAlign = 'left';
+      else if (deg > 185 && deg < 355) ctx.textAlign = 'right';
+      else ctx.textAlign = 'center';
+      ctx.fillText(t(radarLabelKeys[i]), lx, ly);
+    }}
+
+    // Data polygon
+    ctx.beginPath();
+    for (let i = 0; i <= n; i++) {{
+      const idx = i % n;
+      const angle = (2 * Math.PI * idx / n) - Math.PI / 2;
+      const r = R * values[idx];
+      const x = cx + r * Math.cos(angle);
+      const y = cy + r * Math.sin(angle);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }}
+    ctx.fillStyle = 'rgba(232,93,117,0.18)';
+    ctx.fill();
+    ctx.strokeStyle = '#e85d75';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Data points
+    for (let i = 0; i < n; i++) {{
+      const angle = (2 * Math.PI * i / n) - Math.PI / 2;
+      const r = R * values[i];
+      ctx.beginPath();
+      ctx.arc(cx + r * Math.cos(angle), cy + r * Math.sin(angle), 2.5, 0, 2 * Math.PI);
+      ctx.fillStyle = '#e85d75';
+      ctx.fill();
+    }}
+  }}
+
+  // ===== Timeline =====
+  function drawTimeline() {{
+    const canvas = document.getElementById(tid + '-timeline');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const frames = data.frames || [];
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+
+    if (!frames.length) return;
+    const barW = W / frames.length;
+
+    for (let i = 0; i < frames.length; i++) {{
+      const tv2 = frames[i].tlabel_v2 || {{}};
+      const contact = tv2.contact || 0;
+      const slip = tv2.slip_event || 0;
+      if (slip > 0.5) ctx.fillStyle = '#ff6b6b';
+      else if (contact > 0.5) ctx.fillStyle = '#51cf66';
+      else ctx.fillStyle = '#dee2e6';
+      ctx.fillRect(i * barW, 0, Math.max(barW, 1), H);
+    }}
+
+    // Current frame marker
+    ctx.fillStyle = '#e85d75';
+    ctx.fillRect(currentFrameIdx * barW, 0, Math.max(barW, 2), H);
+  }}
+
+  // Timeline click
+  document.getElementById(tid + '-timeline').addEventListener('click', function(e) {{
+    const rect = this.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const ratio = x / rect.width;
+    const frames = data.frames || [];
+    const idx = Math.floor(ratio * frames.length);
+    if (idx >= 0 && idx < frames.length) showFrame(idx);
+  }});
+
+  // ===== Batch Patch =====
+  function batchPatch() {{
+    const start = parseInt(document.getElementById(tid + '-batch-start').value) || 0;
+    const end = parseInt(document.getElementById(tid + '-batch-end').value) || 0;
+    const field = document.getElementById(tid + '-batch-field').value;
+    const valStr = document.getElementById(tid + '-batch-value').value;
+    const val = (field === 'contact' || field === 'slip_event') ? parseFloat(valStr) : valStr;
+
+    const frames = data.frames || [];
+    let count = 0;
+    const undoBatch = [];
+
+    for (let i = 0; i < frames.length; i++) {{
+      const fi = frames[i].frame_idx;
+      if (fi >= start && fi <= end) {{
+        if (field === 'manipulation_phase') {{
+          undoBatch.push({{idx: i, field: field, old: frames[i].manipulation_phase}});
+          frames[i].manipulation_phase = val;
+        }} else {{
+          const old = (frames[i].tlabel_v2 || {{}})[field];
+          if (old !== val) {{
+            undoBatch.push({{idx: i, field: field, old: old}});
+            if (!frames[i].tlabel_v2) frames[i].tlabel_v2 = {{}};
+            frames[i].tlabel_v2[field] = val;
+            if (field === 'contact' && val === 0) {{
+              if (frames[i].tlabel_v2.slip_event > 0) {{
+                undoBatch.push({{idx: i, field: 'slip_event', old: frames[i].tlabel_v2.slip_event}});
+                frames[i].tlabel_v2.slip_event = 0;
+              }}
+              if (frames[i].tlabel_v2.force_magnitude > 0) {{
+                undoBatch.push({{idx: i, field: 'force_magnitude', old: frames[i].tlabel_v2.force_magnitude}});
+                frames[i].tlabel_v2.force_magnitude = 0;
+              }}
+              if (frames[i].manipulation_phase !== 'idle') {{
+                undoBatch.push({{idx: i, field: 'manipulation_phase', old: frames[i].manipulation_phase}});
+                frames[i].manipulation_phase = 'idle';
+              }}
+            }}
+            count++;
+          }}
+        }}
+      }}
+    }}
+    undoStack.push(undoBatch);
+    modifiedCount += count;
+    updateStats();
+    showFrame(currentFrameIdx);
+    return count;
+  }}
+
+  function undo() {{
+    if (!undoStack.length) return;
+    const batch = undoStack.pop();
+    const frames = data.frames || [];
+    const undoneFrames = new Set();
+    for (const op of batch) {{
+      if (op.field === 'manipulation_phase') {{
+        frames[op.idx].manipulation_phase = op.old;
+      }} else {{
+        if (frames[op.idx].tlabel_v2) frames[op.idx].tlabel_v2[op.field] = op.old;
+      }}
+      undoneFrames.add(op.idx);
+    }}
+    modifiedCount = Math.max(0, modifiedCount - undoneFrames.size);
+    updateStats();
+    showFrame(currentFrameIdx);
+  }}
+
+  // ===== Navigation =====
+  function prevFrame() {{ if (currentFrameIdx > 0) showFrame(currentFrameIdx - 1); }}
+  function nextFrame() {{
+    const frames = data.frames || [];
+    if (currentFrameIdx < frames.length - 1) showFrame(currentFrameIdx + 1);
+  }}
+  function jumpTo(val) {{
+    const fi = parseInt(val);
+    const frames = data.frames || [];
+    const idx = frames.findIndex(f => f.frame_idx === fi);
+    if (idx >= 0) showFrame(idx);
+  }}
+
+  // ===== Export =====
+  function exportJSON() {{
+    const blob = new Blob([JSON.stringify(data, null, 2)], {{type: 'application/json'}});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'tlabel_export.json';
+    a.click();
+  }}
+  function exportCSV() {{
+    const frames = data.frames || [];
+    const dims = ['contact','deformation_magnitude','force_magnitude','force_peak',
+      'force_direction','slip_entropy','slip_event','texture_energy',
+      'edge_density','contact_area','centroid_x',
+      'normal_field_magnitude','normal_field_variance',
+      'shear_field_magnitude','shear_field_direction',
+      'delta_force_normal','delta_force_shear','friction_cone_ratio',
+      'optical_flow_magnitude','optical_flow_direction',
+      'temporal_deformation_rate','contact_transition'];
+    let csv = 'frame_idx,timestamp_s,manipulation_phase,confidence,' + dims.join(',') + '\\n';
+    for (const f of frames) {{
+      const tl = f.tlabel_v2 || {{}};
+      csv += f.frame_idx + ',' + f.timestamp_s + ',' + f.manipulation_phase + ',' + f.confidence;
+      for (const d of dims) csv += ',' + (tl[d] || 0);
+      csv += '\\n';
+    }}
+    const blob = new Blob([csv], {{type: 'text/csv'}});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'tlabel_export.csv';
+    a.click();
+    showExportStatus(t('export.success') + ' CSV');
+  }}
+
+  function exportHDF5() {{
+    const msg = currentLang === 'zh-CN' 
+      ? 'HDF5 导出需要使用 Python API:\\n\\ndata.export("output.hdf5")'
+      : 'HDF5 export requires Python API:\\n\\ndata.export("output.hdf5")';
+    alert(msg);
+  }}
+
+  function showExportStatus(msg) {{
+    const el = document.getElementById(tid + '-export-status');
+    el.textContent = msg;
+    el.style.display = 'block';
+    setTimeout(() => {{ el.style.display = 'none'; }}, 3000);
+  }}
+
+  // ===== FTP-1/MTTS Export Panel =====
+  const FTP1_AREAS = {{
+    0: 'Thumb Tip', 1: 'Index Tip', 2: 'Middle Tip', 3: 'Ring Tip', 4: 'Pinky Tip',
+    5: 'Thumb Pad', 6: 'Index Pad', 7: 'Middle Pad', 8: 'Ring Pad', 9: 'Pinky Pad',
+    10: 'Thenar', 11: 'Hypothenar', 12: 'Palm Center', 13: 'Proximal Phalanx', 14: 'Dorsum',
+    15: 'Wrist FX', 16: 'Wrist FY', 17: 'Wrist FZ', 18: 'Wrist TX', 19: 'Wrist TY', 20: 'Wrist TZ'
+  }};
+  let selectedAreas = [0, 1]; // Default: gripper
+
+  function initFTP1Areas() {{
+    const container = document.getElementById(tid + '-ftp1-areas');
+    if (!container) return;
+    container.innerHTML = '';
+    for (let id = 0; id <= 20; id++) {{
+      const checked = selectedAreas.includes(id) ? 'checked' : '';
+      const active = selectedAreas.includes(id) ? 'background:#e85d75;color:#fff;border-color:#e85d75;' : '';
+      const label = document.createElement('label');
+      label.style.cssText = 'display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:4px;border:1px solid #ced4da;font-size:11px;cursor:pointer;user-select:none;transition:all 0.15s;' + active;
+      label.innerHTML = '<input type="checkbox" value="' + id + '" ' + checked + ' style="display:none;">' + id + ':' + FTP1_AREAS[id];
+      const cb = label.querySelector('input');
+      cb.addEventListener('change', function() {{
+        if (this.checked) {{
+          if (!selectedAreas.includes(id)) selectedAreas.push(id);
+          label.style.background = '#e85d75'; label.style.color = '#fff'; label.style.borderColor = '#e85d75';
+        }} else {{
+          selectedAreas = selectedAreas.filter(a => a !== id);
+          label.style.background = ''; label.style.color = ''; label.style.borderColor = '#ced4da';
+        }}
+        selectedAreas.sort((a,b) => a-b);
+      }});
+      container.appendChild(label);
+    }}
+  }}
+
+  function setAreaPreset(areas, btnId) {{
+    selectedAreas = [...areas];
+    initFTP1Areas();
+    // Update preset button styles
+    ['gripper','three','five'].forEach(p => {{
+      const b = document.getElementById(tid + '-ftp1-preset-' + p);
+      if (b) {{ b.style.borderColor = '#ced4da'; b.style.color = '#868e96'; b.style.background = 'transparent'; }}
+    }});
+    const activeBtn = document.getElementById(tid + '-ftp1-preset-' + btnId);
+    if (activeBtn) {{ activeBtn.style.borderColor = '#e85d75'; activeBtn.style.color = '#e85d75'; activeBtn.style.background = 'transparent'; }}
+  }}
+
+  function handleFTP1Export() {{
+    const sensor = document.getElementById(tid + '-ftp1-sensor').value;
+    const side = document.getElementById(tid + '-ftp1-side').value;
+    const group = document.getElementById(tid + '-ftp1-group').value;
+    const status = document.getElementById(tid + '-ftp1-status');
+    const resultDiv = document.getElementById(tid + '-ftp1-result');
+    const resultContent = document.getElementById(tid + '-ftp1-result-content');
+
+    if (selectedAreas.length === 0) {{
+      status.textContent = currentLang === 'zh-CN' ? '⚠️ 请至少选择一个功能区' : '⚠️ Select at least one functional area';
+      return;
+    }}
+
+    status.textContent = currentLang === 'zh-CN' ? '⏳ 正在准备导出...' : '⏳ Preparing export...';
+
+    // Generate export summary (actual Zarr writing requires Python backend)
+    const nFrames = (data.frames || []).length;
+    const areaNames = selectedAreas.map(a => FTP1_AREAS[a] || ('Area_' + a));
+    const summary = {{
+      sensor_name: sensor,
+      side: side,
+      group: group,
+      functional_areas: selectedAreas,
+      functional_area_names: areaNames,
+      time_steps: nFrames,
+      num_slots: selectedAreas.length,
+      data_shape: '[' + nFrames + ', ' + selectedAreas.length + ', 224, 224, 3]',
+      zarr_keys: [
+        side + '_tactile_data_' + group,
+        side + '_tactile_area_' + group,
+        side + '_tactile_sensor_' + group,
+        side + '_tactile_type_' + group,
+      ],
+      python_command: 'data.export_ftp1("output.zarr",\\n  sensor_name="' + sensor + '",\\n  functional_areas=' + JSON.stringify(selectedAreas) + ',\\n  side="' + side + '",\\n  group="' + group + '")'
+    }};
+
+    status.textContent = currentLang === 'zh-CN' ? '✅ 导出预览已生成' : '✅ Export preview ready';
+    resultDiv.style.display = 'block';
+    resultContent.textContent = JSON.stringify(summary, null, 2);
+  }}
+
+
+  // ===== LeRobot Export =====
+  function handleLeRobotExport() {{
+    const tactileField = document.getElementById(tid + '-lerobot-tactile-field').value || 'observation.tactile';
+    const actionField = document.getElementById(tid + '-lerobot-action-field').value || 'action';
+    const overwrite = document.getElementById(tid + '-lerobot-overwrite').checked;
+    const status = document.getElementById(tid + '-lerobot-status');
+    const resultDiv = document.getElementById(tid + '-lerobot-result');
+    const resultContent = document.getElementById(tid + '-lerobot-result-content');
+
+    status.textContent = currentLang === 'zh-CN' ? '⏳ 正在准备导出...' : '⏳ Preparing export...';
+
+    const nFrames = (data.frames || []).length;
+    const summary = {{
+      format: 'lerobot',
+      tactile_field: tactileField,
+      action_field: actionField,
+      overwrite: overwrite,
+      frames: nFrames,
+      python_command: 'from tlabel.converters.lerobot import tlabel_to_lerobot\\n\\ntlabel_to_lerobot(\\n  "annotations.json",\\n  "lerobot_dataset/",\\n  tactile_field="' + tactileField + '",\\n  action_field="' + actionField + '",\\n  overwrite=' + str(overwrite) + ',\\n)'
+    }};
+
+    status.textContent = currentLang === 'zh-CN' ? '✅ 导出预览已生成' : '✅ Export preview ready';
+    resultDiv.style.display = 'block';
+    resultContent.textContent = JSON.stringify(summary, null, 2);
+  }}
+
+  // ===== Lang Toggle =====
+  function toggleLang() {{
+    currentLang = currentLang === 'zh-CN' ? 'en' : 'zh-CN';
+    applyI18n();
+    showFrame(currentFrameIdx);
+    // Re-render quality and episode info
+    renderQuality();
+    renderEpisodeInfo();
+    renderDescribe();
+  }}
+
+  // ===== Episode Labeling =====
+  function initEpisodeForm() {{
+    // Populate from existing episode_info
+    if (episodeInfo.outcome) document.getElementById(tid + '-ep-outcome').value = episodeInfo.outcome;
+    if (episodeInfo.manipulation_type) document.getElementById(tid + '-ep-manip-type').value = episodeInfo.manipulation_type;
+    if (episodeInfo.difficulty) document.getElementById(tid + '-ep-difficulty').value = episodeInfo.difficulty;
+    if (episodeInfo.operator) document.getElementById(tid + '-ep-operator').value = episodeInfo.operator;
+    if (episodeInfo.notes) document.getElementById(tid + '-ep-notes').value = episodeInfo.notes;
+    renderEpisodeInfo();
+  }}
+
+  function applyEpisodeLabel() {{
+    const outcome = document.getElementById(tid + '-ep-outcome').value;
+    const manipType = document.getElementById(tid + '-ep-manip-type').value;
+    const difficulty = document.getElementById(tid + '-ep-difficulty').value;
+    const operator = document.getElementById(tid + '-ep-operator').value;
+    const notes = document.getElementById(tid + '-ep-notes').value;
+
+    // Update data.episode_info
+    if (!data.episode_info) data.episode_info = {{}};
+    if (outcome) data.episode_info.outcome = outcome;
+    if (manipType) data.episode_info.manipulation_type = manipType;
+    if (difficulty) data.episode_info.difficulty = difficulty;
+    if (operator) data.episode_info.operator = operator;
+    if (notes) data.episode_info.notes = notes;
+
+    // Also update local episodeInfo for display
+    Object.assign(episodeInfo, data.episode_info);
+
+    // Disable button to prevent double-click
+    const btn = document.getElementById(tid + '-btn-episode-apply');
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+    btn.style.cursor = 'not-allowed';
+
+    // Show status with detailed message
+    const statusEl = document.getElementById(tid + '-episode-status');
+    const savedMsg = currentLang === 'zh-CN' 
+      ? 'Episode标注已保存（将随导出数据一起输出）'
+      : 'Episode labels saved (will be exported with data)';
+    statusEl.textContent = '✅ ' + savedMsg;
+    statusEl.style.color = '#51cf66';
+    statusEl.style.display = 'inline';
+
+    // Re-enable button and hide status after 4 seconds
+    setTimeout(() => {{
+      statusEl.style.display = 'none';
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      btn.style.cursor = 'pointer';
+    }}, 4000);
+
+    renderEpisodeInfo();
+  }}
+
+  function renderEpisodeInfo() {{
+    const display = document.getElementById(tid + '-episode-info-display');
+    if (!display) return;
+    const info = data.episode_info || episodeInfo;
+    const keys = Object.keys(info);
+    if (keys.length === 0) {{
+      display.innerHTML = `<span style="color:#adb5bd;">${{t('episode.noLabels')}}</span>`;
+      return;
+    }}
+    const outcomeEmoji = {{ 'success': '✅', 'failure': '❌', 'aborted': '⏹️', 'partial': '⚠️' }};
+    const diffEmoji = {{ 'easy': '🟢', 'medium': '🟡', 'hard': '🔴' }};
+    let html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;">';
+    for (const [k, v] of Object.entries(info)) {{
+      let displayVal = v;
+      if (k === 'outcome') displayVal = (outcomeEmoji[v] || '') + ' ' + v;
+      if (k === 'difficulty') displayVal = (diffEmoji[v] || '') + ' ' + v;
+      if (k === 'manipulation_type') displayVal = '🤖 ' + v;
+      if (k === 'notes') {{
+        html += `</div><div style="margin-top:8px;font-size:12px;color:#495057;"><b>${{k}}</b>: ${{v}}</div>`;
+        continue;
+      }}
+      html += `<div><span style="color:#868e96;font-size:11px;">${{k}}</span><br><b style="font-size:13px;">${{displayVal}}</b></div>`;
+    }}
+    if (!html.includes('</div></div>')) html += '</div>';
+    display.innerHTML = html;
+  }}
+
+  // ===== Quality Score =====
+  function renderQuality() {{
+    const q = qualityData;
+    if (!q || !q.overall && q.overall !== 0) {{
+      document.getElementById(tid + '-quality-overall').textContent = '--';
+      document.getElementById(tid + '-quality-grade-badge').textContent = '-';
+      return;
+    }}
+
+    // Colors for light/dark mode
+    const textColor = isDark ? '#c0caf5' : '#343a40';
+    const borderColor = isDark ? '#3b4261' : '#f1f3f5';
+
+    // Overall
+    const overallEl = document.getElementById(tid + '-quality-overall');
+    overallEl.textContent = q.overall.toFixed(1);
+    overallEl.style.color = textColor;
+
+    // Grade badge
+    const grade = q.grade || '-';
+    const gradeColors = {{ 'A': '#51cf66', 'B': '#4dabf7', 'C': '#ffd43b', 'D': '#ff922b', 'F': '#ff6b6b' }};
+    const badge = document.getElementById(tid + '-quality-grade-badge');
+    badge.textContent = grade;
+    badge.style.background = gradeColors[grade] || (isDark ? '#3b4261' : '#e9ecef');
+    badge.style.color = (grade === 'C' || grade === 'D') ? textColor : '#fff';
+
+    // Dimension bars
+    const dims = [
+      {{ key: 'physical_consistency', el: 'physical' }},
+      {{ key: 'temporal_smoothness', el: 'temporal' }},
+      {{ key: 'completeness', el: 'completeness' }},
+      {{ key: 'coverage', el: 'coverage' }},
+    ];
+    for (const d of dims) {{
+      const val = q[d.key] || 0;
+      const valEl = document.getElementById(tid + '-q-' + d.el);
+      if (valEl) valEl.textContent = val.toFixed(1);
+      const barEl = document.getElementById(tid + '-q-' + d.el + '-bar');
+      if (barEl) barEl.style.width = val + '%';
+    }}
+
+    // Warnings
+    const warnEl = document.getElementById(tid + '-quality-warnings');
+    if (q.warnings && q.warnings.length > 0) {{
+      warnEl.innerHTML = q.warnings.map(w => `<div style="padding:4px 0;border-bottom:1px solid ${{borderColor}};color:${{textColor}};">⚠️ ${{w}}</div>`).join('');
+    }} else {{
+      warnEl.innerHTML = `<span style="color:#51cf66;">✅ ${{t('quality.noWarnings')}}</span>`;
+    }}
+  }}
+
+  // ===== Describe Stats =====
+  function renderDescribe() {{
+    const container = document.getElementById(tid + '-describe-table');
+    if (!container) return;
+    const dd = describeData;
+    if (!dd || Object.keys(dd).length === 0) {{
+      container.innerHTML = `<span style="color:#adb5bd;">${{t('stats.noData')}}</span>`;
+      return;
+    }}
+
+    // Colors for light/dark mode
+    const labelColor = isDark ? '#565f89' : '#868e96';
+    const borderColor = isDark ? '#3b4261' : '#dee2e6';
+    const headerColor = isDark ? '#c0caf5' : '#495057';
+    const textColor = isDark ? '#c0caf5' : '#343a40';
+    const rowBg = isDark ? '#1f2335' : '#f1f3f5';
+
+    // Build table like pandas describe() with i18n
+    // i18n keys and their corresponding data keys
+    const statKeyMap = [
+      {{ i18n: 'stats.count', data: 'count' }},
+      {{ i18n: 'stats.mean', data: 'mean' }},
+      {{ i18n: 'stats.std', data: 'std' }},
+      {{ i18n: 'stats.min', data: 'min' }},
+      {{ i18n: 'stats.p25', data: '25%' }},
+      {{ i18n: 'stats.p50', data: '50%' }},
+      {{ i18n: 'stats.p75', data: '75%' }},
+      {{ i18n: 'stats.max', data: 'max' }},
+    ];
+    const fields = Object.keys(dd);
+    
+    let html = `<table style="width:100%;border-collapse:collapse;font-size:12px;color:${{textColor}};">`;
+    html += `<thead><tr><th style="padding:6px 10px;text-align:left;border-bottom:2px solid ${{borderColor}};color:${{labelColor}};"></th>`;
+    for (const f of fields) {{
+      const fieldName = t('dim.' + f) || f;
+      html += `<th style="padding:6px 10px;text-align:right;border-bottom:2px solid ${{borderColor}};color:${{headerColor}};">${{fieldName}}</th>`;
+    }}
+    html += '</tr></thead><tbody>';
+    
+    for (const skm of statKeyMap) {{
+      html += `<tr><td style="padding:5px 10px;border-bottom:1px solid ${{borderColor}};color:${{labelColor}};font-weight:600;">${{t(skm.i18n)}}</td>`;
+      for (const f of fields) {{
+        const val = dd[f][skm.data];
+        const display = (val !== undefined && val !== null) ? (typeof val === 'number' ? val.toFixed(4) : val) : '-';
+        html += `<td style="padding:5px 10px;text-align:right;border-bottom:1px solid ${{rowBg}};color:${{textColor}};">${{display}}</td>`;
+      }}
+      html += '</tr>';
+    }}
+    html += '</tbody></table>';
+    container.innerHTML = html;
+  }}
+
+  // ===== Tactile Image Sequence Viewer =====
+  (function() {{
+    var imgCanvas = document.getElementById(tid + '-tactile_image_canvas');
+    var playBtn = document.getElementById(tid + '-tactile-play-btn');
+    var frameLabel = document.getElementById(tid + '-tactile-frame-label');
+    var progressBar = document.getElementById(tid + '-tactile-progress-bar');
+    var progressThumb = document.getElementById(tid + '-tactile-progress-thumb');
+    var progressWrap = document.getElementById(tid + '-tactile-progress-wrap');
+    var speedSelect = document.getElementById(tid + '-tactile-speed-select');
+    var modeLabel = document.getElementById(tid + '-tactile-image-mode-label');
+
+    if (!imgCanvas) return;
+
+    // Detect data type
+    var tactileImages = data.tactile_images || data.images || null;
+    var pressureMap = data.pressure_map || null;
+    var sensorType = (data.sensor_info && data.sensor_info.type) || 'unknown';
+
+    // Determine visualization mode
+    var vizMode = 'none';
+    var frameData = [];
+    var matrixData = [];
+
+    if (tactileImages && Array.isArray(tactileImages) && tactileImages.length > 0) {{
+      var firstFrame = tactileImages[0];
+      if (firstFrame && (Array.isArray(firstFrame) || (firstFrame.length !== undefined && firstFrame.length > 0))) {{
+        vizMode = 'image';
+        frameData = tactileImages;
+        modeLabel.textContent = t('tactileImage.imageSequence');
+      }}
+    }} else if (pressureMap && Array.isArray(pressureMap) && pressureMap.length > 0) {{
+      var firstMatrix = pressureMap[0];
+      if (firstMatrix && Array.isArray(firstMatrix) && firstMatrix.length > 0) {{
+        vizMode = 'matrix';
+        matrixData = pressureMap;
+        modeLabel.textContent = t('tactileImage.matrixHeatmap');
+      }}
+    }}
+
+    var ps = {{ playing: false, currentFrame: 0, totalFrames: 0, animId: null, lastTime: 0 }};
+
+    if (vizMode === 'image') {{
+      ps.totalFrames = frameData.length;
+    }} else if (vizMode === 'matrix') {{
+      ps.totalFrames = matrixData.length;
+    }} else {{
+      ps.totalFrames = 0;
+    }}
+
+    // Viridis colormap approximation
+    function viridis(t01) {{
+      t01 = Math.max(0, Math.min(1, t01));
+      var stops = [
+        [0.0, 68, 1, 84],
+        [0.25, 60, 80, 130],
+        [0.5, 33, 145, 97],
+        [0.75, 147, 210, 58],
+        [1.0, 253, 231, 37]
+      ];
+      var i = 0;
+      for (i = 0; i < stops.length - 1; i++) {{
+        if (t01 <= stops[i + 1][0]) break;
+      }}
+      var s0 = stops[i], s1 = stops[Math.min(i + 1, stops.length - 1)];
+      var f = (s1[0] - s0[0]) < 1e-8 ? 0 : (t01 - s0[0]) / (s1[0] - s0[0]);
+      return [
+        Math.round(s0[1] + f * (s1[1] - s0[1])),
+        Math.round(s0[2] + f * (s1[2] - s0[2])),
+        Math.round(s0[3] + f * (s1[3] - s0[3]))
+      ];
+    }}
+
+    function renderImageFrame(frameIdx) {{
+      var ctx = imgCanvas.getContext('2d');
+      var W = imgCanvas.width, H = imgCanvas.height;
+      ctx.clearRect(0, 0, W, H);
+
+      if (vizMode === 'none') {{
+        // Level 3: No spatial data
+        var bgColor = isDark ? '#1f2335' : '#e9ecef';
+        var textColor = isDark ? '#565f89' : '#868e96';
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = textColor;
+        ctx.font = '14px -apple-system, BlinkMacSystemFont, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(t('tactileImage.noSpatialData'), W / 2, H / 2 - 20);
+        ctx.font = '12px -apple-system, BlinkMacSystemFont, sans-serif';
+        ctx.fillText(t('tactileImage.sensorType') + ': ' + sensorType, W / 2, H / 2 + 10);
+        // Show available data types
+        var frames = data.frames || [];
+        var availableFields = [];
+        if (frames.length > 0 && frames[0].tlabel_v2) {{
+          var keys = Object.keys(frames[0].tlabel_v2);
+          for (var ki = 0; ki < keys.length && availableFields.length < 8; ki++) {{
+            var k = keys[ki];
+            var hasData = false;
+            for (var fi = 0; fi < Math.min(frames.length, 10); fi++) {{
+              var v = (frames[fi].tlabel_v2 || {{}})[k];
+              if (v !== undefined && v !== null && v !== 0) {{ hasData = true; break; }}
+            }}
+            if (hasData) availableFields.push(k);
+          }}
+        }}
+        if (availableFields.length > 0) {{
+          ctx.fillText(t('tactileImage.availableData') + ': ' + availableFields.join(', '), W / 2, H / 2 + 35);
+        }}
+        return;
+      }}
+
+      if (vizMode === 'image') {{
+        var frame = frameData[frameIdx];
+        if (!frame) return;
+        if (Array.isArray(frame) && frame.length > 0) {{
+          if (Array.isArray(frame[0])) {{
+            if (Array.isArray(frame[0][0])) {{
+              // RGB: frame[h][w][3]
+              var imgH = frame.length;
+              var imgW = frame[0].length;
+              var scale = Math.min(W / imgW, H / imgH) * 0.9;
+              var drawW = imgW * scale;
+              var drawH = imgH * scale;
+              var offsetX = (W - drawW) / 2;
+              var offsetY = (H - drawH) / 2;
+              var imgData = ctx.createImageData(imgW, imgH);
+              for (var y = 0; y < imgH; y++) {{
+                for (var x = 0; x < imgW; x++) {{
+                  var px = frame[y][x];
+                  var idx = (y * imgW + x) * 4;
+                  if (Array.isArray(px) && px.length >= 3) {{
+                    imgData.data[idx] = px[0];
+                    imgData.data[idx + 1] = px[1];
+                    imgData.data[idx + 2] = px[2];
+                    imgData.data[idx + 3] = 255;
+                  }} else {{
+                    var v = typeof px === 'number' ? px : 128;
+                    imgData.data[idx] = v;
+                    imgData.data[idx + 1] = v;
+                    imgData.data[idx + 2] = v;
+                    imgData.data[idx + 3] = 255;
+                  }}
+                }}
+              }}
+              var offscreen = document.createElement('canvas');
+              offscreen.width = imgW;
+              offscreen.height = imgH;
+              offscreen.getContext('2d').putImageData(imgData, 0, 0);
+              ctx.imageSmoothingEnabled = false;
+              ctx.fillStyle = isDark ? '#1a1b26' : '#ffffff';
+              ctx.fillRect(0, 0, W, H);
+              ctx.drawImage(offscreen, offsetX, offsetY, drawW, drawH);
+            }} else {{
+              // Grayscale 2D: frame[h][w]
+              var imgH = frame.length;
+              var imgW = frame[0].length;
+              var scale = Math.min(W / imgW, H / imgH) * 0.9;
+              var drawW = imgW * scale;
+              var drawH = imgH * scale;
+              var offsetX = (W - drawW) / 2;
+              var offsetY = (H - drawH) / 2;
+              var imgData = ctx.createImageData(imgW, imgH);
+              for (var y = 0; y < imgH; y++) {{
+                for (var x = 0; x < imgW; x++) {{
+                  var v = Math.max(0, Math.min(255, frame[y][x] | 0));
+                  var idx = (y * imgW + x) * 4;
+                  imgData.data[idx] = v;
+                  imgData.data[idx + 1] = v;
+                  imgData.data[idx + 2] = v;
+                  imgData.data[idx + 3] = 255;
+                }}
+              }}
+              var offscreen = document.createElement('canvas');
+              offscreen.width = imgW;
+              offscreen.height = imgH;
+              offscreen.getContext('2d').putImageData(imgData, 0, 0);
+              ctx.imageSmoothingEnabled = false;
+              ctx.fillStyle = isDark ? '#1a1b26' : '#ffffff';
+              ctx.fillRect(0, 0, W, H);
+              ctx.drawImage(offscreen, offsetX, offsetY, drawW, drawH);
+            }}
+          }}
+        }}
+      }} else if (vizMode === 'matrix') {{
+        var matrix = matrixData[frameIdx];
+        if (!matrix || !matrix.length) return;
+        var rows = matrix.length;
+        var cols = matrix[0].length || 0;
+        if (rows === 0 || cols === 0) return;
+
+        // Find min/max
+        var minVal = Infinity, maxVal = -Infinity;
+        for (var r = 0; r < rows; r++) {{
+          for (var c = 0; c < cols; c++) {{
+            var v = matrix[r][c];
+            if (v < minVal) minVal = v;
+            if (v > maxVal) maxVal = v;
+          }}
+        }}
+
+        var bgColor = isDark ? '#1a1b26' : '#ffffff';
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, W, H);
+
+        // Draw heatmap
+        var margin = 30;
+        var cellW = (W - margin * 2) / cols;
+        var cellH = (H - margin * 2) / rows;
+        var cellSize = Math.min(cellW, cellH);
+        var offsetX = (W - cellSize * cols) / 2;
+        var offsetY = (H - cellSize * rows) / 2;
+
+        for (var r = 0; r < rows; r++) {{
+          for (var c = 0; c < cols; c++) {{
+            var v = matrix[r][c];
+            var norm = (v - minVal) / (maxVal - minVal + 1e-8);
+            var rgb = viridis(norm);
+            ctx.fillStyle = 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ')';
+            ctx.fillRect(offsetX + c * cellSize, offsetY + r * cellSize, cellSize - 0.5, cellSize - 0.5);
+          }}
+        }}
+
+        // Axis labels for small matrices
+        if (rows <= 32 && cols <= 32) {{
+          ctx.fillStyle = isDark ? '#565f89' : '#868e96';
+          ctx.font = '10px monospace';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'top';
+          if (cols <= 16) {{
+            for (var c = 0; c < cols; c++) {{
+              ctx.fillText('' + c, offsetX + c * cellSize + cellSize / 2, offsetY + rows * cellSize + 4);
+            }}
+          }}
+          ctx.textAlign = 'right';
+          ctx.textBaseline = 'middle';
+          if (rows <= 16) {{
+            for (var r = 0; r < rows; r++) {{
+              ctx.fillText('' + r, offsetX - 4, offsetY + r * cellSize + cellSize / 2);
+            }}
+          }}
+        }}
+
+        // Colorbar
+        var barW = 12, barH = H - margin * 2;
+        var barX = W - margin - barW - 10;
+        var barY = margin;
+        for (var i = 0; i < barH; i++) {{
+          var t01 = 1 - i / barH;
+          var rgb = viridis(t01);
+          ctx.fillStyle = 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ')';
+          ctx.fillRect(barX, barY + i, barW, 1);
+        }}
+        ctx.fillStyle = isDark ? '#565f89' : '#868e96';
+        ctx.font = '9px monospace';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.fillText(maxVal.toFixed(2), barX + barW + 3, barY);
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(minVal.toFixed(2), barX + barW + 3, barY + barH);
+
+        // Label
+        ctx.fillStyle = isDark ? '#565f89' : '#868e96';
+        ctx.font = '11px -apple-system, BlinkMacSystemFont, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.fillText(t('tactileImage.matrixHeatmap') + ' (' + rows + '\u00d7' + cols + ')', offsetX, 8);
+      }}
+    }}
+
+    function updatePlaybackUI() {{
+      var f = ps.currentFrame;
+      var total = ps.totalFrames;
+      frameLabel.textContent = 'Frame ' + f + ' / ' + (total > 0 ? total - 1 : 0);
+      var pct = total > 1 ? (f / (total - 1)) * 100 : 0;
+      progressBar.style.width = pct + '%';
+      progressThumb.style.left = pct + '%';
+    }}
+
+    function seekFrame(frameIdx) {{
+      frameIdx = Math.max(0, Math.min(ps.totalFrames - 1, frameIdx));
+      ps.currentFrame = frameIdx;
+      renderImageFrame(frameIdx);
+      updatePlaybackUI();
+      // Sync with main timeline
+      if (vizMode !== 'none') {{
+        var frames = data.frames || [];
+        if (frameIdx < frames.length) showFrame(frameIdx);
+      }}
+    }}
+
+    function playTick(timestamp) {{
+      if (!ps.playing) return;
+      var speed = parseFloat(speedSelect.value) || 1;
+      var interval = 100 / speed;
+      if (timestamp - ps.lastTime >= interval) {{
+        ps.lastTime = timestamp;
+        ps.currentFrame++;
+        if (ps.currentFrame >= ps.totalFrames) {{
+          ps.currentFrame = 0;
+        }}
+        renderImageFrame(ps.currentFrame);
+        updatePlaybackUI();
+      }}
+      ps.animId = requestAnimationFrame(playTick);
+    }}
+
+    function togglePlay() {{
+      ps.playing = !ps.playing;
+      if (ps.playing) {{
+        playBtn.textContent = '\u23f8 ' + t('tactileImage.pause');
+        ps.lastTime = performance.now();
+        ps.animId = requestAnimationFrame(playTick);
+      }} else {{
+        playBtn.textContent = '\u25b6 ' + t('tactileImage.play');
+        if (ps.animId) cancelAnimationFrame(ps.animId);
+      }}
+    }}
+
+    // Progress bar drag (mouse)
+    var dragging = false;
+    progressWrap.addEventListener('mousedown', function(e) {{
+      dragging = true;
+      handleSeek(e);
+    }});
+    document.addEventListener('mousemove', function(e) {{
+      if (dragging) handleSeek(e);
+    }});
+    document.addEventListener('mouseup', function() {{ dragging = false; }});
+    // Touch support
+    progressWrap.addEventListener('touchstart', function(e) {{
+      dragging = true;
+      handleSeek(e.touches[0]);
+    }});
+    document.addEventListener('touchmove', function(e) {{
+      if (dragging) handleSeek(e.touches[0]);
+    }});
+    document.addEventListener('touchend', function() {{ dragging = false; }});
+
+    function handleSeek(e) {{
+      var rect = progressWrap.getBoundingClientRect();
+      var ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      var frameIdx = Math.round(ratio * (ps.totalFrames - 1));
+      seekFrame(frameIdx);
+    }}
+
+    playBtn.addEventListener('click', togglePlay);
+
+    // Initial render
+    renderImageFrame(0);
+    updatePlaybackUI();
+
+    // Expose for sync with main timeline and dark mode
+    window['_tlabel_' + tid + '_tactileImg'] = {{
+      seekFrame: seekFrame,
+      renderFrame: renderImageFrame,
+      stop: function() {{
+        ps.playing = false;
+        if (ps.animId) cancelAnimationFrame(ps.animId);
+        playBtn.textContent = '\u25b6 ' + t('tactileImage.play');
+      }}
+    }};
+  }})();
+
+  // ===== Event Listeners =====
+  document.getElementById(tid + '-lang-btn').addEventListener('click', toggleLang);
+  document.getElementById(tid + '-btn-prev').addEventListener('click', prevFrame);
+  document.getElementById(tid + '-btn-next').addEventListener('click', nextFrame);
+  document.getElementById(tid + '-frame-input').addEventListener('change', function() {{ jumpTo(this.value); }});
+  document.getElementById(tid + '-btn-batch').addEventListener('click', batchPatch);
+  document.getElementById(tid + '-btn-undo').addEventListener('click', undo);
+  document.getElementById(tid + '-btn-export-json').addEventListener('click', exportJSON);
+  document.getElementById(tid + '-btn-export-csv').addEventListener('click', exportCSV);
+  document.getElementById(tid + '-btn-export-hdf5').addEventListener('click', exportHDF5);
+  document.getElementById(tid + '-btn-episode-apply').addEventListener('click', applyEpisodeLabel);
+
+  // FTP-1 Export Panel events
+  const ftp1ExportBtn = document.getElementById(tid + '-ftp1-export-btn');
+  if (ftp1ExportBtn) ftp1ExportBtn.addEventListener('click', handleFTP1Export);
+  const ftp1PresetGripper = document.getElementById(tid + '-ftp1-preset-gripper');
+  if (ftp1PresetGripper) ftp1PresetGripper.addEventListener('click', () => setAreaPreset([0, 1], 'gripper'));
+  const ftp1PresetThree = document.getElementById(tid + '-ftp1-preset-three');
+  if (ftp1PresetThree) ftp1PresetThree.addEventListener('click', () => setAreaPreset([0, 1, 2], 'three'));
+  const ftp1PresetFive = document.getElementById(tid + '-ftp1-preset-five');
+  if (ftp1PresetFive) ftp1PresetFive.addEventListener('click', () => setAreaPreset([0, 1, 2, 3, 4], 'five'));
+  const lerobotExportBtn = document.getElementById(tid + '-lerobot-export-btn');
+  if (lerobotExportBtn) lerobotExportBtn.addEventListener('click', handleLeRobotExport);
+
+
+  // ===== Dark Mode =====
+  let isDark = false;
+  const rootEl = document.getElementById(tid + '-root');
+
+  function toggleDark() {{
+    isDark = !isDark;
+    const btn = document.getElementById(tid + '-dark-btn');
+    if (isDark) {{
+      rootEl.style.background = '#1a1b26';
+      rootEl.style.color = '#c0caf5';
+      btn.textContent = '☀️';
+      rootEl.querySelectorAll('div[style*="background: #fff"], div[style*="background:#fff"]').forEach(el => {{
+        el.style.background = '#24283b'; el.style.borderColor = '#3b4261'; el.style.color = '#c0caf5';
+      }});
+      rootEl.querySelectorAll('div[style*="background: #f1f3f5"], div[style*="background:#f1f3f5"]').forEach(el => {{
+        el.style.background = '#1f2335';
+      }});
+      rootEl.querySelectorAll('div[style*="background: #e9ecef"], div[style*="background:#e9ecef"]').forEach(el => {{
+        el.style.background = '#1f2335';
+      }});
+      rootEl.querySelectorAll('div[style*="background: #f8f9fa"], div[style*="background:#f8f9fa"]').forEach(el => {{
+        el.style.background = '#1f2335';
+      }});
+      rootEl.querySelectorAll('span[style*="color: #868e96"]').forEach(el => {{
+        el.style.color = '#565f89';
+      }});
+      rootEl.querySelectorAll('span[style*="color: #343a40"]').forEach(el => {{
+        el.style.color = '#c0caf5';
+      }});
+      rootEl.querySelectorAll('input, select, textarea').forEach(el => {{
+        el.style.background = '#24283b'; el.style.color = '#c0caf5'; el.style.borderColor = '#3b4261';
+      }});
+      rootEl.querySelectorAll('canvas').forEach(el => {{
+        el.style.background = '#24283b';
+      }});
+      // Tactile image section dark mode
+      var tactileSection = document.getElementById(tid + '-tactile-image-section');
+      if (tactileSection) {{
+        tactileSection.style.background = '#1f2335';
+      }}
+      var tactileProgressBg = document.getElementById(tid + '-tactile-progress-bg');
+      if (tactileProgressBg) tactileProgressBg.style.background = '#3b4261';
+      rootEl.querySelectorAll('button').forEach(el => {{
+        if (!el.style.background.includes('gradient') && !el.style.background.includes('#e85d75')) {{
+          el.style.background = '#24283b'; el.style.color = '#c0caf5'; el.style.borderColor = '#3b4261';
+        }}
+      }});
+      rootEl.querySelectorAll('table').forEach(el => {{
+        el.style.color = '#c0caf5';
+      }});
+      rootEl.querySelectorAll('th, td').forEach(el => {{
+        el.style.borderColor = '#3b4261'; el.style.color = '#c0caf5';
+      }});
+      // Re-render quality and stats tabs for dark mode colors
+      renderQuality();
+      renderDescribe();
+      // Re-render tactile image canvas for dark mode
+      var tactileImgV = window['_tlabel_' + tid + '_tactileImg'];
+      if (tactileImgV) tactileImgV.renderFrame(0);
+    }} else {{
+      btn.textContent = '🌙';
+      rootEl.style.background = '#f8f9fa';
+      rootEl.style.color = '#343a40';
+      updateStats();
+      showFrame(currentFrameIdx);
+      // Re-render quality and stats tabs for light mode colors
+      renderQuality();
+      renderDescribe();
+      // Re-render tactile image canvas for light mode
+      var tactileImgV2 = window['_tlabel_' + tid + '_tactileImg'];
+      if (tactileImgV2) tactileImgV2.renderFrame(0);
+    }}
+  }}
+
+  document.getElementById(tid + '-dark-btn').addEventListener('click', toggleDark);
+
+  // ===== Keyboard Shortcuts =====
+  document.addEventListener('keydown', function(e) {{
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+    switch(e.key) {{
+      case 'ArrowLeft': e.preventDefault(); prevFrame(); break;
+      case 'ArrowRight': e.preventDefault(); nextFrame(); break;
+      case ' ':
+        e.preventDefault();
+        const frame = data.frames[currentFrameIdx];
+        if (frame) {{
+          const newContact = frame.tlabel_v2.contact > 0.5 ? 0.0 : 1.0;
+          frame.tlabel_v2.contact = newContact;
+          if (newContact === 0.0) {{
+            frame.tlabel_v2.slip_event = 0.0;
+            frame.tlabel_v2.force_magnitude = 0.0;
+            frame.manipulation_phase = 'idle';
+          }}
+          modifiedCount++; updateStats(); showFrame(currentFrameIdx);
+        }}
+        break;
+      case 's': case 'S':
+        const f2 = data.frames[currentFrameIdx];
+        if (f2 && f2.tlabel_v2.contact > 0.5) {{
+          f2.tlabel_v2.slip_event = f2.tlabel_v2.slip_event > 0.5 ? 0.0 : 1.0;
+          if (f2.tlabel_v2.slip_event > 0.5) f2.manipulation_phase = 'slip';
+          modifiedCount++; updateStats(); showFrame(currentFrameIdx);
+        }}
+        break;
+      case 'd': case 'D': toggleDark(); break;
+      case '?':
+        alert(currentLang === 'zh-CN'
+          ? '快捷键:\\n← → 切帧\\n空格 标记/取消接触\\nS 标记/取消滑移\\nD 切换暗色模式\\n? 显示帮助'
+          : 'Shortcuts:\\n← → Navigate\\nSpace Toggle contact\\nS Toggle slip\\nD Dark mode\\n? Help');
+        break;
+    }}
+  }});
+
+  // ===== Init =====
+  updateStats();
+  applyI18n();
+  showFrame(0);
+  initEpisodeForm();
+  renderQuality();
+  renderDescribe();
+  initFTP1Areas();
+
+  window['_tlabel_' + tid] = {{
+    prevFrame, nextFrame, jumpTo, batchPatch, undo,
+    exportJSON, exportCSV, exportHDF5, toggleLang,
+    applyEpisodeLabel, switchTab, handleFTP1Export, setAreaPreset
+  }};
+}})();
+</script>"""
