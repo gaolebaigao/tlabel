@@ -421,6 +421,7 @@ class GelSightAdapter(BaseAdapter):
                 manipulation_phase=phases[i],
                 confidence=confidence,
                 sensor_specific=sensor_specific,
+                image=img,  # v0.12: 保留原始图像用于可视化
             )
             tlabel_frames.append(frame)
             # 更新prev状态

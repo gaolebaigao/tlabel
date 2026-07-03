@@ -79,6 +79,25 @@ class TLabelPanel:
                         "methods": r.method,
                     }
 
+        # v0.12: 提取图像数据用于可视化
+        tactile_images = None
+        try:
+            images = self.data.get_images(max_frames=50)  # 限制最多50帧避免内存爆炸
+            if any(img is not None for img in images):
+                # 转换为base64供前端使用
+                import base64
+                import cv2
+                tactile_images = []
+                for img in images:
+                    if img is not None:
+                        _, buffer = cv2.imencode('.png', img)
+                        img_base64 = base64.b64encode(buffer).decode('utf-8')
+                        tactile_images.append(f"data:image/png;base64,{img_base64}")
+                    else:
+                        tactile_images.append(None)
+        except Exception:
+            pass  # 图像提取失败不影响其他功能
+
         return generate_panel_html(
             data_dict=data_dict,
             lang=self.lang,
@@ -88,6 +107,7 @@ class TLabelPanel:
             describe_stats=self._describe_stats,
             predict_highlights=predict_highlights,
             auto_label_summary=self._auto_label_summary,
+            tactile_images=tactile_images,  # v0.12: 传入图像数据
         )
 
     def __repr__(self):

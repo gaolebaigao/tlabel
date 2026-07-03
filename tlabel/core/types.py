@@ -15,14 +15,17 @@ class TLabelFrame:
     """单帧标注数据"""
     __slots__ = [
         "frame_idx", "timestamp_s", "tlabel_v2", "manipulation_phase",
-        "confidence", "sensor_specific", "patches", "_original_tlabel"
+        "confidence", "sensor_specific", "patches", "_original_tlabel",
+        "image", "image_path"  # v0.12: 原始图像数据（numpy数组）或图像路径
     ]
 
     def __init__(self, frame_idx: int, timestamp_s: float,
                  tlabel_v2: Dict[str, float],
                  manipulation_phase: str = "idle",
                  confidence: float = 1.0,
-                 sensor_specific: Optional[Dict] = None):
+                 sensor_specific: Optional[Dict] = None,
+                 image: Optional[Any] = None,
+                 image_path: Optional[str] = None):
         self.frame_idx = frame_idx
         self.timestamp_s = timestamp_s
         self.tlabel_v2 = tlabel_v2
@@ -31,6 +34,8 @@ class TLabelFrame:
         self.sensor_specific = sensor_specific or {}
         self.patches = []
         self._original_tlabel = copy.deepcopy(tlabel_v2)
+        self.image = image  # numpy数组，用于可视化
+        self.image_path = image_path  # 图像文件路径，用于懒加载
 
     @property
     def contact(self) -> float:
@@ -490,91 +495,6 @@ class TLabelData:
 
         return result
 
-    # ============================================================
-    # v0.7.0: 数据增强
-    # ============================================================
-
-    def augment(self, methods: list, params: dict = None, seed: int = None) -> 'TLabelData':
-        """
-        对当前数据应用增强，返回新的TLabelData实例 / Apply augmentation, return new TLabelData
-
-        内部将帧级标注转为 (T, 22) 特征矩阵，经 AugmentEngine 增强后，
-        回写到新 TLabelData 的帧级 tlabel_v2 字典中。元数据全部保持不变。
-
-        Args:
-            methods: 增强方法名列表，可选:
-                'time_warp'     — 时序弹性扭曲
-                'noise_inject'  — 高斯噪声注入
-                'random_crop'   — 随机时间窗口裁剪
-                'force_scale'   — 力 magnitude 缩放
-                'frame_dropout' — 随机帧丢弃
-            params: 各方法的参数覆盖，如 {'time_warp': {'sigma': 0.2}}
-            seed: 主随机种子，用于整体复现
-
-        Returns:
-            新的 TLabelData 实例，features 已增强，元数据不变
-
-        用法:
-            augmented = data.augment(['time_warp', 'noise_inject'])
-            augmented = data.augment(['force_scale'], params={'force_scale': {'factor_range': (0.5, 1.5)}})
-        """
-        import copy
-        import numpy as np
-        from tlabel.augment.engine import AugmentEngine
-
-        if not methods:
-            raise ValueError("methods list cannot be empty")
-
-        # 验证方法名
-        for m in methods:
-            if m not in AugmentEngine.AVAILABLE_METHODS:
-                available = list(AugmentEngine.AVAILABLE_METHODS.keys())
-                raise ValueError(
-                    f"Unknown augmentation method '{m}'. Available: {available}"
-                )
-
-        if not self.frames:
-            raise ValueError("Cannot augment empty TLabelData (no frames)")
-
-        # 提取22维特征矩阵 (T, D)
-        feature_keys = list(self.frames[0].tlabel_v2.keys())
-        features = np.array(
-            [[frame.tlabel_v2.get(k, 0.0) for k in feature_keys] for frame in self.frames],
-            dtype=np.float64,
-        )
-
-        # 执行增强
-        augmented_features = AugmentEngine.augment(features, methods, params, seed=seed)
-
-        # 构建新的 TLabelData（深拷贝帧以隔离原始数据）
-        new_frames = []
-        for i, frame in enumerate(self.frames):
-            new_tlabel_v2 = dict(frame.tlabel_v2)  # 浅拷贝字典
-            for j, key in enumerate(feature_keys):
-                new_tlabel_v2[key] = float(augmented_features[i, j])
-            new_frame = TLabelFrame(
-                frame_idx=frame.frame_idx,
-                timestamp_s=frame.timestamp_s,
-                tlabel_v2=new_tlabel_v2,
-                manipulation_phase=frame.manipulation_phase,
-                confidence=frame.confidence,
-                sensor_specific=copy.deepcopy(frame.sensor_specific) if frame.sensor_specific else None,
-            )
-            new_frame.patches = list(frame.patches)  # 保留 patch 历史
-            new_frames.append(new_frame)
-
-        new_data = TLabelData(
-            frames=new_frames,
-            sensor_info=copy.deepcopy(self.sensor_info),
-            episode_info=copy.deepcopy(self.episode_info),
-            capabilities=copy.deepcopy(self.capabilities),
-            schema_version=self.schema_version,
-            sensor_id=self.sensor_id,
-            calibration_params=copy.deepcopy(self.calibration_params) if self.calibration_params else None,
-            sensor_profile=copy.deepcopy(self.sensor_profile) if self.sensor_profile else None,
-        )
-        return new_data
-
     def to_dict(self) -> Dict:
         """转换为字典"""
         contact_count = sum(1 for f in self.frames if f.contact > 0.5)
@@ -626,6 +546,35 @@ class TLabelData:
             "frames": [f.to_dict(is_first=(i == 0), is_last=(i == len(self.frames) - 1)) 
                       for i, f in enumerate(self.frames)],
         }
+
+    def get_images(self, max_frames: Optional[int] = None) -> List[Any]:
+        """提取所有帧的图像数据（用于可视化）
+        
+        Args:
+            max_frames: 最多返回多少帧的图像（None=全部）
+        
+        Returns:
+            图像列表（numpy数组或None），长度等于帧数
+        """
+        images = []
+        limit = max_frames if max_frames else len(self.frames)
+        for i, frame in enumerate(self.frames):
+            if i >= limit:
+                break
+            # 优先使用内存中的图像
+            if hasattr(frame, 'image') and frame.image is not None:
+                images.append(frame.image)
+            elif hasattr(frame, 'image_path') and frame.image_path:
+                # 懒加载：从文件路径读取
+                try:
+                    import cv2
+                    img = cv2.imread(frame.image_path)
+                    images.append(img)
+                except Exception:
+                    images.append(None)
+            else:
+                images.append(None)
+        return images
 
     def _repr_html_(self):
         """Jupyter自动渲染面板"""

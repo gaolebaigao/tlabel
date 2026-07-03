@@ -24,6 +24,7 @@ def generate_panel_html(
     describe_stats: Optional[Dict] = None,
     predict_highlights: Optional[Dict] = None,
     auto_label_summary: Optional[Dict] = None,
+    tactile_images: Optional[list] = None,  # v0.12: 触觉图像列表（base64）
 ) -> str:
     """生成完整面板HTML"""
     data_json = json.dumps(data_dict, ensure_ascii=False, default=str)
@@ -33,6 +34,8 @@ def generate_panel_html(
     describe_json = json.dumps(describe_stats or {}, ensure_ascii=False, default=str)
     predict_json = json.dumps(predict_highlights or {}, ensure_ascii=False, default=str)
     autolabel_json = json.dumps(auto_label_summary or {}, ensure_ascii=False, default=str)
+    # v0.12: 触觉图像数据
+    images_json = json.dumps(tactile_images or [], ensure_ascii=False, default=str)
     tid = instance_id
 
     return f"""<!DOCTYPE html>
@@ -46,7 +49,7 @@ def generate_panel_html(
   <div style="display:flex;align-items:center;gap:10px;">
     <span style="font-size:20px;">🦞</span>
     <span style="font-size:16px;font-weight:700;color:#e85d75;" data-i18n="app.title">TLabel 触觉标注工具</span>
-    <span style="font-size:10px;color:#868e96;background:#e9ecef;padding:1px 6px;border-radius:4px;">v0.11.1</span>
+    <span style="font-size:10px;color:#868e96;background:#e9ecef;padding:1px 6px;border-radius:4px;">v0.8.0</span>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span style="font-size:12px;color:#868e96;" id="{tid}-sensor-info"></span>
@@ -107,41 +110,20 @@ def generate_panel_html(
   </div>
 </div>
 
-<!-- Tactile Image Sequence Visualization -->
-<div style="padding:12px 20px;background:#e9ecef;" id="{tid}-tactile-image-section">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-    <span style="font-size:12px;color:#868e96;" data-i18n="tactileImage.title">触觉图像序列</span>
-    <span style="font-size:11px;color:#e85d75;" id="{tid}-tactile-image-mode-label"></span>
-  </div>
-  <canvas id="{tid}-tactile_image_canvas" width="920" height="300"
-          style="width:100%;height:300px;border-radius:8px;background:#fff;display:block;"></canvas>
-  <!-- Playback Controls -->
-  <div style="display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap;" id="{tid}-tactile-image-controls">
-    <button id="{tid}-tactile-play-btn"
-            style="padding:4px 12px;border-radius:6px;border:1px solid #ced4da;background:#fff;color:#495057;cursor:pointer;font-size:12px;"
-            data-i18n="tactileImage.play">▶ 播放</button>
-    <span id="{tid}-tactile-frame-label" style="font-size:12px;color:#868e96;min-width:80px;">Frame 0 / 0</span>
-    <div style="flex:1;min-width:120px;position:relative;height:16px;cursor:pointer;" id="{tid}-tactile-progress-wrap">
-      <div style="position:absolute;top:6px;left:0;right:0;height:4px;background:#dee2e6;border-radius:2px;" id="{tid}-tactile-progress-bg"></div>
-      <div style="position:absolute;top:6px;left:0;height:4px;background:#e85d75;border-radius:2px;width:0%;" id="{tid}-tactile-progress-bar"></div>
-      <div style="position:absolute;top:3px;width:10px;height:10px;background:#e85d75;border-radius:50%;left:0%;transform:translateX(-50%);" id="{tid}-tactile-progress-thumb"></div>
-    </div>
-    <select id="{tid}-tactile-speed-select"
-            style="padding:2px 6px;border-radius:6px;border:1px solid #ced4da;background:#fff;color:#495057;font-size:11px;">
-      <option value="0.5">0.5x</option>
-      <option value="1" selected>1x</option>
-      <option value="2">2x</option>
-      <option value="5">5x</option>
-    </select>
-  </div>
-</div>
-
-<!-- Main Content: Radar + Detail -->
+<!-- Main Content: Radar + Detail + Image -->
 <div style="display:flex;gap:16px;padding:16px 20px;">
   <!-- Radar Chart -->
   <div style="flex:1;background:#fff;border-radius:10px;padding:12px;border:1px solid #e9ecef;">
     <div style="font-size:12px;color:#868e96;margin-bottom:4px;" data-i18n="chart.radar">22维特征</div>
     <canvas id="{tid}-radar" width="360" height="340" style="width:100%;"></canvas>
+  </div>
+  <!-- Tactile Image (v0.12) -->
+  <div style="flex:1;background:#fff;border-radius:10px;padding:12px;border:1px solid #e9ecef;" id="{tid}-image-panel">
+    <div style="font-size:12px;color:#868e96;margin-bottom:4px;">触觉图像</div>
+    <div id="{tid}-image-container" style="width:100%;height:340px;display:flex;align-items:center;justify-content:center;background:#f8f9fa;border-radius:8px;overflow:hidden;">
+      <img id="{tid}-tactile-img" src="" style="max-width:100%;max-height:100%;object-fit:contain;display:none;" />
+      <div id="{tid}-no-image" style="color:#adb5bd;font-size:13px;">无图像数据</div>
+    </div>
   </div>
   <!-- Frame Detail -->
   <div style="flex:1;background:#fff;border-radius:10px;padding:12px;border:1px solid #e9ecef;" id="{tid}-detail-panel">
@@ -494,71 +476,6 @@ def generate_panel_html(
     </div>
   </div>
 
-
-  <!-- LeRobot Section -->
-  <div style="background:#fff;border-radius:10px;padding:20px;border:1px solid #e9ecef;margin-bottom:16px;">
-    <div style="font-size:14px;font-weight:700;color:#343a40;margin-bottom:4px;">
-      🤖 <span data-i18n="export.lerobot_title">LeRobot 格式导出</span>
-    </div>
-    <div style="font-size:12px;color:#868e96;margin-bottom:16px;" data-i18n="export.lerobot_desc">
-      将标注写回 LeRobot 数据集的 Parquet 文件，更新 meta/info.json。
-    </div>
-
-    <!-- LeRobot Config -->
-    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
-      <div style="flex:1;min-width:180px;">
-        <label style="font-size:11px;color:#868e96;display:block;margin-bottom:4px;" data-i18n="export.lerobot_tactile_field">触觉字段名</label>
-        <input type="text" id="{tid}-lerobot-tactile-field" value="observation.tactile"
-               style="width:100%;padding:6px 10px;border:1px solid #ced4da;border-radius:6px;font-size:12px;background:#fff;"
-               placeholder="observation.tactile">
-      </div>
-      <div style="flex:1;min-width:180px;">
-        <label style="font-size:11px;color:#868e96;display:block;margin-bottom:4px;" data-i18n="export.lerobot_action_field">动作字段名</label>
-        <input type="text" id="{tid}-lerobot-action-field" value="action"
-               style="width:100%;padding:6px 10px;border:1px solid #ced4da;border-radius:6px;font-size:12px;background:#fff;"
-               placeholder="action">
-      </div>
-      <div style="flex:1;min-width:120px;display:flex;align-items:flex-end;">
-        <label style="font-size:11px;color:#868e96;display:flex;align-items:center;gap:6px;cursor:pointer;">
-          <input type="checkbox" id="{tid}-lerobot-overwrite" style="width:14px;height:14px;">
-          <span data-i18n="export.lerobot_overwrite">覆盖已有字段</span>
-        </label>
-      </div>
-    </div>
-
-    <!-- Export Button -->
-    <div style="display:flex;align-items:center;gap:12px;">
-      <button id="{tid}-lerobot-export-btn" style="padding:8px 24px;border-radius:8px;border:none;background:linear-gradient(135deg,#4dabf7,#3b82f6);color:#fff;font-weight:700;font-size:13px;cursor:pointer;box-shadow:0 2px 8px rgba(77,171,247,0.3);">
-        <span data-i18n="export.lerobot_btn">📦 导出为 LeRobot Parquet</span>
-      </button>
-      <span id="{tid}-lerobot-status" style="font-size:12px;color:#868e96;"></span>
-    </div>
-
-    <!-- Export Result -->
-    <div id="{tid}-lerobot-result" style="display:none;margin-top:14px;background:#f1f3f5;border-radius:8px;padding:14px;font-size:12px;">
-      <div style="font-weight:600;color:#343a40;margin-bottom:8px;" data-i18n="export.result_title">📋 导出结果</div>
-      <pre id="{tid}-lerobot-result-content" style="margin:0;font-family:monospace;font-size:11px;color:#495057;white-space:pre-wrap;"></pre>
-    </div>
-  </div>
-
-  <!-- LeRobot Format Reference -->
-  <div style="background:#fff;border-radius:10px;padding:20px;border:1px solid #e9ecef;">
-    <div style="font-size:13px;font-weight:600;color:#343a40;margin-bottom:8px;" data-i18n="export.lerobot_ref">
-      📖 LeRobot 格式说明
-    </div>
-    <div style="font-size:11px;color:#495057;line-height:1.8;font-family:monospace;background:#f8f9fa;padding:12px;border-radius:6px;">
-      <div style="color:#868e96;">// LeRobot dataset 目录结构:</div>
-      <div><span style="color:#4dabf7;">meta/</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#868e96;">← 元信息目录</span></div>
-      <div>  <span style="color:#4dabf7;">info.json</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#868e96;">← 数据集元信息（自动更新）</span></div>
-      <div><span style="color:#4dabf7;">data/</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#868e96;">← 数据目录</span></div>
-      <div>  <span style="color:#4dabf7;">chunk-000/</span></div>
-      <div>    <span style="color:#4dabf7;">episode_000000.parquet</span> <span style="color:#868e96;">← 标注写入此文件</span></div>
-    </div>
-    <div style="font-size:11px;color:#868e96;margin-top:8px;" data-i18n="export.lerobot_note">
-      💡 导出会将 TLabel 标注结果写入 LeRobot 数据集的 Parquet 文件中。
-    </div>
-  </div>
-
 </div>
 </div><!-- end panel-export -->
 
@@ -573,6 +490,7 @@ def generate_panel_html(
   const describeData = {describe_json};
   const predictHighlights = {predict_json};
   const autoLabelSummary = {autolabel_json};
+  const tactileImages = {images_json};  // v0.12: 触觉图像列表
   const tid = '{tid}';
   let currentFrameIdx = 0;
   let currentLang = (data.sensor_info && data.sensor_info.lang) || 'zh-CN';
@@ -601,14 +519,6 @@ def generate_panel_html(
       'export.btn_export': '📦 导出为 FTP-1 Zarr', 'export.result_title': '📋 导出结果',
       'export.format_ref': '📖 MTTS Zarr 格式说明', 'export.format_note': '💡 导出的 .zarr 文件可直接被 FTP-1 加载',
       'export.preset_gripper': '预设: 夹爪 [0,1]', 'export.preset_three': '预设: 三指 [0,1,2]', 'export.preset_five': '预设: 五指 [0-4]',
-      'export.lerobot_title': 'LeRobot 格式导出',
-      'export.lerobot_desc': '将标注写回 LeRobot 数据集的 Parquet 文件，更新 meta/info.json。',
-      'export.lerobot_tactile_field': '触觉字段名',
-      'export.lerobot_action_field': '动作字段名',
-      'export.lerobot_overwrite': '覆盖已有字段',
-      'export.lerobot_btn': '📦 导出为 LeRobot Parquet',
-      'export.lerobot_ref': '📖 LeRobot 格式说明',
-      'export.lerobot_note': '💡 导出会将 TLabel 标注结果写入 LeRobot 数据集的 Parquet 文件中',
       'episode.title': 'Episode 级标注', 'episode.desc': '为整个交互Episode添加语义标注，描述操作任务的整体结果和属性。标注结果会写入 episode_info 并随数据一起导出。',
       'episode.outcome': '操作结果', 'episode.outcomeDefault': '— 未标注 —',
       'episode.manipType': '操作类型', 'episode.manipTypeDefault': '— 未标注 —',
@@ -661,17 +571,6 @@ def generate_panel_html(
       'dim.delta_fn': 'Δ法向', 'dim.delta_fs': 'Δ剪切', 'dim.friction': '摩擦',
       'dim.flow_mag': '流速', 'dim.flow_dir': '流向', 'dim.deform_rate': '形变速',
       'dim.transition': '相变',
-      // Tactile Image Sequence i18n
-      'tactileImage.title': '触觉图像序列',
-      'tactileImage.play': '播放',
-      'tactileImage.pause': '暂停',
-      'tactileImage.frame': '帧',
-      'tactileImage.noSpatialData': '该传感器无空间分辨率数据',
-      'tactileImage.matrixHeatmap': 'Matrix Heatmap Visualization',
-      'tactileImage.imageSequence': 'Image Sequence',
-      'tactileImage.sensorType': '传感器类型',
-      'tactileImage.availableData': '可用数据类型',
-      'tactileImage.noData': '无图像/矩阵数据',
     }},
     'en': {{
       'app.title': 'TLabel Tactile Annotation',
@@ -693,14 +592,6 @@ def generate_panel_html(
       'export.btn_export': '📦 Export as FTP-1 Zarr', 'export.result_title': '📋 Export Result',
       'export.format_ref': '📖 MTTS Zarr Format Reference', 'export.format_note': '💡 Exported .zarr can be loaded directly by FTP-1',
       'export.preset_gripper': 'Preset: Gripper [0,1]', 'export.preset_three': 'Preset: 3-Finger [0,1,2]', 'export.preset_five': 'Preset: 5-Finger [0-4]',
-      'export.lerobot_title': 'LeRobot Format Export',
-      'export.lerobot_desc': 'Write annotations back to LeRobot dataset Parquet files, update meta/info.json.',
-      'export.lerobot_tactile_field': 'Tactile Field',
-      'export.lerobot_action_field': 'Action Field',
-      'export.lerobot_overwrite': 'Overwrite existing',
-      'export.lerobot_btn': '📦 Export as LeRobot Parquet',
-      'export.lerobot_ref': '📖 LeRobot Format Reference',
-      'export.lerobot_note': '💡 Export writes TLabel annotations into LeRobot dataset Parquet files',
       'episode.title': 'Episode Annotation', 'episode.desc': 'Add semantic labels for the entire interaction episode. Results are saved to episode_info and exported with data.',
       'episode.outcome': 'Outcome', 'episode.outcomeDefault': '— Not labeled —',
       'episode.manipType': 'Manipulation Type', 'episode.manipTypeDefault': '— Not labeled —',
@@ -753,17 +644,6 @@ def generate_panel_html(
       'dim.delta_fn': 'ΔNormal', 'dim.delta_fs': 'ΔShear', 'dim.friction': 'Friction',
       'dim.flow_mag': 'Flow', 'dim.flow_dir': 'Flow Dir', 'dim.deform_rate': 'Def Rate',
       'dim.transition': 'Transition',
-      // Tactile Image Sequence i18n
-      'tactileImage.title': 'Tactile Image Sequence',
-      'tactileImage.play': 'Play',
-      'tactileImage.pause': 'Pause',
-      'tactileImage.frame': 'Frame',
-      'tactileImage.noSpatialData': 'This sensor has no spatial resolution data',
-      'tactileImage.matrixHeatmap': 'Matrix Heatmap Visualization',
-      'tactileImage.imageSequence': 'Image Sequence',
-      'tactileImage.sensorType': 'Sensor Type',
-      'tactileImage.availableData': 'Available Data',
-      'tactileImage.noData': 'No image/matrix data',
     }}
   }};
 
@@ -859,12 +739,20 @@ def generate_panel_html(
     // Radar
     drawRadar(tv2);
 
+    // Tactile Image (v0.12)
+    const imgEl = document.getElementById(tid + '-tactile-img');
+    const noImgEl = document.getElementById(tid + '-no-image');
+    if (tactileImages && tactileImages[idx]) {{
+      imgEl.src = tactileImages[idx];
+      imgEl.style.display = 'block';
+      noImgEl.style.display = 'none';
+    }} else {{
+      imgEl.style.display = 'none';
+      noImgEl.style.display = 'block';
+    }}
+
     // Timeline marker
     drawTimeline();
-
-    // Sync tactile image viewer with main timeline
-    var tactileImgViewer = window['_tlabel_' + tid + '_tactileImg'];
-    if (tactileImgViewer) tactileImgViewer.seekFrame(idx);
   }}
 
   // ===== Radar Chart =====
@@ -1206,33 +1094,6 @@ def generate_panel_html(
     resultContent.textContent = JSON.stringify(summary, null, 2);
   }}
 
-
-  // ===== LeRobot Export =====
-  function handleLeRobotExport() {{
-    const tactileField = document.getElementById(tid + '-lerobot-tactile-field').value || 'observation.tactile';
-    const actionField = document.getElementById(tid + '-lerobot-action-field').value || 'action';
-    const overwrite = document.getElementById(tid + '-lerobot-overwrite').checked;
-    const status = document.getElementById(tid + '-lerobot-status');
-    const resultDiv = document.getElementById(tid + '-lerobot-result');
-    const resultContent = document.getElementById(tid + '-lerobot-result-content');
-
-    status.textContent = currentLang === 'zh-CN' ? '⏳ 正在准备导出...' : '⏳ Preparing export...';
-
-    const nFrames = (data.frames || []).length;
-    const summary = {{
-      format: 'lerobot',
-      tactile_field: tactileField,
-      action_field: actionField,
-      overwrite: overwrite,
-      frames: nFrames,
-      python_command: 'from tlabel.converters.lerobot import tlabel_to_lerobot\\n\\ntlabel_to_lerobot(\\n  "annotations.json",\\n  "lerobot_dataset/",\\n  tactile_field="' + tactileField + '",\\n  action_field="' + actionField + '",\\n  overwrite=' + str(overwrite) + ',\\n)'
-    }};
-
-    status.textContent = currentLang === 'zh-CN' ? '✅ 导出预览已生成' : '✅ Export preview ready';
-    resultDiv.style.display = 'block';
-    resultContent.textContent = JSON.stringify(summary, null, 2);
-  }}
-
   // ===== Lang Toggle =====
   function toggleLang() {{
     currentLang = currentLang === 'zh-CN' ? 'en' : 'zh-CN';
@@ -1428,369 +1289,6 @@ def generate_panel_html(
     container.innerHTML = html;
   }}
 
-  // ===== Tactile Image Sequence Viewer =====
-  (function() {{
-    var imgCanvas = document.getElementById(tid + '-tactile_image_canvas');
-    var playBtn = document.getElementById(tid + '-tactile-play-btn');
-    var frameLabel = document.getElementById(tid + '-tactile-frame-label');
-    var progressBar = document.getElementById(tid + '-tactile-progress-bar');
-    var progressThumb = document.getElementById(tid + '-tactile-progress-thumb');
-    var progressWrap = document.getElementById(tid + '-tactile-progress-wrap');
-    var speedSelect = document.getElementById(tid + '-tactile-speed-select');
-    var modeLabel = document.getElementById(tid + '-tactile-image-mode-label');
-
-    if (!imgCanvas) return;
-
-    // Detect data type
-    var tactileImages = data.tactile_images || data.images || null;
-    var pressureMap = data.pressure_map || null;
-    var sensorType = (data.sensor_info && data.sensor_info.type) || 'unknown';
-
-    // Determine visualization mode
-    var vizMode = 'none';
-    var frameData = [];
-    var matrixData = [];
-
-    if (tactileImages && Array.isArray(tactileImages) && tactileImages.length > 0) {{
-      var firstFrame = tactileImages[0];
-      if (firstFrame && (Array.isArray(firstFrame) || (firstFrame.length !== undefined && firstFrame.length > 0))) {{
-        vizMode = 'image';
-        frameData = tactileImages;
-        modeLabel.textContent = t('tactileImage.imageSequence');
-      }}
-    }} else if (pressureMap && Array.isArray(pressureMap) && pressureMap.length > 0) {{
-      var firstMatrix = pressureMap[0];
-      if (firstMatrix && Array.isArray(firstMatrix) && firstMatrix.length > 0) {{
-        vizMode = 'matrix';
-        matrixData = pressureMap;
-        modeLabel.textContent = t('tactileImage.matrixHeatmap');
-      }}
-    }}
-
-    var ps = {{ playing: false, currentFrame: 0, totalFrames: 0, animId: null, lastTime: 0 }};
-
-    if (vizMode === 'image') {{
-      ps.totalFrames = frameData.length;
-    }} else if (vizMode === 'matrix') {{
-      ps.totalFrames = matrixData.length;
-    }} else {{
-      ps.totalFrames = 0;
-    }}
-
-    // Viridis colormap approximation
-    function viridis(t01) {{
-      t01 = Math.max(0, Math.min(1, t01));
-      var stops = [
-        [0.0, 68, 1, 84],
-        [0.25, 60, 80, 130],
-        [0.5, 33, 145, 97],
-        [0.75, 147, 210, 58],
-        [1.0, 253, 231, 37]
-      ];
-      var i = 0;
-      for (i = 0; i < stops.length - 1; i++) {{
-        if (t01 <= stops[i + 1][0]) break;
-      }}
-      var s0 = stops[i], s1 = stops[Math.min(i + 1, stops.length - 1)];
-      var f = (s1[0] - s0[0]) < 1e-8 ? 0 : (t01 - s0[0]) / (s1[0] - s0[0]);
-      return [
-        Math.round(s0[1] + f * (s1[1] - s0[1])),
-        Math.round(s0[2] + f * (s1[2] - s0[2])),
-        Math.round(s0[3] + f * (s1[3] - s0[3]))
-      ];
-    }}
-
-    function renderImageFrame(frameIdx) {{
-      var ctx = imgCanvas.getContext('2d');
-      var W = imgCanvas.width, H = imgCanvas.height;
-      ctx.clearRect(0, 0, W, H);
-
-      if (vizMode === 'none') {{
-        // Level 3: No spatial data
-        var bgColor = isDark ? '#1f2335' : '#e9ecef';
-        var textColor = isDark ? '#565f89' : '#868e96';
-        ctx.fillStyle = bgColor;
-        ctx.fillRect(0, 0, W, H);
-        ctx.fillStyle = textColor;
-        ctx.font = '14px -apple-system, BlinkMacSystemFont, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(t('tactileImage.noSpatialData'), W / 2, H / 2 - 20);
-        ctx.font = '12px -apple-system, BlinkMacSystemFont, sans-serif';
-        ctx.fillText(t('tactileImage.sensorType') + ': ' + sensorType, W / 2, H / 2 + 10);
-        // Show available data types
-        var frames = data.frames || [];
-        var availableFields = [];
-        if (frames.length > 0 && frames[0].tlabel_v2) {{
-          var keys = Object.keys(frames[0].tlabel_v2);
-          for (var ki = 0; ki < keys.length && availableFields.length < 8; ki++) {{
-            var k = keys[ki];
-            var hasData = false;
-            for (var fi = 0; fi < Math.min(frames.length, 10); fi++) {{
-              var v = (frames[fi].tlabel_v2 || {{}})[k];
-              if (v !== undefined && v !== null && v !== 0) {{ hasData = true; break; }}
-            }}
-            if (hasData) availableFields.push(k);
-          }}
-        }}
-        if (availableFields.length > 0) {{
-          ctx.fillText(t('tactileImage.availableData') + ': ' + availableFields.join(', '), W / 2, H / 2 + 35);
-        }}
-        return;
-      }}
-
-      if (vizMode === 'image') {{
-        var frame = frameData[frameIdx];
-        if (!frame) return;
-        if (Array.isArray(frame) && frame.length > 0) {{
-          if (Array.isArray(frame[0])) {{
-            if (Array.isArray(frame[0][0])) {{
-              // RGB: frame[h][w][3]
-              var imgH = frame.length;
-              var imgW = frame[0].length;
-              var scale = Math.min(W / imgW, H / imgH) * 0.9;
-              var drawW = imgW * scale;
-              var drawH = imgH * scale;
-              var offsetX = (W - drawW) / 2;
-              var offsetY = (H - drawH) / 2;
-              var imgData = ctx.createImageData(imgW, imgH);
-              for (var y = 0; y < imgH; y++) {{
-                for (var x = 0; x < imgW; x++) {{
-                  var px = frame[y][x];
-                  var idx = (y * imgW + x) * 4;
-                  if (Array.isArray(px) && px.length >= 3) {{
-                    imgData.data[idx] = px[0];
-                    imgData.data[idx + 1] = px[1];
-                    imgData.data[idx + 2] = px[2];
-                    imgData.data[idx + 3] = 255;
-                  }} else {{
-                    var v = typeof px === 'number' ? px : 128;
-                    imgData.data[idx] = v;
-                    imgData.data[idx + 1] = v;
-                    imgData.data[idx + 2] = v;
-                    imgData.data[idx + 3] = 255;
-                  }}
-                }}
-              }}
-              var offscreen = document.createElement('canvas');
-              offscreen.width = imgW;
-              offscreen.height = imgH;
-              offscreen.getContext('2d').putImageData(imgData, 0, 0);
-              ctx.imageSmoothingEnabled = false;
-              ctx.fillStyle = isDark ? '#1a1b26' : '#ffffff';
-              ctx.fillRect(0, 0, W, H);
-              ctx.drawImage(offscreen, offsetX, offsetY, drawW, drawH);
-            }} else {{
-              // Grayscale 2D: frame[h][w]
-              var imgH = frame.length;
-              var imgW = frame[0].length;
-              var scale = Math.min(W / imgW, H / imgH) * 0.9;
-              var drawW = imgW * scale;
-              var drawH = imgH * scale;
-              var offsetX = (W - drawW) / 2;
-              var offsetY = (H - drawH) / 2;
-              var imgData = ctx.createImageData(imgW, imgH);
-              for (var y = 0; y < imgH; y++) {{
-                for (var x = 0; x < imgW; x++) {{
-                  var v = Math.max(0, Math.min(255, frame[y][x] | 0));
-                  var idx = (y * imgW + x) * 4;
-                  imgData.data[idx] = v;
-                  imgData.data[idx + 1] = v;
-                  imgData.data[idx + 2] = v;
-                  imgData.data[idx + 3] = 255;
-                }}
-              }}
-              var offscreen = document.createElement('canvas');
-              offscreen.width = imgW;
-              offscreen.height = imgH;
-              offscreen.getContext('2d').putImageData(imgData, 0, 0);
-              ctx.imageSmoothingEnabled = false;
-              ctx.fillStyle = isDark ? '#1a1b26' : '#ffffff';
-              ctx.fillRect(0, 0, W, H);
-              ctx.drawImage(offscreen, offsetX, offsetY, drawW, drawH);
-            }}
-          }}
-        }}
-      }} else if (vizMode === 'matrix') {{
-        var matrix = matrixData[frameIdx];
-        if (!matrix || !matrix.length) return;
-        var rows = matrix.length;
-        var cols = matrix[0].length || 0;
-        if (rows === 0 || cols === 0) return;
-
-        // Find min/max
-        var minVal = Infinity, maxVal = -Infinity;
-        for (var r = 0; r < rows; r++) {{
-          for (var c = 0; c < cols; c++) {{
-            var v = matrix[r][c];
-            if (v < minVal) minVal = v;
-            if (v > maxVal) maxVal = v;
-          }}
-        }}
-
-        var bgColor = isDark ? '#1a1b26' : '#ffffff';
-        ctx.fillStyle = bgColor;
-        ctx.fillRect(0, 0, W, H);
-
-        // Draw heatmap
-        var margin = 30;
-        var cellW = (W - margin * 2) / cols;
-        var cellH = (H - margin * 2) / rows;
-        var cellSize = Math.min(cellW, cellH);
-        var offsetX = (W - cellSize * cols) / 2;
-        var offsetY = (H - cellSize * rows) / 2;
-
-        for (var r = 0; r < rows; r++) {{
-          for (var c = 0; c < cols; c++) {{
-            var v = matrix[r][c];
-            var norm = (v - minVal) / (maxVal - minVal + 1e-8);
-            var rgb = viridis(norm);
-            ctx.fillStyle = 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ')';
-            ctx.fillRect(offsetX + c * cellSize, offsetY + r * cellSize, cellSize - 0.5, cellSize - 0.5);
-          }}
-        }}
-
-        // Axis labels for small matrices
-        if (rows <= 32 && cols <= 32) {{
-          ctx.fillStyle = isDark ? '#565f89' : '#868e96';
-          ctx.font = '10px monospace';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'top';
-          if (cols <= 16) {{
-            for (var c = 0; c < cols; c++) {{
-              ctx.fillText('' + c, offsetX + c * cellSize + cellSize / 2, offsetY + rows * cellSize + 4);
-            }}
-          }}
-          ctx.textAlign = 'right';
-          ctx.textBaseline = 'middle';
-          if (rows <= 16) {{
-            for (var r = 0; r < rows; r++) {{
-              ctx.fillText('' + r, offsetX - 4, offsetY + r * cellSize + cellSize / 2);
-            }}
-          }}
-        }}
-
-        // Colorbar
-        var barW = 12, barH = H - margin * 2;
-        var barX = W - margin - barW - 10;
-        var barY = margin;
-        for (var i = 0; i < barH; i++) {{
-          var t01 = 1 - i / barH;
-          var rgb = viridis(t01);
-          ctx.fillStyle = 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ')';
-          ctx.fillRect(barX, barY + i, barW, 1);
-        }}
-        ctx.fillStyle = isDark ? '#565f89' : '#868e96';
-        ctx.font = '9px monospace';
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'top';
-        ctx.fillText(maxVal.toFixed(2), barX + barW + 3, barY);
-        ctx.textBaseline = 'bottom';
-        ctx.fillText(minVal.toFixed(2), barX + barW + 3, barY + barH);
-
-        // Label
-        ctx.fillStyle = isDark ? '#565f89' : '#868e96';
-        ctx.font = '11px -apple-system, BlinkMacSystemFont, sans-serif';
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'top';
-        ctx.fillText(t('tactileImage.matrixHeatmap') + ' (' + rows + '\u00d7' + cols + ')', offsetX, 8);
-      }}
-    }}
-
-    function updatePlaybackUI() {{
-      var f = ps.currentFrame;
-      var total = ps.totalFrames;
-      frameLabel.textContent = 'Frame ' + f + ' / ' + (total > 0 ? total - 1 : 0);
-      var pct = total > 1 ? (f / (total - 1)) * 100 : 0;
-      progressBar.style.width = pct + '%';
-      progressThumb.style.left = pct + '%';
-    }}
-
-    function seekFrame(frameIdx) {{
-      frameIdx = Math.max(0, Math.min(ps.totalFrames - 1, frameIdx));
-      ps.currentFrame = frameIdx;
-      renderImageFrame(frameIdx);
-      updatePlaybackUI();
-      // Sync with main timeline
-      if (vizMode !== 'none') {{
-        var frames = data.frames || [];
-        if (frameIdx < frames.length) showFrame(frameIdx);
-      }}
-    }}
-
-    function playTick(timestamp) {{
-      if (!ps.playing) return;
-      var speed = parseFloat(speedSelect.value) || 1;
-      var interval = 100 / speed;
-      if (timestamp - ps.lastTime >= interval) {{
-        ps.lastTime = timestamp;
-        ps.currentFrame++;
-        if (ps.currentFrame >= ps.totalFrames) {{
-          ps.currentFrame = 0;
-        }}
-        renderImageFrame(ps.currentFrame);
-        updatePlaybackUI();
-      }}
-      ps.animId = requestAnimationFrame(playTick);
-    }}
-
-    function togglePlay() {{
-      ps.playing = !ps.playing;
-      if (ps.playing) {{
-        playBtn.textContent = '\u23f8 ' + t('tactileImage.pause');
-        ps.lastTime = performance.now();
-        ps.animId = requestAnimationFrame(playTick);
-      }} else {{
-        playBtn.textContent = '\u25b6 ' + t('tactileImage.play');
-        if (ps.animId) cancelAnimationFrame(ps.animId);
-      }}
-    }}
-
-    // Progress bar drag (mouse)
-    var dragging = false;
-    progressWrap.addEventListener('mousedown', function(e) {{
-      dragging = true;
-      handleSeek(e);
-    }});
-    document.addEventListener('mousemove', function(e) {{
-      if (dragging) handleSeek(e);
-    }});
-    document.addEventListener('mouseup', function() {{ dragging = false; }});
-    // Touch support
-    progressWrap.addEventListener('touchstart', function(e) {{
-      dragging = true;
-      handleSeek(e.touches[0]);
-    }});
-    document.addEventListener('touchmove', function(e) {{
-      if (dragging) handleSeek(e.touches[0]);
-    }});
-    document.addEventListener('touchend', function() {{ dragging = false; }});
-
-    function handleSeek(e) {{
-      var rect = progressWrap.getBoundingClientRect();
-      var ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-      var frameIdx = Math.round(ratio * (ps.totalFrames - 1));
-      seekFrame(frameIdx);
-    }}
-
-    playBtn.addEventListener('click', togglePlay);
-
-    // Initial render
-    renderImageFrame(0);
-    updatePlaybackUI();
-
-    // Expose for sync with main timeline and dark mode
-    window['_tlabel_' + tid + '_tactileImg'] = {{
-      seekFrame: seekFrame,
-      renderFrame: renderImageFrame,
-      stop: function() {{
-        ps.playing = false;
-        if (ps.animId) cancelAnimationFrame(ps.animId);
-        playBtn.textContent = '\u25b6 ' + t('tactileImage.play');
-      }}
-    }};
-  }})();
-
   // ===== Event Listeners =====
   document.getElementById(tid + '-lang-btn').addEventListener('click', toggleLang);
   document.getElementById(tid + '-btn-prev').addEventListener('click', prevFrame);
@@ -1812,9 +1310,6 @@ def generate_panel_html(
   if (ftp1PresetThree) ftp1PresetThree.addEventListener('click', () => setAreaPreset([0, 1, 2], 'three'));
   const ftp1PresetFive = document.getElementById(tid + '-ftp1-preset-five');
   if (ftp1PresetFive) ftp1PresetFive.addEventListener('click', () => setAreaPreset([0, 1, 2, 3, 4], 'five'));
-  const lerobotExportBtn = document.getElementById(tid + '-lerobot-export-btn');
-  if (lerobotExportBtn) lerobotExportBtn.addEventListener('click', handleLeRobotExport);
-
 
   // ===== Dark Mode =====
   let isDark = false;
@@ -1851,13 +1346,6 @@ def generate_panel_html(
       rootEl.querySelectorAll('canvas').forEach(el => {{
         el.style.background = '#24283b';
       }});
-      // Tactile image section dark mode
-      var tactileSection = document.getElementById(tid + '-tactile-image-section');
-      if (tactileSection) {{
-        tactileSection.style.background = '#1f2335';
-      }}
-      var tactileProgressBg = document.getElementById(tid + '-tactile-progress-bg');
-      if (tactileProgressBg) tactileProgressBg.style.background = '#3b4261';
       rootEl.querySelectorAll('button').forEach(el => {{
         if (!el.style.background.includes('gradient') && !el.style.background.includes('#e85d75')) {{
           el.style.background = '#24283b'; el.style.color = '#c0caf5'; el.style.borderColor = '#3b4261';
@@ -1872,9 +1360,6 @@ def generate_panel_html(
       // Re-render quality and stats tabs for dark mode colors
       renderQuality();
       renderDescribe();
-      // Re-render tactile image canvas for dark mode
-      var tactileImgV = window['_tlabel_' + tid + '_tactileImg'];
-      if (tactileImgV) tactileImgV.renderFrame(0);
     }} else {{
       btn.textContent = '🌙';
       rootEl.style.background = '#f8f9fa';
@@ -1884,9 +1369,6 @@ def generate_panel_html(
       // Re-render quality and stats tabs for light mode colors
       renderQuality();
       renderDescribe();
-      // Re-render tactile image canvas for light mode
-      var tactileImgV2 = window['_tlabel_' + tid + '_tactileImg'];
-      if (tactileImgV2) tactileImgV2.renderFrame(0);
     }}
   }}
 
@@ -1930,16 +1412,13 @@ def generate_panel_html(
   }});
 
   // ===== Init =====
-  // Wrap in setTimeout to ensure DOM is ready in Jupyter environment
-  setTimeout(function() {{
-    updateStats();
-    applyI18n();
-    showFrame(0);
-    initEpisodeForm();
-    renderQuality();
-    renderDescribe();
-    initFTP1Areas();
-  }}, 10);
+  updateStats();
+  applyI18n();
+  showFrame(0);
+  initEpisodeForm();
+  renderQuality();
+  renderDescribe();
+  initFTP1Areas();
 
   window['_tlabel_' + tid] = {{
     prevFrame, nextFrame, jumpTo, batchPatch, undo,
