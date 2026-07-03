@@ -26,6 +26,30 @@
 
 ## 🆕 更新亮点
 
+### v0.11.0 — 触觉图像可视化 & 数据增强
+**Canvas 渲染的触觉图像回放、纯 numpy 数据增强、AnyTouch 多传感器支持。**
+- 🎬 **触觉图像序列可视化**：Canvas 渲染播放，三级策略（实拍图像 / 热力图 / 占位），播放/暂停/拖动/变速控制，暗色模式 & 国际化
+- 📈 **数据增强模块**：5 种方法（`time_warp`、`noise_inject`、`random_crop`、`force_scale`、`frame_dropout`），零新依赖（纯 numpy），三级 API
+- 🔌 **TacQuad 适配器**：GeWu-Lab AnyTouch (ICLR 2025) — GelSight Mini、DIGIT、DuraGel + 可选 Tac3D 力场
+- 📦 `pip install tlabel[tacquad]`
+
+```python
+import tlabel
+
+# 数据增强 — 一行搞定
+data = tlabel.demo('gelsight')
+augmented = tlabel.augment(data, methods=["time_warp", "noise_inject"], seed=42)
+
+# TacQuad 多传感器加载
+data = tlabel.load("anytouch_dataset/", format="tacquad", sensor="digit")
+```
+
+### v0.10.2 — UniVTAC 适配器
+**跨数据集触觉互操作 — UniVTAC 基准测试支持。**
+- 🆕 **UniVTAC 适配器**：加载 UniVTAC HDF5 数据集，自动识别（双 GelSight Mini，22 维）
+- 🔍 **智能 HDF5 检测**：自动区分 PaXini 与 UniVTAC
+- 📦 `pip install tlabel[univtac]`
+
 ### v0.8.0 — FTP-1 / MTTS 导出
 **标注数据一键导出为 FTP-1 的 MTTS Zarr 格式，直接用于触觉基础模型微调。**
 - 🚀 **FTP-1 转换器**：`tlabel_to_ftp1()` / `batch_to_ftp1()`，一行代码导出 Zarr
@@ -53,6 +77,8 @@ data.export_ftp1("output.zarr",
 <details>
 <summary><b>历史版本</b></summary>
 
+- **v0.10.3** — VTouch/YCB-Slide 适配器注册、LeRobot 导出面板、PyPI 修复
+- **v0.9.0** — 面板第一阶段（5 项 UI 功能）、Exporter 插件注册表（7 种格式）
 - **v0.4.2** — 完整国际化：双语面板UI（中文/英文）、本地化错误提示和文档
 - **v0.4.1** — 面板UI集成：Tab导航、批量修正工具、面板内一键导出按钮
 - **v0.4.0** — 交互式面板：彩色时间轴、22维雷达图、帧详情编辑器
@@ -123,6 +149,8 @@ import tlabel
 data = tlabel.load("gelsight_force.pkl")     # GelSight / DIGIT
 data = tlabel.load("paxini_episode.h5")      # 帕西尼
 data = tlabel.load("daimon_data/")           # 戴盟（目录或 .parquet）
+data = tlabel.load("univtac_episode.hdf5")   # UniVTAC（双 GelSight Mini）
+data = tlabel.load("anytouch_dataset/")      # TacQuad / AnyTouch (ICLR 2025)
 ```
 
 ### 标注与导出
@@ -138,6 +166,27 @@ data.export("output.csv")    # 平面CSV，pandas/Excel友好
 ```
 
 完整闭环：**加载 → 审核 → 修正 → 导出** 🔁
+
+### 数据增强
+
+```python
+import tlabel
+
+data = tlabel.demo('gelsight')
+
+# 快速增强 — 默认：time_warp + noise_inject
+augmented = tlabel.augment(data)
+
+# 细粒度控制
+from tlabel.augment import AugmentEngine
+engine = AugmentEngine(seed=42)
+augmented = engine.augment(data, methods=["time_warp", "noise_inject", "random_crop"])
+
+# 或通过 TLabelData 方法
+augmented = data.augment(methods=["force_scale", "frame_dropout"], seed=42)
+```
+
+5 种内置方法：`time_warp`、`noise_inject`、`random_crop`、`force_scale`、`frame_dropout` — 全部纯 numpy，零新依赖。
 
 ### 导出到 FTP-1（基础模型就绪）
 
@@ -214,6 +263,9 @@ data.review()
 | **DIGIT** | 视觉型 | `.pkl` | 22 | ✅ | ✅ 稳定 |
 | **戴盟 DM-TacClaw** | 多模态 | `.parquet` / 目录 | 22（有视频）/ 20（无视频） | ✅ / — | ✅ 稳定 |
 | **帕西尼 PXCap** | 力觉阵列 | `.h5` / `.hdf5` | 20 | — | ✅ 稳定 |
+| **UniVTAC** | 视觉型（双 GelSight Mini） | `.hdf5` / `.h5` | 22 | ✅ | ✅ 新增 |
+| **TacQuad (AnyTouch)** | 视觉型多传感器 | 目录 | 22 | ✅ | ✅ 新增 |
+| **VTouch** | 视觉型 | `.pkl` | 22 | ✅ | ✅ 新增 |
 
 > 力觉型传感器（帕西尼）没有光学图像→20维；图像型→完整22维；戴盟在没有视频文件时自动降级到20维。不会报错，不会出幺蛾子。
 
@@ -236,6 +288,9 @@ data.review()
 pip install tlabel[gelsight]   # GelSight / DIGIT → opencv-python
 pip install tlabel[paxini]     # 帕西尼 → h5py
 pip install tlabel[daimon]     # 戴盟 → pyarrow + opencv-python
+pip install tlabel[univtac]    # UniVTAC → h5py
+pip install tlabel[tacquad]    # TacQuad / AnyTouch → (纯 numpy)
+pip install tlabel[vtouch]     # VTouch → opencv-python
 pip install tlabel[ftp1]       # FTP-1/MTTS 导出 → zarr
 pip install tlabel[all]        # 全部安装
 ```
@@ -250,6 +305,7 @@ pip install tlabel[all]        # 全部安装
 
 ## 🎨 面板功能
 
+- 🎬 **触觉图像序列可视化**：Canvas 渲染播放，三级策略（实拍图像 / 热力图 / 占位），播放/暂停/拖动/变速控制，暗色模式
 - 🎨 **彩色时间轴**：绿=接触 · 红=滑移 · 灰=空闲，模式一眼就看出来
 - 🕸 **22维雷达图**：完整特征向量一览，中英双语标签
 - ✏️ **帧修正 & 批量修正**：改一帧还是改一串，你说了算
@@ -332,6 +388,10 @@ frame.patch("contact", 0)                         # 单帧（联动=True）
 frame.patch("contact", 0, cascade=False)           # 不联动
 data.batch_patch(10, 50, "contact", 0)             # 区间批量修正
 
+# ── 数据增强 ──
+augmented = tlabel.augment(data)                   # 默认增强
+augmented = tlabel.augment(data, methods=["time_warp", "noise_inject"], seed=42)
+
 # ── 预标注 ──
 from tlabel.predict import PredictEngine
 engine = PredictEngine()
@@ -393,7 +453,10 @@ tlabel/
 │   ├── base.py           # BaseAdapter 接口
 │   ├── gelsight.py       # GelSight Mini / DIGIT
 │   ├── paxini.py         # 帕西尼 PXCap
-│   └── daimon.py         # 戴盟 DM-TacClaw（+视频解码）
+│   ├── daimon.py         # 戴盟 DM-TacClaw（+视频解码）
+│   └── tacquad.py        # TacQuad / AnyTouch (ICLR 2025)
+├── augment/
+│   └── engine.py         # 数据增强（time_warp, noise, crop, scale, dropout）
 ├── converters/
 │   ├── lerobot.py        # LeRobot 格式转换器
 │   └── ftp1.py           # FTP-1/MTTS Zarr 格式转换器

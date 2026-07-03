@@ -26,6 +26,24 @@
 
 ## 🆕 What's New
 
+### v0.11.0 — Tactile Image Visualization & Data Augmentation
+**Canvas-based tactile image playback, pure-numpy augmentation, and AnyTouch multi-sensor support.**
+- 🎬 **Tactile Image Sequence Visualization**: Canvas-rendered playback with 3-level strategy (real image / heatmap / placeholder), play/pause/seek/speed controls, dark mode & i18n
+- 📈 **Data Augmentation Module**: 5 methods (`time_warp`, `noise_inject`, `random_crop`, `force_scale`, `frame_dropout`), zero new deps (pure numpy), 3-level API
+- 🔌 **TacQuad Adapter**: GeWu-Lab AnyTouch (ICLR 2025) — GelSight Mini, DIGIT, DuraGel + optional Tac3D force field
+- 📦 `pip install tlabel[tacquad]`
+
+```python
+import tlabel
+
+# Data augmentation — one-liner
+data = tlabel.demo('gelsight')
+augmented = tlabel.augment(data, methods=["time_warp", "noise_inject"], seed=42)
+
+# TacQuad multi-sensor loading
+data = tlabel.load("anytouch_dataset/", format="tacquad", sensor="digit")
+```
+
 ### v0.10.2 — UniVTAC Adapter
 **Cross-dataset tactile interoperability — UniVTAC benchmark support.**
 - 🆕 **UniVTAC Adapter**: Load UniVTAC HDF5 datasets with auto-detection (dual GelSight Mini, 22 dims)
@@ -59,6 +77,8 @@ data.export_ftp1("output.zarr",
 <details>
 <summary><b>Previous releases</b></summary>
 
+- **v0.10.3** — VTouch/YCB-Slide adapter registration, LeRobot export panel, PyPI fixes
+- **v0.9.0** — Panel Phase 1 (5 UI features), Exporter Plugin Registry (7 formats)
 - **v0.4.2** — Full i18n: bilingual Panel UI (中文/English), localized error messages, docs in both languages
 - **v0.4.1** — Panel UI integration: Tab navigation, batch correction tool, export buttons directly in panel
 - **v0.4.0** — Interactive Panel: color-coded timeline, 22-dim radar chart, frame detail editor
@@ -130,6 +150,7 @@ data = tlabel.load("gelsight_force.pkl")     # GelSight / DIGIT
 data = tlabel.load("paxini_episode.h5")      # PaXini
 data = tlabel.load("daimon_data/")           # Daimon (directory or .parquet)
 data = tlabel.load("univtac_episode.hdf5")   # UniVTAC (dual GelSight Mini)
+data = tlabel.load("anytouch_dataset/")      # TacQuad / AnyTouch (ICLR 2025)
 ```
 
 ### Annotate & Export
@@ -145,6 +166,27 @@ data.export("output.csv")    # Flat CSV for pandas/Excel
 ```
 
 Full loop: **load → review → correct → export** 🔁
+
+### Data Augmentation
+
+```python
+import tlabel
+
+data = tlabel.demo('gelsight')
+
+# Quick augment — default: time_warp + noise_inject
+augmented = tlabel.augment(data)
+
+# Fine-grained control
+from tlabel.augment import AugmentEngine
+engine = AugmentEngine(seed=42)
+augmented = engine.augment(data, methods=["time_warp", "noise_inject", "random_crop"])
+
+# Or via TLabelData method
+augmented = data.augment(methods=["force_scale", "frame_dropout"], seed=42)
+```
+
+5 built-in methods: `time_warp`, `noise_inject`, `random_crop`, `force_scale`, `frame_dropout` — all pure numpy, zero new dependencies.
 
 ### Export to FTP-1 (Foundation Model Ready)
 
@@ -222,6 +264,8 @@ data.review()
 | **Daimon DM-TacClaw** | Multimodal | `.parquet` / dir | 22 (video) / 20 (no video) | ✅ / — | ✅ Stable |
 | **PaXini PXCap** | Force array | `.h5` / `.hdf5` | 20 | — | ✅ Stable |
 | **UniVTAC** | Vision-based (Dual GelSight Mini) | `.hdf5` / `.h5` | 22 | ✅ | ✅ New |
+| **TacQuad (AnyTouch)** | Vision-based multi-sensor | directory | 22 | ✅ | ✅ New |
+| **VTouch** | Vision-based | `.pkl` | 22 | ✅ | ✅ New |
 
 > Force-type sensors (PaXini) lack optical images → 20 dims. Image-type → full 22. Daimon gracefully degrades when no video is present. **No errors, no surprises.**
 
@@ -245,6 +289,8 @@ pip install tlabel[gelsight]   # GelSight / DIGIT → opencv-python
 pip install tlabel[paxini]     # PaXini → h5py
 pip install tlabel[daimon]     # Daimon → pyarrow + opencv-python
 pip install tlabel[univtac]    # UniVTAC → h5py
+pip install tlabel[tacquad]    # TacQuad / AnyTouch → (pure numpy)
+pip install tlabel[vtouch]     # VTouch → opencv-python
 pip install tlabel[ftp1]       # FTP-1/MTTS export → zarr
 pip install tlabel[all]        # Everything
 ```
@@ -259,6 +305,7 @@ pip install tlabel[all]        # Everything
 
 ## 🎨 Panel Features
 
+- 🎬 **Tactile image sequence visualization**: Canvas-based playback with 3-level strategy (real image / heatmap / placeholder), play/pause/seek/speed controls, dark mode
 - 🎨 **Color-coded timeline**: green = contact · red = slip · gray = idle — patterns jump out instantly
 - 🕸 **22-dim radar chart**: see the full feature vector at a glance, bilingual labels
 - ✏️ **Frame & batch patching**: fix one frame or a range, your call
@@ -341,6 +388,10 @@ frame.patch("contact", 0)                         # Single frame (cascade=True)
 frame.patch("contact", 0, cascade=False)           # No cascade
 data.batch_patch(10, 50, "contact", 0)             # Range patch
 
+# ── Augmentation ──
+augmented = tlabel.augment(data)                   # Default augmentation
+augmented = tlabel.augment(data, methods=["time_warp", "noise_inject"], seed=42)
+
 # ── Pre-Annotation ──
 from tlabel.predict import PredictEngine
 engine = PredictEngine()
@@ -369,7 +420,7 @@ When `contact` is set to `0`, these fields are automatically zeroed:
 | `delta_force_shear` | always |
 | `contact_area` | always |
 | `contact_transition` | only if value > 0.5 |
-| `manipulation_phase` | → `"idle"` (if not already) |
+| `manipulation_phase` → `"idle"` | if not already |
 
 ---
 
@@ -402,7 +453,10 @@ tlabel/
 │   ├── base.py           # BaseAdapter interface
 │   ├── gelsight.py       # GelSight Mini / DIGIT
 │   ├── paxini.py         # PaXini PXCap
-│   └── daimon.py         # Daimon DM-TacClaw (+ video decoding)
+│   ├── daimon.py         # Daimon DM-TacClaw (+ video decoding)
+│   └── tacquad.py        # TacQuad / AnyTouch (ICLR 2025)
+├── augment/
+│   └── engine.py         # Data augmentation (time_warp, noise, crop, scale, dropout)
 ├── converters/
 │   ├── lerobot.py        # LeRobot format converter
 │   └── ftp1.py           # FTP-1/MTTS Zarr format converter

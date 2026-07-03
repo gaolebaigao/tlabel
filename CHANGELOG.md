@@ -1,5 +1,71 @@
 # Changelog
 
+## [0.11.0] - 2026-07-01
+
+### Added
+- **Tactile Image Sequence Visualization** — Canvas-based tactile image playback in the Panel
+  - 3-level rendering strategy: real image for GelSight/DIGIT, heatmap for PaXini/UniVTAC, placeholder for VTouch
+  - Playback controls: play/pause, frame seek, speed adjustment (0.25x–4x)
+  - Dark mode support + i18n (中文 / English)
+- **Data Augmentation Module** (`tlabel/augment/`) — Pure-numpy data augmentation for tactile sequences
+  - 5 methods: `time_warp`, `noise_inject`, `random_crop`, `force_scale`, `frame_dropout`
+  - Zero new dependencies (pure numpy, no cv2/torch required)
+  - 3-level API: `tlabel.augment()` → `TLabelData.augment()` → `AugmentEngine.augment()`
+  - Reproducible via `seed` parameter
+- **TacQuad Adapter** (`tlabel/adapters/tacquad.py`) — GeWu-Lab AnyTouch (ICLR 2025) multi-sensor dataset support
+  - 3 sensor variants: GelSight Mini, DIGIT, DuraGel (RGB PNG tactile images)
+  - Optional Tac3D force field overlay
+  - CSV metadata parsing with auto-detection
+  - Demo data generator for testing
+  - `pip install tlabel[tacquad]`
+- **VTouch Adapter** — VTouch sensor data support via `tlabel.load()`
+
+### Usage
+```python
+import tlabel
+
+# ── Data Augmentation ──
+data = tlabel.demo('gelsight')
+
+# Quick augment with default settings
+augmented = tlabel.augment(data)
+
+# Fine-grained control
+from tlabel.augment import AugmentEngine
+engine = AugmentEngine(seed=42)
+augmented = engine.augment(data, methods=["time_warp", "noise_inject"])
+
+# Or via TLabelData method
+augmented = data.augment(methods=["force_scale", "frame_dropout"], seed=42)
+
+# ── TacQuad Loading ──
+data = tlabel.load("anytouch_dataset/", format="tacquad")
+data = tlabel.load("anytouch_dataset/", format="tacquad", sensor="digit")
+```
+
+### Changed
+- Version bump: 0.10.3 → 0.11.0
+- Keywords: added tactile, visualization, augmentation, tacquad
+
+## [0.10.3] - 2026-06-30
+
+### Added
+- **VTouch Adapter Registration** — VTouch sensor adapter registered in the adapter registry
+- **YCB-Slide Adapter Registration** — YCB-Slide adapter fully registered for `tlabel.load()` auto-detection
+- **UI: LeRobot Export Panel** — New panel section for exporting data in LeRobot format
+
+### Fixed
+- PyPI publishing fixes (wheel metadata, package discovery)
+
+## [0.10.2] - 2026-06-30
+
+### Added
+- **UniVTAC Adapter** (`tlabel/adapters/univtac.py`) — Cross-dataset tactile interoperability
+  - UniVTAC HDF5 dataset support (dual GelSight Mini, 22 dims)
+  - Smart HDF5 detection: auto-distinguishes PaXini vs UniVTAC by internal structure
+  - `pip install tlabel[univtac]`
+- Auto-detect UniVTAC HDF5 files in `tlabel.load()`
+
 ## [0.10.0] - 2026-06-29
 
 ### Added
@@ -62,7 +128,7 @@ data = tlabel.load("dataset/real", format="ycb_slide", trajectory_id=0)
   - 自动图像缩放至224×224 + uint8/float32归一化
   - 支持追加模式（多Episode合并到同一Zarr）
   - `batch_to_ftp1()` — 批量导出工具
-- **UI 新增"导出"Tab** — 面板新增🚀导出标签
+- **UI 新增“导出”Tab** — 面板新增🚀导出标签
   - FTP-1传感器选择器（7种传感器下拉）
   - 功能区映射可视化配置（21个可勾选槽位）
   - 3种预设按钮（夹爪/三指/五指）
@@ -136,7 +202,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 切换暗色模式后自动重新渲染统计数据
 - **Episode语义标注保存反馈优化**
   - 反馈持续时间从2秒延长至4秒
-  - 反馈信息更详细，显示"Episode标注已保存（将随导出数据一起输出）"
+  - 反馈信息更详细，显示“Episode标注已保存（将随导出数据一起输出）”
   - 保存按钮点击后短暂禁用，防止重复点击
 
 ### Changed
