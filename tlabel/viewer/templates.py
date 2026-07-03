@@ -46,7 +46,7 @@ def generate_panel_html(
   <div style="display:flex;align-items:center;gap:10px;">
     <span style="font-size:20px;">🦞</span>
     <span style="font-size:16px;font-weight:700;color:#e85d75;" data-i18n="app.title">TLabel 触觉标注工具</span>
-    <span style="font-size:10px;color:#868e96;background:#e9ecef;padding:1px 6px;border-radius:4px;">v0.8.0</span>
+    <span style="font-size:10px;color:#868e96;background:#e9ecef;padding:1px 6px;border-radius:4px;">v0.11.1</span>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span style="font-size:12px;color:#868e96;" id="{tid}-sensor-info"></span>
@@ -1225,7 +1225,7 @@ def generate_panel_html(
       action_field: actionField,
       overwrite: overwrite,
       frames: nFrames,
-      python_command: 'from tlabel.converters.lerobot import tlabel_to_lerobot\n\ntlabel_to_lerobot(\n  "annotations.json",\n  "lerobot_dataset/",\n  tactile_field="' + tactileField + '",\n  action_field="' + actionField + '",\n  overwrite=' + str(overwrite) + ',\n)'
+      python_command: 'from tlabel.converters.lerobot import tlabel_to_lerobot\\n\\ntlabel_to_lerobot(\\n  "annotations.json",\\n  "lerobot_dataset/",\\n  tactile_field="' + tactileField + '",\\n  action_field="' + actionField + '",\\n  overwrite=' + str(overwrite) + ',\\n)'
     }};
 
     status.textContent = currentLang === 'zh-CN' ? '✅ 导出预览已生成' : '✅ Export preview ready';
@@ -1930,13 +1930,16 @@ def generate_panel_html(
   }});
 
   // ===== Init =====
-  updateStats();
-  applyI18n();
-  showFrame(0);
-  initEpisodeForm();
-  renderQuality();
-  renderDescribe();
-  initFTP1Areas();
+  // Wrap in setTimeout to ensure DOM is ready in Jupyter environment
+  setTimeout(function() {{
+    updateStats();
+    applyI18n();
+    showFrame(0);
+    initEpisodeForm();
+    renderQuality();
+    renderDescribe();
+    initFTP1Areas();
+  }}, 10);
 
   window['_tlabel_' + tid] = {{
     prevFrame, nextFrame, jumpTo, batchPatch, undo,
