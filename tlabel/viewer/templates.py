@@ -13,6 +13,7 @@ TLabel面板模板生成器 — 生成Jupyter嵌入的HTML+JS+CSS
 
 import json
 from typing import Optional, Dict
+from tlabel._version import __version__
 
 
 def generate_panel_html(
@@ -49,7 +50,7 @@ def generate_panel_html(
   <div style="display:flex;align-items:center;gap:10px;">
     <span style="font-size:20px;">🦞</span>
     <span style="font-size:16px;font-weight:700;color:#e85d75;" data-i18n="app.title">TLabel 触觉标注工具</span>
-    <span style="font-size:10px;color:#868e96;background:#e9ecef;padding:1px 6px;border-radius:4px;">v0.8.0</span>
+    <span style="font-size:10px;color:#868e96;background:#e9ecef;padding:1px 6px;border-radius:4px;">v{__version__}</span>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span style="font-size:12px;color:#868e96;" id="{tid}-sensor-info"></span>
