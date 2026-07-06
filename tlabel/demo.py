@@ -13,7 +13,7 @@ from tlabel.core.types import TLabelData, TLabelFrame
 _DEMO_DIR = Path(__file__).parent / "demo_data"
 
 # 可用的Demo传感器列表
-AVAILABLE_SENSORS = ["gelsight", "digit", "paxini", "daimon", "touchd", "gelsight_images"]
+AVAILABLE_SENSORS = ["gelsight", "digit", "paxini", "daimon", "touchd", "gelsight_images", "primitives_demo"]
 
 
 def _generate_synthetic_tactile_images(num_frames: int = 10) -> list:
@@ -67,9 +67,10 @@ def demo(sensor: Optional[str] = None, **kwargs) -> TLabelData:
     加载内置Demo数据集，快速体验TLabel标注面板
 
     参数:
-        sensor: 传感器类型，可选 "gelsight" / "digit" / "paxini" / "daimon" / "touchd" / "gelsight_images"
+        sensor: 传感器类型，可选 "gelsight" / "digit" / "paxini" / "daimon" / "touchd" / "gelsight_images" / "primitives_demo"
                 不传则默认加载 gelsight demo
                 "gelsight_images" 会加载带触觉图像的demo数据
+                "primitives_demo" 会加载Motor Primitive标注demo（v0.13）
 
     返回:
         TLabelData — 可直接 review() / export()
@@ -80,6 +81,7 @@ def demo(sensor: Optional[str] = None, **kwargs) -> TLabelData:
         data = tlabel.demo('digit')       # DIGIT demo
         data = tlabel.demo('touchd')      # ToucHD-Force demo
         data = tlabel.demo('gelsight_images')  # 带触觉图像的GelSight demo
+        data = tlabel.demo('primitives_demo')  # Motor Primitive 标注 demo
         data.review()                     # Jupyter弹出面板
     """
     if sensor is None:
@@ -136,6 +138,22 @@ def demo(sensor: Optional[str] = None, **kwargs) -> TLabelData:
         capabilities=raw.get("capabilities", {}),
         schema_version=raw.get("schema_version", "0.4.0"),
     )
+
+    # v0.13: 加载 primitive_annotations
+    if "primitive_annotations" in raw:
+        from tlabel.core.primitive import PrimitiveAnnotation
+        for pa_dict in raw["primitive_annotations"]:
+            try:
+                pa = PrimitiveAnnotation(
+                    name=pa_dict["primitive_name"],
+                    start=pa_dict["start_frame"],
+                    end=pa_dict["end_frame"],
+                    confidence=pa_dict.get("confidence", 1.0),
+                    source=pa_dict.get("source", "manual"),
+                )
+                data.primitive_annotations.append(pa)
+            except (ValueError, KeyError):
+                pass
 
     return data
 

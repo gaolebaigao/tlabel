@@ -89,7 +89,9 @@ def _export_csv(data: TLabelData, output_path: str):
         "temporal_deformation_rate", "contact_transition",
     ]
 
-    headers = ["frame_idx", "timestamp_s", "is_first", "is_last", "manipulation_phase", "confidence"] + TLABEL_DIMS
+    # v0.13: 新增primitive_label列
+    headers = ["frame_idx", "timestamp_s", "is_first", "is_last",
+               "manipulation_phase", "confidence", "primitive_label"] + TLABEL_DIMS
 
     with open(path, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
@@ -98,6 +100,13 @@ def _export_csv(data: TLabelData, output_path: str):
         for i, frame in enumerate(data.frames):
             is_first = (i == 0)
             is_last = (i == len(data.frames) - 1)
+            # v0.13: 获取该帧的primitive
+            primitive = ""
+            if hasattr(data, 'primitive_annotations') and data.primitive_annotations:
+                for p in data.primitive_annotations:
+                    if p.start_frame <= frame.frame_idx <= p.end_frame:
+                        primitive = p.primitive_name
+                        break
             row = [
                 frame.frame_idx,
                 frame.timestamp_s,
@@ -105,6 +114,7 @@ def _export_csv(data: TLabelData, output_path: str):
                 is_last,
                 frame.manipulation_phase,
                 frame.confidence,
+                primitive,
             ]
             row.extend([frame.tlabel_v2.get(dim, 0.0) for dim in TLABEL_DIMS])
             writer.writerow(row)

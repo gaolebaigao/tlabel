@@ -287,3 +287,168 @@ class PredictEngine:
             "low_confidence_count": low_conf_count,
             "coverage": {k: round(v / total, 3) for k, v in field_counts.items()},
         }
+
+    # ============================================================
+    # v0.13.0: Motor Primitive 预测
+    # ============================================================
+
+    def predict_primitives(self, data: TLabelData) -> List[Dict]:
+        """
+        基于力/接触信号的规则推断 Motor Primitive
+
+        启发式规则:
+        - force 上升 + contact 建立 → grasp / press
+        - force 稳定 + 位移 → wrap / wipe
+        - force 下降 → release (不标注primitive)
+        - 无接触 + 位移 → reach
+
+        Args:
+            data: TLabelData 实例
+
+        Returns:
+            List of primitive annotation dicts
+        """
+        from tlabel.core.primitive import PRIMITIVE_PRESETS
+
+        if not data.frames or len(data.frames) < 3:
+            return []
+
+        # 提取时序信号
+        forces = []
+        contacts = []
+        deformations = []
+        for f in data.frames:
+            tv2 = f.tlabel_v2
+            forces.append(tv2.get("force_magnitude", 0.0))
+            contacts.append(tv2.get("contact", 0.0))
+            deformations.append(tv2.get("deformation_magnitude", 0.0))
+
+        # 计算力的变化率
+        force_deltas = [0.0]
+        for i in range(1, len(forces)):
+            force_deltas.append(forces[i] - forces[i - 1])
+
+        # 基于时序信号推断每帧的primitive
+        frame_primitives = []
+        for i in range(len(data.frames)):
+            force = forces[i]
+            contact = contacts[i]
+            deform = deformations[i]
+            fd = force_deltas[i]
+
+            # 计算力的趋势（短期平均）
+            window = min(5, i + 1)
+            avg_fd = sum(force_deltas[max(0, i - window + 1):i + 1]) / window
+
+            primitive = None
+            confidence = 0.0
+
+            if contact < 0.3 and force < 0.1:
+                # 无接触、低力 → reach
+                primitive = 'reach'
+                confidence = 0.5
+            elif contact > 0.5:
+                if avg_fd > 0.05:
+                    # 力在上升 → grasp 或 press
+                    if deform > 0.2:
+                        primitive = 'grasp'
+                        confidence = 0.6
+                    else:
+                        primitive = 'press'
+                        confidence = 0.55
+                elif abs(avg_fd) < 0.02 and force > 0.2:
+                    # 力稳定、有接触 → wrap 或 wipe
+                    shear = data.frames[i].tlabel_v2.get("shear_field_magnitude", 0)
+                    if shear > 0.1:
+                        primitive = 'wipe'
+                        confidence = 0.5
+                    else:
+                        primitive = 'wrap'
+                        confidence = 0.5
+                elif avg_fd < -0.05:
+                    # 力在下降 → squeeze（释放前）
+                    primitive = 'squeeze'
+                    confidence = 0.45
+                else:
+                    # 有接触但不明确
+                    primitive = 'grasp'
+                    confidence = 0.35
+
+            frame_primitives.append({
+                'frame_idx': data.frames[i].frame_idx,
+                'primitive': primitive,
+                'confidence': confidence,
+            })
+
+        # 合并连续相同primitive为区间
+        annotations = []
+        current = None
+        for fp in frame_primitives:
+            if fp['primitive'] is None:
+                if current is not None:
+                    annotations.append(current)
+                    current = None
+                continue
+
+            if current is None:
+                current = {
+                    'primitive_name': fp['primitive'],
+                    'start_frame': fp['frame_idx'],
+                    'end_frame': fp['frame_idx'],
+                    'confidence': fp['confidence'],
+                    'source': 'ai_predicted',
+                }
+            elif current['primitive_name'] == fp['primitive']:
+                current['end_frame'] = fp['frame_idx']
+                # 取区间最低置信度
+                current['confidence'] = min(current['confidence'], fp['confidence'])
+            else:
+                annotations.append(current)
+                current = {
+                    'primitive_name': fp['primitive'],
+                    'start_frame': fp['frame_idx'],
+                    'end_frame': fp['frame_idx'],
+                    'confidence': fp['confidence'],
+                    'source': 'ai_predicted',
+                }
+
+        if current is not None:
+            annotations.append(current)
+
+        # 过滤掉太短的区间（< 3帧）和低置信度的
+        annotations = [a for a in annotations
+                       if a['end_frame'] - a['start_frame'] >= 2 and a['confidence'] >= 0.3]
+
+        return annotations
+
+    def apply_primitives(self, data: TLabelData,
+                         min_confidence: float = 0.4) -> int:
+        """
+        将预测的primitive标注应用到TLabelData
+
+        Args:
+            data: TLabelData 实例
+            min_confidence: 最低置信度阈值
+
+        Returns:
+            应用的标注数量
+        """
+        from tlabel.core.primitive import PrimitiveAnnotation
+
+        annotations = self.predict_primitives(data)
+        count = 0
+        for ann in annotations:
+            if ann['confidence'] >= min_confidence:
+                try:
+                    pa = PrimitiveAnnotation(
+                        name=ann['primitive_name'],
+                        start=ann['start_frame'],
+                        end=ann['end_frame'],
+                        confidence=ann['confidence'],
+                        source='ai_predicted',
+                    )
+                    data.primitive_annotations.append(pa)
+                    count += 1
+                except ValueError:
+                    pass
+        return count

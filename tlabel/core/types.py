@@ -16,7 +16,9 @@ class TLabelFrame:
     __slots__ = [
         "frame_idx", "timestamp_s", "tlabel_v2", "manipulation_phase",
         "confidence", "sensor_specific", "patches", "_original_tlabel",
-        "image", "image_path"  # v0.12: 原始图像数据（numpy数组）或图像路径
+        "image", "image_path",  # v0.12: 原始图像数据（numpy数组）或图像路径
+        "primitive_label",  # v0.13: primitive名称，如 'wrap', 'lift', 'grasp'
+        "primitive_confidence",  # v0.13: AI预标注的置信度 0.0-1.0
     ]
 
     def __init__(self, frame_idx: int, timestamp_s: float,
@@ -25,7 +27,9 @@ class TLabelFrame:
                  confidence: float = 1.0,
                  sensor_specific: Optional[Dict] = None,
                  image: Optional[Any] = None,
-                 image_path: Optional[str] = None):
+                 image_path: Optional[str] = None,
+                 primitive_label: Optional[str] = None,
+                 primitive_confidence: float = 1.0):
         self.frame_idx = frame_idx
         self.timestamp_s = timestamp_s
         self.tlabel_v2 = tlabel_v2
@@ -36,6 +40,8 @@ class TLabelFrame:
         self._original_tlabel = copy.deepcopy(tlabel_v2)
         self.image = image  # numpy数组，用于可视化
         self.image_path = image_path  # 图像文件路径，用于懒加载
+        self.primitive_label = primitive_label  # v0.13: primitive名称
+        self.primitive_confidence = primitive_confidence  # v0.13: 置信度
 
     @property
     def contact(self) -> float:
@@ -138,6 +144,10 @@ class TLabelFrame:
             d["sensor_specific"] = self.sensor_specific
         if self.patches:
             d["patches"] = self.patches
+        # v0.13: primitive标注（仅在有值时输出）
+        if self.primitive_label is not None:
+            d["primitive_label"] = self.primitive_label
+            d["primitive_confidence"] = round(self.primitive_confidence, 4)
         return d
 
 
@@ -168,6 +178,7 @@ class TLabelData:
         self.calibration_params = calibration_params or {}  # 标定参数
         self.sensor_profile = sensor_profile  # v0.7: 传感器物理属性元数据
         self._predict_results = None  # v0.5.0: 预标注结果缓存（供UI高亮）
+        self.primitive_annotations = []  # v0.13: Motor Primitive标注列表
 
     @property
     def num_frames(self) -> int:
@@ -220,6 +231,55 @@ class TLabelData:
                     f.patch(field, new_value, cascade=cascade)
                     count += 1
         return count
+
+    # ============================================================
+    # v0.13.0: Motor Primitive 标注
+    # ============================================================
+
+    def add_primitive(self, name: str, start_frame: int, end_frame: int,
+                    confidence: float = 1.0, source: str = 'manual') -> None:
+        """
+        添加 Motor Primitive 标注
+
+        Args:
+            name: primitive名称（必须是22个标准primitive之一）
+            start_frame: 起始帧索引
+            end_frame: 结束帧索引
+            confidence: 置信度 0.0-1.0
+            source: 标注来源 'manual' | 'ai_predicted'
+
+        用法:
+            data.add_primitive('grasp', 10, 30, confidence=0.95)
+            data.add_primitive('lift', 35, 55)
+        """
+        from tlabel.core.primitive import PrimitiveAnnotation, PRIMITIVE_PRESETS
+        if name not in PRIMITIVE_PRESETS:
+            raise ValueError(f"Unknown primitive: {name}. Must be one of {PRIMITIVE_PRESETS}")
+        self.primitive_annotations.append(
+            PrimitiveAnnotation(name, start_frame, end_frame, confidence, source)
+        )
+
+    def get_primitive_timeline(self) -> List:
+        """
+        返回 primitive 时间线（用于可视化）
+
+        Returns:
+            List of (primitive_name, start_frame, end_frame) tuples
+        """
+        return [(p.primitive_name, p.start_frame, p.end_frame)
+                for p in self.primitive_annotations]
+
+    def get_primitive_at_frame(self, frame_idx: int) -> Optional[str]:
+        """
+        获取某帧对应的 primitive 名称
+
+        Returns:
+            primitive名称或None
+        """
+        for p in self.primitive_annotations:
+            if p.contains_frame(frame_idx):
+                return p.primitive_name
+        return None
 
     def review(self, lang: str = "auto", **kwargs):
         """弹出Jupyter彩色标注面板"""
@@ -545,6 +605,9 @@ class TLabelData:
             "capabilities": self.capabilities,
             "frames": [f.to_dict(is_first=(i == 0), is_last=(i == len(self.frames) - 1)) 
                       for i, f in enumerate(self.frames)],
+            # v0.13: Motor Primitive标注（仅在有标注时输出）
+            "primitive_annotations": [p.to_dict() for p in self.primitive_annotations]
+                if self.primitive_annotations else [],
         }
 
     def get_images(self, max_frames: Optional[int] = None) -> List[Any]:

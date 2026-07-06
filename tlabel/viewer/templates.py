@@ -12,8 +12,8 @@ TLabel面板模板生成器 — 生成Jupyter嵌入的HTML+JS+CSS
 """
 
 import json
-from typing import Optional, Dict
 from tlabel._version import __version__
+from typing import Optional, Dict
 
 
 def generate_panel_html(
@@ -101,6 +101,9 @@ def generate_panel_html(
   </div>
   <canvas id="{tid}-timeline" width="920" height="60" 
           style="width:100%;height:60px;border-radius:8px;cursor:pointer;background:#fff;"></canvas>
+  <canvas id="{tid}-primitive-track" width="920" height="28" 
+          style="width:100%;height:28px;border-radius:6px;background:#f8f9fa;margin-top:4px;display:none;"></canvas>
+  <div id="{tid}-primitive-legend" style="display:none;font-size:10px;color:#868e96;margin-top:4px;"></div>
   <div style="display:flex;justify-content:center;gap:8px;margin-top:6px;">
     <button id="{tid}-btn-prev"
             style="padding:4px 12px;border-radius:6px;border:1px solid #ced4da;background:#fff;color:#495057;cursor:pointer;">◀</button>
@@ -720,9 +723,22 @@ def generate_panel_html(
     const detail = document.getElementById(tid + '-detail-content');
     const phaseColors = {{ 'idle': '#adb5bd', 'initial_contact': '#4dabf7', 'stable_contact': '#51cf66', 'slip': '#ff6b6b', 'grasp': '#ffd43b', 'hold': '#845ef7' }};
     const phaseColor = phaseColors[f.manipulation_phase] || '#adb5bd';
+    // v0.13: Find current primitive
+    let primLabel = '';
+    const primAnns = data.primitive_annotations || [];
+    for (const pa of primAnns) {{
+      if (f.frame_idx >= pa.start_frame && f.frame_idx <= pa.end_frame) {{
+        primLabel = pa.primitive_name;
+        break;
+      }}
+    }}
+    const primBadge = primLabel
+      ? `<span style="background:${{primitiveColors[primLabel] || '#adb5bd'}};color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;margin-left:4px;">🦖 ${{primLabel}}</span>`
+      : '';
     detail.innerHTML = `
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
         <span style="background:${{phaseColor}};color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">${{f.manipulation_phase}}</span>
+        ${{primBadge}}
         <span style="font-size:11px;color:#868e96;">conf: ${{(f.confidence * 100).toFixed(0)}}%</span>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;">
@@ -754,6 +770,8 @@ def generate_panel_html(
 
     // Timeline marker
     drawTimeline();
+    // v0.13: Primitive track
+    drawPrimitiveTrack();
   }}
 
   // ===== Radar Chart =====
@@ -870,6 +888,66 @@ def generate_panel_html(
     ctx.fillRect(currentFrameIdx * barW, 0, Math.max(barW, 2), H);
   }}
 
+  // ===== v0.13: Primitive Track =====
+  const primitiveColors = {{
+    'wrap': '#FF6B6B', 'lift': '#4ECDC4', 'grasp': '#45B7D1',
+    'fold': '#FFA07A', 'cut': '#98D8C8', 'insert': '#F7DC6F',
+    'press': '#BB8FCE', 'wipe': '#85C1E2', 'peel': '#F8B739',
+    'assemble': '#82E0AA', 'extract': '#F1948A', 'twist': '#D7BDE2',
+    'shake': '#AED6F1', 'dispense': '#A3E4D7', 'disassemble': '#F9E79F',
+    'squeeze': '#F5B7B1', 'pour': '#D5F5E3', 'open': '#FADBD8',
+    'close': '#D4E6F1', 'screw': '#FCF3CF', 'unscrew': '#E8DAEF',
+    'reach': '#D5D8DC'
+  }};
+
+  function drawPrimitiveTrack() {{
+    const canvas = document.getElementById(tid + '-primitive-track');
+    const legend = document.getElementById(tid + '-primitive-legend');
+    if (!canvas) return;
+    const primAnns = data.primitive_annotations || [];
+    if (!primAnns.length) {{
+      canvas.style.display = 'none';
+      if (legend) legend.style.display = 'none';
+      return;
+    }}
+    canvas.style.display = 'block';
+    if (legend) {{
+      legend.style.display = 'block';
+      const usedPrims = [...new Set(primAnns.map(p => p.primitive_name))];
+      legend.innerHTML = '<b>Primitives:</b> ' + usedPrims.map(p =>
+        '<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:' +
+        (primitiveColors[p] || '#adb5bd') + ';margin:0 2px;"></span>' + p
+      ).join(' ');
+    }}
+    const ctx = canvas.getContext('2d');
+    const frames = data.frames || [];
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+    if (!frames.length) return;
+    const totalFrames = frames.length;
+    const frameMinIdx = frames[0].frame_idx;
+    const frameMaxIdx = frames[frames.length - 1].frame_idx;
+    const range = Math.max(frameMaxIdx - frameMinIdx, 1);
+
+    for (const ann of primAnns) {{
+      const x1 = ((ann.start_frame - frameMinIdx) / range) * W;
+      const x2 = ((ann.end_frame - frameMinIdx) / range) * W;
+      ctx.fillStyle = primitiveColors[ann.primitive_name] || '#adb5bd';
+      ctx.fillRect(x1, 2, Math.max(x2 - x1, 2), H - 4);
+      // Label
+      const textW = ctx.measureText(ann.primitive_name).width;
+      if ((x2 - x1) > textW + 8) {{
+        ctx.fillStyle = '#fff';
+        ctx.font = '10px -apple-system, sans-serif';
+        ctx.fillText(ann.primitive_name, x1 + 4, H / 2 + 3);
+      }}
+    }}
+    // Current frame marker
+    ctx.fillStyle = 'rgba(232, 93, 117, 0.6)';
+    const curX = ((frames[currentFrameIdx].frame_idx - frameMinIdx) / range) * W;
+    ctx.fillRect(curX, 0, 2, H);
+  }}
+
   // Timeline click
   document.getElementById(tid + '-timeline').addEventListener('click', function(e) {{
     const rect = this.getBoundingClientRect();
@@ -979,10 +1057,17 @@ def generate_panel_html(
       'delta_force_normal','delta_force_shear','friction_cone_ratio',
       'optical_flow_magnitude','optical_flow_direction',
       'temporal_deformation_rate','contact_transition'];
-    let csv = 'frame_idx,timestamp_s,manipulation_phase,confidence,' + dims.join(',') + '\\n';
+    // v0.13: add primitive_label column
+    let csv = 'frame_idx,timestamp_s,manipulation_phase,confidence,primitive_label,' + dims.join(',') + '\\n';
+    const primAnns = data.primitive_annotations || [];
     for (const f of frames) {{
       const tl = f.tlabel_v2 || {{}};
-      csv += f.frame_idx + ',' + f.timestamp_s + ',' + f.manipulation_phase + ',' + f.confidence;
+      // find primitive for this frame
+      let prim = '';
+      for (const pa of primAnns) {{
+        if (f.frame_idx >= pa.start_frame && f.frame_idx <= pa.end_frame) {{ prim = pa.primitive_name; break; }}
+      }}
+      csv += f.frame_idx + ',' + f.timestamp_s + ',' + f.manipulation_phase + ',' + f.confidence + ',' + prim;
       for (const d of dims) csv += ',' + (tl[d] || 0);
       csv += '\\n';
     }}

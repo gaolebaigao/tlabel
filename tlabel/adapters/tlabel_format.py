@@ -75,4 +75,20 @@ class TLabelAdapter(BaseAdapter):
             schema_version=raw.get("schema_version", "0.4.0"),
         )
         
+        # v0.13: 加载 primitive_annotations（向后兼容：旧JSON没有此字段也能正常加载）
+        if "primitive_annotations" in raw:
+            from tlabel.core.primitive import PrimitiveAnnotation
+            for pa_dict in raw["primitive_annotations"]:
+                try:
+                    pa = PrimitiveAnnotation(
+                        name=pa_dict["primitive_name"],
+                        start=pa_dict["start_frame"],
+                        end=pa_dict["end_frame"],
+                        confidence=pa_dict.get("confidence", 1.0),
+                        source=pa_dict.get("source", "manual"),
+                    )
+                    data.primitive_annotations.append(pa)
+                except (ValueError, KeyError):
+                    pass
+        
         return data

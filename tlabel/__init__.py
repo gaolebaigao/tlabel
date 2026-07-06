@@ -4,6 +4,7 @@ from tlabel._version import __version__
 
 from tlabel.core.loader import load
 from tlabel.core.types import TLabelData, TLabelFrame, EpisodeLabel
+from tlabel.core.primitive import PrimitiveAnnotation, PRIMITIVE_PRESETS, PRIMITIVE_COLORS
 from tlabel.demo import demo, list_demos
 from tlabel.predict.engine import PredictEngine
 from tlabel.quality.scorer import QualityScorer
@@ -31,6 +32,7 @@ def augment(data, methods, params=None, seed=None):
 
 __all__ = [
     "load", "TLabelData", "TLabelFrame", "EpisodeLabel",
+    "PrimitiveAnnotation", "PRIMITIVE_PRESETS", "PRIMITIVE_COLORS",
     "demo", "list_demos", "PredictEngine",
     "QualityScorer", "BatchProcessor", "TLabelBatchPanel", "AugmentEngine", "augment", "__version__",
 ]
