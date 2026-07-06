@@ -26,7 +26,36 @@
 
 ## 🆕 What's New
 
-### v0.11.0 — Tactile Image Visualization & Data Augmentation
+### v0.13.0 — Motor Primitive Annotation System 🆕
+**The world's first tactile primitive annotation toolkit — inspired by T-Rex (Li Fei-Fei, Jim Fan, Xu Danfei et al.).**
+- 🏷️ **22 Motor Primitives**: wrap, lift, grasp, fold, cut, insert, press, wipe, peel, assemble, extract, twist, shake, dispense, disassemble, squeeze, pour, open, close, screw, unscrew, reach
+- 📊 **Primitive Timeline Track**: Canvas-rendered color-coded primitive segments in the Panel, with frame-level detail badges
+- 🤖 **AI Pre-Annotation**: `predict_primitives()` — heuristic inference from force/contact patterns (force rise→grasp/press, stable+motion→wrap/wipe, drop→squeeze, no contact→reach)
+- 📈 **Structured Annotations**: `add_primitive(name, start_frame, end_frame)` API for time-interval primitive labeling
+- 💾 **Export Support**: CSV export with `primitive_label` column; JSON export with `primitive_annotations` array
+- 🔄 **Backward Compatible**: Old tlabel.json files load normally (no primitive_annotations → empty list)
+
+```python
+import tlabel
+
+# Load demo with primitive annotations
+data = tlabel.demo('primitives_demo')
+data.review()  # See primitive timeline track in Panel
+
+# Add primitive annotations programmatically
+data.add_primitive('reach', start_frame=0, end_frame=10)
+data.add_primitive('grasp', start_frame=10, end_frame=25)
+data.add_primitive('lift', start_frame=25, end_frame=40)
+
+# AI pre-annotation (heuristic-based)
+data.apply_primitives()  # Auto-detect primitives from force/contact patterns
+
+# Get primitive timeline
+timeline = data.get_primitive_timeline()
+# [('reach', 0, 10), ('grasp', 10, 25), ('lift', 25, 40)]
+```
+
+### v0.12.0 — Tactile Image Visualization & Data Augmentation
 **Canvas-based tactile image playback, pure-numpy augmentation, and AnyTouch multi-sensor support.**
 - 🎬 **Tactile Image Sequence Visualization**: Canvas-rendered playback with 3-level strategy (real image / heatmap / placeholder), play/pause/seek/speed controls, dark mode & i18n
 - 📈 **Data Augmentation Module**: 5 methods (`time_warp`, `noise_inject`, `random_crop`, `force_scale`, `frame_dropout`), zero new deps (pure numpy), 3-level API
@@ -77,6 +106,10 @@ data.export_ftp1("output.zarr",
 <details>
 <summary><b>Previous releases</b></summary>
 
+- **v0.12.4** — Fix gelsight_images demo JSON format
+- **v0.12.3** — Dynamic version display in Panel
+- **v0.12.0** — Tactile image visualization, data augmentation, TacQuad adapter
+- **v0.11.2** — Fix Jupyter panel initialization timing
 - **v0.10.3** — VTouch/YCB-Slide adapter registration, LeRobot export panel, PyPI fixes
 - **v0.9.0** — Panel Phase 1 (5 UI features), Exporter Plugin Registry (7 formats)
 - **v0.4.2** — Full i18n: bilingual Panel UI (中文/English), localized error messages, docs in both languages
