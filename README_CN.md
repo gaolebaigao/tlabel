@@ -26,7 +26,36 @@
 
 ## 🆕 更新亮点
 
-### v0.11.0 — 触觉图像可视化 & 数据增强
+### v0.13.0 — Motor Primitive 标注系统 🆕
+**全球首个触觉 Primitive 标注工具——灵感来自 T-Rex（李飞飞、Jim Fan、徐丹飞等）。**
+- 🏷️ **22 个 Motor Primitives**：wrap、lift、grasp、fold、cut、insert、press、wipe、peel、assemble、extract、twist、shake、dispense、disassemble、squeeze、pour、open、close、screw、unscrew、reach
+- 📊 **Primitive 时间轴轨道**：Panel 中 Canvas 渲染的彩色 primitive 段落，帧级详情标记
+- 🤖 **AI 预标注**：`predict_primitives()` — 基于力/接触模式的启发式推断（力上升→grasp/press，稳定+运动→wrap/wipe，下降→squeeze，无接触→reach）
+- 📈 **结构化标注**：`add_primitive(name, start_frame, end_frame)` API，支持时间区间标注
+- 💾 **导出支持**：CSV 导出新增 `primitive_label` 列；JSON 导出新增 `primitive_annotations` 数组
+- 🔄 **向后兼容**：旧 tlabel.json 文件正常加载（无 primitive_annotations → 空列表）
+
+```python
+import tlabel
+
+# 加载带 primitive 标注的 demo
+data = tlabel.demo('primitives_demo')
+data.review()  # 在 Panel 中查看 primitive 时间轴轨道
+
+# 手动添加 primitive 标注
+data.add_primitive('reach', start_frame=0, end_frame=10)
+data.add_primitive('grasp', start_frame=10, end_frame=25)
+data.add_primitive('lift', start_frame=25, end_frame=40)
+
+# AI 预标注（启发式规则）
+data.apply_primitives()  # 从力/接触模式自动推断 primitive
+
+# 获取 primitive 时间线
+timeline = data.get_primitive_timeline()
+# [('reach', 0, 10), ('grasp', 10, 25), ('lift', 25, 40)]
+```
+
+### v0.12.0 — 触觉图像可视化 & 数据增强
 **Canvas 渲染的触觉图像回放、纯 numpy 数据增强、AnyTouch 多传感器支持。**
 - 🎬 **触觉图像序列可视化**：Canvas 渲染播放，三级策略（实拍图像 / 热力图 / 占位），播放/暂停/拖动/变速控制，暗色模式 & 国际化
 - 📈 **数据增强模块**：5 种方法（`time_warp`、`noise_inject`、`random_crop`、`force_scale`、`frame_dropout`），零新依赖（纯 numpy），三级 API
@@ -77,6 +106,10 @@ data.export_ftp1("output.zarr",
 <details>
 <summary><b>历史版本</b></summary>
 
+- **v0.12.4** — 修复 gelsight_images demo JSON 格式
+- **v0.12.3** — Panel 版本号动态化
+- **v0.12.0** — 触觉图像可视化、数据增强、TacQuad 适配器
+- **v0.11.2** — 修复 Jupyter 面板初始化时序
 - **v0.10.3** — VTouch/YCB-Slide 适配器注册、LeRobot 导出面板、PyPI 修复
 - **v0.9.0** — 面板第一阶段（5 项 UI 功能）、Exporter 插件注册表（7 种格式）
 - **v0.4.2** — 完整国际化：双语面板UI（中文/英文）、本地化错误提示和文档
