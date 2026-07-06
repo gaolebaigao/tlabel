@@ -1,5 +1,57 @@
 # Changelog
 
+## [0.14.0] - 2026-07-06
+
+### Added
+- **Taxonomy System** — Configurable primitive taxonomy with physics-grounded defaults
+  - 7 default primitives: reach, grasp, press, squeeze, wrap, wipe, lift (from T-Rex 22, selected for clear force signatures)
+  - Cutkosky grasp subtypes: power_grasp, precision_grasp, lateral_grasp
+  - `TaxonomyConfig` class for managing available primitives
+  - `get_default_taxonomy()` / `get_full_taxonomy()` factory functions
+- **Custom Primitive Registration** — `register_custom_primitive()` API
+  - Define custom primitive with force_range, deformation, contact, shear rules
+  - Syncs with both taxonomy engine and PrimitiveAnnotation validator
+- **Force Estimation → Primitive Pipeline** — Full auto-workflow from visual-tactile images
+  - Force estimator infers force distributions from GelSight/DIGIT images
+  - Rule engine maps force patterns to primitives with confidence scores
+  - Source tracking: `ai_predicted` (force sensor) vs `ai_predicted_estimated` (inferred)
+- **Enhanced CSV Export** — `primitive_source` and `primitive_confidence` columns
+- **Collapsible Prediction Panel** — In-panel taxonomy selector + predict button + statistics
+- **Batch Patch Primitive** — Bulk primitive correction with type selector + confidence controls
+
+### Changed
+- `predict/engine.py`: `predict_primitives()` now accepts `taxonomy` parameter, default to `get_default_taxonomy()`
+- `core/types.py`: `add_primitive()` validates against registered primitives via `is_valid_primitive()`
+- `core/types.py`: New `predict_primitives()` convenience method on TLabelData
+- `core/primitive.py`: Added `DEFAULT_PRIMITIVE_SUBSET` (7 primitives), `GRASP_SUBTYPES` dict, `_custom_registry`
+- `export/writer.py`: CSV export includes source + confidence metadata columns
+- `viewer/templates.py`: Collapsible primitive prediction panel, batch patch primitive support, `runPrimitivePrediction()` JS function
+- Reach confidence threshold raised from 0.5 to 0.65
+
+### Architecture
+- Design principle: "Assist, not autoritate" — all predictions carry source + confidence, low-confidence segments left blank for manual annotation
+- Data flow: Adapter → tlabel standard fields → Rule engine reads fields → extracts physics quantities → determines primitive → stores with metadata
+- No new external dependencies (pure numpy + built-in rules)
+
+### Usage
+```python
+import tlabel
+
+# Default taxonomy prediction
+data = tlabel.demo('gelsight')
+data.predict_primitives()
+
+# Custom taxonomy
+taxonomy = tlabel.get_default_taxonomy()
+data.predict_primitives(taxonomy=taxonomy, min_confidence=0.4)
+
+# Register custom primitive
+tlabel.register_custom_primitive('poke',
+    force_range=(0.1, 0.8), deformation_max=0.15,
+    contact_required=True, confidence=0.5)
+```
+
+
 ## [0.13.0] - 2026-07-06
 
 ### Added

@@ -26,7 +26,41 @@
 
 ## 🆕 更新亮点
 
-### v0.13.0 — Motor Primitive 标注系统 🆕
+### v0.14.0 — Taxonomy 系统 & 力推断 Primitive 预标注 🆕
+**从视触觉图像到力推断到 Primitive 标注 — 全自动工作流。**
+- 🧬 **Taxonomy 系统**：可配置的 primitive 分类体系，内置 7 种物理含义明确的默认子集（reach/grasp/press/squeeze/wrap/wipe/lift），源自 T-Rex 22 种，含 Cutkosky 抓握子分类（力量/精确/侧向抓握）
+- 💪 **力推断→Primitive 流水线**：无需力传感器，从视触觉图像（GelSight/DIGIT）自动推断力分布→检测事件→标注 primitive
+- 🎯 **置信度与来源追踪**：每条 AI 预测都携带 `source`（ai_predicted / ai_predicted_estimated）+ `confidence` 分数——来源透明可追溯
+- 🔧 **自定义 Primitive 注册**：`register_custom_primitive()` API，支持用户定义新 primitive 类型及其物理规则
+- 📊 **增强 CSV 导出**：新增 `primitive_source` 和 `primitive_confidence` 列，完整元数据可追溯
+- 🎨 **可折叠预标注面板**：Panel 内 taxonomy 选择器 + 预标注按钮 + 结果统计
+- 📦 **批量修正支持**：批量 primitive 修正，支持类型选择 + 置信度控制
+
+```python
+import tlabel
+
+# 加载数据并自动预标注 primitive（使用默认 taxonomy）
+data = tlabel.demo('gelsight')
+data.predict_primitives()  # 从力/接触模式自动推断
+
+# 使用自定义 taxonomy 并设置最低置信度
+taxonomy = tlabel.get_default_taxonomy()
+taxonomy.register(tlabel.PrimitiveRule(
+    name='poke', min_force=0.1, max_deformation=0.15,
+    contact_required=True, min_confidence=0.5
+))
+data.predict_primitives(taxonomy=taxonomy, min_confidence=0.4)
+
+# 全局注册自定义 primitive
+tlabel.register_custom_primitive('poke',
+    force_range=(0.1, 0.8), deformation_max=0.15,
+    contact_required=True, confidence=0.5)
+
+# 导出完整元数据（source + confidence）
+data.export("output.csv")  # 包含 primitive_source、primitive_confidence 列
+```
+
+### v0.13.0 — Motor Primitive 标注系统
 **全球首个触觉 Primitive 标注工具——灵感来自 T-Rex（李飞飞、Jim Fan、徐丹飞等）。**
 - 🏷️ **22 个 Motor Primitives**：wrap、lift、grasp、fold、cut、insert、press、wipe、peel、assemble、extract、twist、shake、dispense、disassemble、squeeze、pour、open、close、screw、unscrew、reach
 - 📊 **Primitive 时间轴轨道**：Panel 中 Canvas 渲染的彩色 primitive 段落，帧级详情标记
@@ -106,6 +140,7 @@ data.export_ftp1("output.zarr",
 <details>
 <summary><b>历史版本</b></summary>
 
+- **v0.13.1** — GBK 编码热修复，Primitive 系统稳定化
 - **v0.12.4** — 修复 gelsight_images demo JSON 格式
 - **v0.12.3** — Panel 版本号动态化
 - **v0.12.0** — 触觉图像可视化、数据增强、TacQuad 适配器

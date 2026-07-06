@@ -26,7 +26,41 @@
 
 ## 🆕 What's New
 
-### v0.13.0 — Motor Primitive Annotation System 🆕
+### v0.14.0 — Taxonomy System & Force-Inferred Primitive Prediction 🆕
+**From visual-tactile images to force estimation to primitive annotation — fully automated pipeline.**
+- 🧬 **Taxonomy System**: Configurable primitive taxonomy with 7 default physics-grounded primitives (reach, grasp, press, squeeze, wrap, wipe, lift) selected from T-Rex 22, with Cutkosky grasp subtypes (power/precision/lateral)
+- 💪 **Force Estimation → Primitive Pipeline**: Auto-detect primitives from visual-tactile images (GelSight/DIGIT) even without force sensors — `force_estimator` infers force distributions, then rule engine maps to primitives
+- 🎯 **Confidence & Source Tracking**: Every AI prediction carries `source` (ai_predicted / ai_predicted_estimated) + `confidence` score — transparent provenance
+- 🔧 **Custom Primitive Registration**: `register_custom_primitive()` API for user-defined primitives with physical rules
+- 📊 **Enhanced CSV Export**: New `primitive_source` and `primitive_confidence` columns for full metadata traceability
+- 🎨 **Collapsible Prediction Panel**: In-panel taxonomy selector + prediction button + result statistics
+- 📦 **Batch Patch Support**: Bulk primitive correction with primitive type + confidence controls
+
+```python
+import tlabel
+
+# Load data and auto-predict primitives (uses default taxonomy)
+data = tlabel.demo('gelsight')
+data.predict_primitives()  # Auto-detect from force/contact patterns
+
+# Use custom taxonomy with minimum confidence threshold
+taxonomy = tlabel.get_default_taxonomy()
+taxonomy.register(tlabel.PrimitiveRule(
+    name='poke', min_force=0.1, max_deformation=0.15,
+    contact_required=True, min_confidence=0.5
+))
+data.predict_primitives(taxonomy=taxonomy, min_confidence=0.4)
+
+# Register custom primitives globally
+tlabel.register_custom_primitive('poke',
+    force_range=(0.1, 0.8), deformation_max=0.15,
+    contact_required=True, confidence=0.5)
+
+# Export with full metadata (source + confidence)
+data.export("output.csv")  # includes primitive_source, primitive_confidence columns
+```
+
+### v0.13.0 — Motor Primitive Annotation System
 **The world's first tactile primitive annotation toolkit — inspired by T-Rex (Li Fei-Fei, Jim Fan, Xu Danfei et al.).**
 - 🏷️ **22 Motor Primitives**: wrap, lift, grasp, fold, cut, insert, press, wipe, peel, assemble, extract, twist, shake, dispense, disassemble, squeeze, pour, open, close, screw, unscrew, reach
 - 📊 **Primitive Timeline Track**: Canvas-rendered color-coded primitive segments in the Panel, with frame-level detail badges
@@ -106,6 +140,7 @@ data.export_ftp1("output.zarr",
 <details>
 <summary><b>Previous releases</b></summary>
 
+- **v0.13.1** — GBK encoding hotfix, primitive system stabilization
 - **v0.12.4** — Fix gelsight_images demo JSON format
 - **v0.12.3** — Dynamic version display in Panel
 - **v0.12.0** — Tactile image visualization, data augmentation, TacQuad adapter
