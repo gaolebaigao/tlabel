@@ -100,7 +100,7 @@ def demo(sensor: Optional[str] = None, **kwargs) -> TLabelData:
 
     # 直接从TLabel Format JSON加载，不走适配器
     import json
-    with open(demo_file, "r") as f:
+    with open(demo_file, "r", encoding="utf-8") as f:
         raw = json.load(f)
 
     # 如果是gelsight_images，生成合成图像
