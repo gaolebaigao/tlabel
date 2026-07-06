@@ -1,5 +1,49 @@
 # Changelog
 
+## [0.13.0] - 2026-07-06
+
+### Added
+- **Motor Primitive Annotation System** — The world's first tactile primitive annotation toolkit
+  - 22 Motor Primitives from T-Rex paper: wrap, lift, grasp, fold, cut, insert, press, wipe, peel, assemble, extract, twist, shake, dispense, disassemble, squeeze, pour, open, close, screw, unscrew, reach
+  - `PrimitiveAnnotation` class for time-interval primitive labeling (`start_frame`, `end_frame`)
+  - Color-coded primitive timeline track in Panel (Canvas-rendered)
+  - Frame detail badge showing current primitive name
+- **AI Pre-Annotation for Primitives** — `predict_primitives()` heuristic inference
+  - Force rise → grasp/press, stable+motion → wrap/wipe, force drop → squeeze, no contact → reach
+  - `apply_primitives()` method on TLabelData
+- **Structured API** — `add_primitive(name, start_frame, end_frame, confidence=1.0)`
+- **Timeline Query** — `get_primitive_timeline()` returns list of (name, start, end) tuples
+- **Frame Query** — `get_primitive_at_frame(frame)` returns primitive at given frame
+- **Export Support** — CSV export with `primitive_label` column; JSON with `primitive_annotations` array
+- **Demo Data** — `tlabel.demo('primitives_demo')` with pre-annotated reach→grasp→lift→wrap→press sequence
+- **Backward Compatible** — Old tlabel.json files without primitive_annotations load normally (empty list)
+
+### Changed
+- `TLabelFrame` extended with `primitive_label` and `primitive_confidence` fields
+- `TLabelData` extended with `primitive_annotations` list and new methods
+- Panel templates.py: new primitive-track canvas element, primitive badge in frame detail
+- Export writer.py: CSV includes primitive_label column
+
+### Usage
+```python
+import tlabel
+
+# Load demo with primitive annotations
+data = tlabel.demo('primitives_demo')
+data.review()  # See primitive timeline in Panel
+
+# Add primitives manually
+data.add_primitive('reach', 0, 10)
+data.add_primitive('grasp', 10, 25)
+
+# AI pre-annotation
+data.apply_primitives()
+
+# Query
+timeline = data.get_primitive_timeline()
+current = data.get_primitive_at_frame(15)  # 'grasp'
+```
+
 ## [0.11.0] - 2026-07-01
 
 ### Added
