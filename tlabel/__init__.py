@@ -4,9 +4,20 @@ from tlabel._version import __version__
 
 from tlabel.core.loader import load
 from tlabel.core.types import TLabelData, TLabelFrame, EpisodeLabel
-from tlabel.core.primitive import PrimitiveAnnotation, PRIMITIVE_PRESETS, PRIMITIVE_COLORS
+from tlabel.core.primitive import (
+    PrimitiveAnnotation, PRIMITIVE_PRESETS, PRIMITIVE_COLORS,
+    DEFAULT_PRIMITIVE_SUBSET, GRASP_SUBTYPES, is_valid_primitive,
+)
+from tlabel.core.taxonomy import (
+    TaxonomyConfig, PrimitiveRule, get_default_taxonomy, get_full_taxonomy,
+)
+from tlabel.core.events import TactileEvent, EVENT_PRESETS
 from tlabel.demo import demo, list_demos
 from tlabel.predict.engine import PredictEngine
+from tlabel.predict.force_estimator import (
+    ForceEstimator, DeformationForceEstimator, ImageForceEstimator,
+    CompositeForceEstimator, auto_force_estimate,
+)
 from tlabel.quality.scorer import QualityScorer
 from tlabel.batch.processor import BatchProcessor
 from tlabel.viewer.batch_panel import TLabelBatchPanel
@@ -33,6 +44,11 @@ def augment(data, methods, params=None, seed=None):
 __all__ = [
     "load", "TLabelData", "TLabelFrame", "EpisodeLabel",
     "PrimitiveAnnotation", "PRIMITIVE_PRESETS", "PRIMITIVE_COLORS",
+    "DEFAULT_PRIMITIVE_SUBSET", "GRASP_SUBTYPES", "is_valid_primitive",
+    "TaxonomyConfig", "PrimitiveRule", "get_default_taxonomy", "get_full_taxonomy",
+    "TactileEvent", "EVENT_PRESETS",
+    "ForceEstimator", "DeformationForceEstimator", "ImageForceEstimator",
+    "CompositeForceEstimator", "auto_force_estimate",
     "demo", "list_demos", "PredictEngine",
     "QualityScorer", "BatchProcessor", "TLabelBatchPanel", "AugmentEngine", "augment", "__version__",
 ]

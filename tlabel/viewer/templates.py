@@ -93,6 +93,28 @@ def generate_panel_html(
   <span>✏️ <span data-i18n="stats.modified">已修正</span>: <b id="{tid}-stat-modified">0</b></span>
 </div>
 
+<!-- v0.14: Primitive 预标注面板 -->
+<div style="padding:8px 20px;background:#fff;border-bottom:1px solid #e9ecef;">
+  <div id="{tid}-pp-toggle" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;padding:4px 0;">
+    <span style="font-size:12px;font-weight:600;color:#495057;">🏷️ Primitive 预标注</span>
+    <span id="{tid}-pp-arrow" style="font-size:10px;color:#868e96;">▼</span>
+  </div>
+  <div id="{tid}-pp-content" style="display:none;padding:8px 0 4px;">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap;">
+      <span style="font-size:11px;color:#868e96;">Taxonomy:</span>
+      <select id="{tid}-pp-taxonomy" style="border-radius:6px;border:1px solid #ced4da;background:#fff;color:#343a40;padding:2px 6px;font-size:11px;">
+        <option value="default">默认 (7种)</option>
+        <option value="full">完整 T-Rex (22种)</option>
+      </select>
+      <span style="font-size:11px;color:#868e96;">最低置信度:</span>
+      <input type="number" id="{tid}-pp-minconf" value="0.4" min="0" max="1" step="0.05"
+             style="width:50px;border-radius:4px;border:1px solid #ced4da;text-align:center;font-size:11px;padding:2px;">
+      <button id="{tid}-pp-run" style="padding:3px 12px;border-radius:6px;border:none;background:#e85d75;color:#fff;cursor:pointer;font-size:11px;font-weight:600;">🤖 运行预标注</button>
+    </div>
+    <div id="{tid}-pp-result" style="display:none;font-size:11px;color:#495057;background:#f8f9fa;padding:6px 10px;border-radius:6px;margin-top:4px;"></div>
+  </div>
+</div>
+
 <!-- Timeline -->
 <div style="padding:12px 20px;background:#e9ecef;">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
@@ -152,9 +174,34 @@ def generate_panel_html(
       <option value="slip_event" data-i18n="batch.optSlip">滑移事件 (0/1)</option>
       <option value="force_magnitude" data-i18n="batch.optForce">力度</option>
       <option value="manipulation_phase" data-i18n="batch.optPhase">操作阶段</option>
+      <option value="primitive_label" data-i18n="batch.optPrimitive">Primitive 标注</option>
     </select>
     <input type="text" id="{tid}-batch-value" style="width:80px;border-radius:6px;border:1px solid #ced4da;
            background:#fff;color:#343a40;padding:3px 6px;font-size:12px;" placeholder="0">
+    <select id="{tid}-batch-prim-value" style="display:none;border-radius:6px;border:1px solid #ced4da;background:#fff;color:#343a40;padding:3px 6px;font-size:12px;">
+      <option value="grasp">grasp</option>
+      <option value="press">press</option>
+      <option value="squeeze">squeeze</option>
+      <option value="reach">reach</option>
+      <option value="wrap">wrap</option>
+      <option value="wipe">wipe</option>
+      <option value="lift">lift</option>
+      <option value="fold">fold</option>
+      <option value="cut">cut</option>
+      <option value="insert">insert</option>
+      <option value="peel">peel</option>
+      <option value="assemble">assemble</option>
+      <option value="extract">extract</option>
+      <option value="twist">twist</option>
+      <option value="shake">shake</option>
+      <option value="dispense">dispense</option>
+      <option value="disassemble">disassemble</option>
+      <option value="pour">pour</option>
+      <option value="open">open</option>
+      <option value="close">close</option>
+      <option value="screw">screw</option>
+      <option value="unscrew">unscrew</option>
+    </select>
     <button id="{tid}-btn-batch"
             style="padding:4px 12px;border-radius:6px;border:none;background:#e85d75;color:#fff;
                    cursor:pointer;font-size:12px;" data-i18n="batch.apply">应用</button>
@@ -732,8 +779,18 @@ def generate_panel_html(
         break;
       }}
     }}
+    let primSource = '', primConfVal = 0;
+    for (const pa of primAnns) {{
+      if (f.frame_idx >= pa.start_frame && f.frame_idx <= pa.end_frame) {{
+        primSource = pa.source || '';
+        primConfVal = pa.confidence || 0;
+        break;
+      }}
+    }}
+    const sourceIcon = primSource === 'manual' ? '✍️' : (primSource === 'ai_predicted_estimated' ? '🤖⚡' : (primSource === 'ai_predicted' ? '🤖' : ''));
+    const confDisplay = primConfVal > 0 ? ` conf:${{(primConfVal * 100).toFixed(0)}}%` : '';
     const primBadge = primLabel
-      ? `<span style="background:${{primitiveColors[primLabel] || '#adb5bd'}};color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;margin-left:4px;">🦖 ${{primLabel}}</span>`
+      ? `<span style="background:${{primitiveColors[primLabel] || '#adb5bd'}};color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;margin-left:4px;">🦖 ${{primLabel}}</span><span style="font-size:10px;color:#868e96;margin-left:4px;">${{sourceIcon}}${{confDisplay}}</span>`
       : '';
     detail.innerHTML = `
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
@@ -948,6 +1005,32 @@ def generate_panel_html(
     ctx.fillRect(curX, 0, 2, H);
   }}
 
+  // v0.14: Primitive prediction panel toggle
+  document.getElementById(tid + '-pp-toggle').addEventListener('click', function() {{
+    var content = document.getElementById(tid + '-pp-content');
+    var arrow = document.getElementById(tid + '-pp-arrow');
+    if (content.style.display === 'none') {{
+      content.style.display = 'block';
+      arrow.textContent = '▲';
+    }} else {{
+      content.style.display = 'none';
+      arrow.textContent = '▼';
+    }}
+  }});
+
+  // v0.14: Batch field change - show/hide primitive selector
+  document.getElementById(tid + '-batch-field').addEventListener('change', function() {{
+    var primSelect = document.getElementById(tid + '-batch-prim-value');
+    var textInput = document.getElementById(tid + '-batch-value');
+    if (this.value === 'primitive_label') {{
+      primSelect.style.display = 'inline-block';
+      textInput.style.display = 'none';
+    }} else {{
+      primSelect.style.display = 'none';
+      textInput.style.display = 'inline-block';
+    }}
+  }});
+
   // Timeline click
   document.getElementById(tid + '-timeline').addEventListener('click', function(e) {{
     const rect = this.getBoundingClientRect();
@@ -976,6 +1059,29 @@ def generate_panel_html(
         if (field === 'manipulation_phase') {{
           undoBatch.push({{idx: i, field: field, old: frames[i].manipulation_phase}});
           frames[i].manipulation_phase = val;
+        }} else if (field === 'primitive_label') {{
+          var primVal = document.getElementById(tid + '-batch-prim-value').value;
+          frames[i].primitive_label = primVal;
+          frames[i].primitive_confidence = 1.0;
+          // 更新 primitive_annotations
+          var primAnns = data.primitive_annotations || [];
+          var found = false;
+          for (var pi = 0; pi < primAnns.length; pi++) {{
+            if (primAnns[pi].start_frame <= fi && fi <= primAnns[pi].end_frame) {{
+              undoBatch.push({{idx: i, field: 'primitive_annotation', old: JSON.parse(JSON.stringify(primAnns[pi]))}});
+              primAnns[pi].primitive_name = primVal;
+              primAnns[pi].source = 'manual';
+              primAnns[pi].confidence = 1.0;
+              found = true;
+              break;
+            }}
+          }}
+          if (!found) {{
+            var newAnn = {{primitive_name: primVal, start_frame: fi, end_frame: fi, confidence: 1.0, source: 'manual'}};
+            data.primitive_annotations.push(newAnn);
+            undoBatch.push({{idx: i, field: 'primitive_annotation_new', old: newAnn}});
+          }}
+          count++;
         }} else {{
           const old = (frames[i].tlabel_v2 || {{}})[field];
           if (old !== val) {{
@@ -1039,6 +1145,112 @@ def generate_panel_html(
     if (idx >= 0) showFrame(idx);
   }}
 
+  // v0.14: Run primitive prediction (client-side simplified)
+  function runPrimitivePrediction() {{
+    var taxonomyVal = document.getElementById(tid + '-pp-taxonomy').value;
+    var minConf = parseFloat(document.getElementById(tid + '-pp-minconf').value) || 0.4;
+    var frames = data.frames || [];
+    if (!frames.length) return;
+    
+    // Simple client-side heuristic prediction
+    var predPrimAnns = [];
+    var currentPrim = null;
+    
+    for (var i = 0; i < frames.length; i++) {{
+      var tv2 = frames[i].tlabel_v2 || {{}};
+      var force = tv2.force_magnitude || 0;
+      var contact = tv2.contact || 0;
+      var deform = tv2.deformation_magnitude || 0;
+      var shear = tv2.shear_field_magnitude || 0;
+      
+      // Compute force delta
+      var prevForce = i > 0 ? ((frames[i-1].tlabel_v2 || {{}}).force_magnitude || 0) : 0;
+      var fd = force - prevForce;
+      // Short window average
+      var windowSize = Math.min(5, i + 1);
+      var avgFd = 0;
+      for (var w = Math.max(0, i - windowSize + 1); w <= i; w++) {{
+        var pf = w > 0 ? ((frames[w-1].tlabel_v2 || {{}}).force_magnitude || 0) : 0;
+        var cf = (frames[w].tlabel_v2 || {{}}).force_magnitude || 0;
+        avgFd += (cf - pf);
+      }}
+      avgFd /= windowSize;
+      
+      var primitive = null;
+      var conf = 0;
+      
+      if (contact < 0.3 && force < 0.1) {{
+        primitive = 'reach'; conf = 0.65;
+      }} else if (contact > 0.5) {{
+        if (avgFd > 0.05) {{
+          if (deform > 0.2) {{ primitive = 'grasp'; conf = 0.6; }}
+          else {{ primitive = 'press'; conf = 0.55; }}
+        }} else if (Math.abs(avgFd) < 0.02 && force > 0.2) {{
+          if (shear > 0.1) {{ primitive = 'wipe'; conf = 0.5; }}
+          else {{ primitive = 'wrap'; conf = 0.5; }}
+        }} else if (avgFd < -0.05) {{
+          primitive = 'squeeze'; conf = 0.45;
+        }} else {{
+          primitive = 'grasp'; conf = 0.35;
+        }}
+      }}
+      
+      // Filter by taxonomy
+      var defaultPrims = ['reach','grasp','press','squeeze','wrap','wipe','lift'];
+      var allowedPrims = taxonomyVal === 'full' ? 
+        ['wrap','lift','grasp','fold','cut','insert','press','wipe','peel','assemble','extract','twist','shake','dispense','disassemble','squeeze','pour','open','close','screw','unscrew','reach'] :
+        defaultPrims;
+      if (primitive && allowedPrims.indexOf(primitive) === -1) {{
+        primitive = null; conf = 0;
+      }}
+      
+      if (conf < minConf) {{ primitive = null; conf = 0; }}
+      
+      // Merge consecutive same primitives
+      if (primitive === null) {{
+        if (currentPrim) {{ predPrimAnns.push(currentPrim); currentPrim = null; }}
+      }} else if (currentPrim && currentPrim.primitive_name === primitive) {{
+        currentPrim.end_frame = frames[i].frame_idx;
+        currentPrim.confidence = Math.min(currentPrim.confidence, conf);
+      }} else {{
+        if (currentPrim) predPrimAnns.push(currentPrim);
+        currentPrim = {{
+          primitive_name: primitive,
+          start_frame: frames[i].frame_idx,
+          end_frame: frames[i].frame_idx,
+          confidence: conf,
+          source: 'ai_predicted'
+        }};
+      }}
+    }}
+    if (currentPrim) predPrimAnns.push(currentPrim);
+    
+    // Filter short segments
+    predPrimAnns = predPrimAnns.filter(function(a) {{ return a.end_frame - a.start_frame >= 2; }});
+    
+    data.primitive_annotations = predPrimAnns;
+    
+    // Show results
+    var resultDiv = document.getElementById(tid + '-pp-result');
+    if (predPrimAnns.length) {{
+      var counts = {{}};
+      predPrimAnns.forEach(function(a) {{ counts[a.primitive_name] = (counts[a.primitive_name] || 0) + 1; }});
+      var parts = Object.keys(counts).map(function(k) {{ return k + '×' + counts[k]; }});
+      var lowCount = predPrimAnns.filter(function(a) {{ return a.confidence < 0.5; }}).length;
+      resultDiv.innerHTML = '<b>✅ 预标注完成：</b>' + parts.join(', ') +
+        (lowCount > 0 ? '<br><span style="color:#e85d75;">⚠ ' + lowCount + '个低置信度区间，请人工审核</span>' : '');
+    }} else {{
+      resultDiv.innerHTML = '<span style="color:#868e96;">未检测到有效的 primitive 区间</span>';
+    }}
+    resultDiv.style.display = 'block';
+    
+    // Refresh display
+    drawPrimitiveTrack();
+    showFrame(currentFrameIdx);
+  }}
+
+  document.getElementById(tid + '-pp-run').addEventListener('click', runPrimitivePrediction);
+
   // ===== Export =====
   function exportJSON() {{
     const blob = new Blob([JSON.stringify(data, null, 2)], {{type: 'application/json'}});
@@ -1058,7 +1270,7 @@ def generate_panel_html(
       'optical_flow_magnitude','optical_flow_direction',
       'temporal_deformation_rate','contact_transition'];
     // v0.13: add primitive_label column
-    let csv = 'frame_idx,timestamp_s,manipulation_phase,confidence,primitive_label,' + dims.join(',') + '\\n';
+    let csv = 'frame_idx,timestamp_s,manipulation_phase,confidence,primitive_label,primitive_source,primitive_confidence,' + dims.join(',') + '\\n';
     const primAnns = data.primitive_annotations || [];
     for (const f of frames) {{
       const tl = f.tlabel_v2 || {{}};
@@ -1067,7 +1279,15 @@ def generate_panel_html(
       for (const pa of primAnns) {{
         if (f.frame_idx >= pa.start_frame && f.frame_idx <= pa.end_frame) {{ prim = pa.primitive_name; break; }}
       }}
-      csv += f.frame_idx + ',' + f.timestamp_s + ',' + f.manipulation_phase + ',' + f.confidence + ',' + prim;
+      var primSource = '', primConf = '';
+      for (var pa2 of primAnns) {{
+        if (f.frame_idx >= pa2.start_frame && f.frame_idx <= pa2.end_frame) {{
+          primSource = pa2.source || '';
+          primConf = pa2.confidence !== undefined ? pa2.confidence : '';
+          break;
+        }}
+      }}
+      csv += f.frame_idx + ',' + f.timestamp_s + ',' + f.manipulation_phase + ',' + f.confidence + ',' + prim + ',' + primSource + ',' + primConf;
       for (const d of dims) csv += ',' + (tl[d] || 0);
       csv += '\\n';
     }}

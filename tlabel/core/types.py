@@ -176,9 +176,35 @@ class TLabelData:
         self.schema_version = schema_version
         self.sensor_id = sensor_id  # 传感器标识（如 "left_gripper"）
         self.calibration_params = calibration_params or {}  # 标定参数
-        self.sensor_profile = sensor_profile  # v0.7: 传感器物理属性元数据
+        self.sensor_profile = self._apply_sensor_profile_defaults(sensor_profile, sensor_info)
         self._predict_results = None  # v0.5.0: 预标注结果缓存（供UI高亮）
         self.primitive_annotations = []  # v0.13: Motor Primitive标注列表
+        self.tactile_events = []  # v0.14: 触觉事件标注列表
+
+    @staticmethod
+    def _apply_sensor_profile_defaults(sensor_profile: Optional[Dict],
+                                        sensor_info: Optional[Dict]) -> Optional[Dict]:
+        """
+        为sensor_profile填充弹性体刚度默认值（v0.14.0）
+
+        如果sensor_profile中没有elastomer.stiffness_n_m，根据传感器类型自动填充。
+        """
+        from tlabel.predict.force_estimator import DEFAULT_ELASTOMER_STIFFNESS, get_default_stiffness
+
+        if sensor_profile is None:
+            sensor_profile = {}
+
+        elastomer = sensor_profile.get("elastomer", {})
+        if not elastomer:
+            elastomer = {}
+
+        # 如果已有stiffness_n_m，不覆盖
+        if "stiffness_n_m" not in elastomer or elastomer["stiffness_n_m"] is None:
+            sensor_type = (sensor_info or {}).get("type", "")
+            elastomer["stiffness_n_m"] = get_default_stiffness(sensor_type)
+
+        sensor_profile["elastomer"] = elastomer
+        return sensor_profile
 
     @property
     def num_frames(self) -> int:
@@ -242,22 +268,54 @@ class TLabelData:
         添加 Motor Primitive 标注
 
         Args:
-            name: primitive名称（必须是22个标准primitive之一）
+            name: primitive名称（内置22种 + taxonomy自定义扩展）
             start_frame: 起始帧索引
             end_frame: 结束帧索引
             confidence: 置信度 0.0-1.0
-            source: 标注来源 'manual' | 'ai_predicted'
+            source: 标注来源 'manual' | 'ai_predicted' | 'ai_predicted_estimated'
 
         用法:
             data.add_primitive('grasp', 10, 30, confidence=0.95)
             data.add_primitive('lift', 35, 55)
         """
-        from tlabel.core.primitive import PrimitiveAnnotation, PRIMITIVE_PRESETS
-        if name not in PRIMITIVE_PRESETS:
-            raise ValueError(f"Unknown primitive: {name}. Must be one of {PRIMITIVE_PRESETS}")
+        from tlabel.core.primitive import PrimitiveAnnotation
+        # PrimitiveAnnotation 构造函数内部会做验证
         self.primitive_annotations.append(
             PrimitiveAnnotation(name, start_frame, end_frame, confidence, source)
         )
+
+    def predict_primitives(self, taxonomy=None, min_confidence: float = 0.4) -> int:
+        """
+        自动预标注 Motor Primitive（v0.14.0 便捷方法）
+
+        基于力/接触信号的规则推断，自动检测 primitive 区间并添加到
+        primitive_annotations 列表。
+
+        Args:
+            taxonomy: TaxonomyConfig 实例，None 则使用默认 7 种
+            min_confidence: 最低置信度阈值，低于此值的标注不添加
+
+        Returns:
+            添加的标注数量
+        """
+        from tlabel.predict.engine import PredictEngine
+        engine = PredictEngine()
+        annotations = engine.predict_primitives(self, taxonomy=taxonomy)
+        count = 0
+        for ann in annotations:
+            if ann['confidence'] >= min_confidence:
+                try:
+                    self.add_primitive(
+                        name=ann['primitive_name'],
+                        start_frame=ann['start_frame'],
+                        end_frame=ann['end_frame'],
+                        confidence=ann['confidence'],
+                        source=ann.get('source', 'ai_predicted'),
+                    )
+                    count += 1
+                except ValueError:
+                    pass
+        return count
 
     def get_primitive_timeline(self) -> List:
         """
@@ -280,6 +338,61 @@ class TLabelData:
             if p.contains_frame(frame_idx):
                 return p.primitive_name
         return None
+
+    # ============================================================
+    # v0.14.0: Tactile Event 标注
+    # ============================================================
+
+    def add_event(self, event_type: str, frame_idx: int,
+                  confidence: float = 1.0, source: str = "manual",
+                  start_frame: Optional[int] = None, end_frame: Optional[int] = None,
+                  metadata: Optional[Dict] = None) -> None:
+        """
+        添加触觉事件标注
+
+        Args:
+            event_type: 事件类型（如 "contact_onset", "slip" 等）
+            frame_idx: 事件帧
+            confidence: 置信度 0-1
+            source: "manual" / "ai_predicted"
+            start_frame: 起始帧（区间事件）
+            end_frame: 结束帧（区间事件）
+            metadata: 附加信息
+
+        用法:
+            data.add_event("contact_onset", 42, confidence=0.9)
+            data.add_event("slip", 50, start_frame=50, end_frame=65, confidence=0.7)
+        """
+        from tlabel.core.events import TactileEvent
+        te = TactileEvent(
+            event_type=event_type,
+            frame_idx=frame_idx,
+            confidence=confidence,
+            source=source,
+            start_frame=start_frame,
+            end_frame=end_frame,
+            metadata=metadata,
+        )
+        self.tactile_events.append(te)
+
+    def get_events_at_frame(self, frame_idx: int) -> List:
+        """获取某帧对应的所有触觉事件"""
+        return [e for e in self.tactile_events if e.contains_frame(frame_idx)]
+
+    def get_events_by_type(self, event_type: str) -> List:
+        """按类型获取事件列表"""
+        return [e for e in self.tactile_events if e.event_type == event_type]
+
+    def detect_events(self, min_confidence: float = 0.5) -> int:
+        """
+        自动检测触觉事件并应用
+
+        Returns:
+            检测到的事件数量
+        """
+        from tlabel.predict.engine import PredictEngine
+        engine = PredictEngine()
+        return engine.apply_events(self, min_confidence=min_confidence)
 
     def review(self, lang: str = "auto", **kwargs):
         """弹出Jupyter彩色标注面板"""
@@ -608,6 +721,9 @@ class TLabelData:
             # v0.13: Motor Primitive标注（仅在有标注时输出）
             "primitive_annotations": [p.to_dict() for p in self.primitive_annotations]
                 if self.primitive_annotations else [],
+            # v0.14: 触觉事件标注（仅在有标注时输出）
+            "tactile_events": [e.to_dict() for e in self.tactile_events]
+                if self.tactile_events else [],
         }
 
     def get_images(self, max_frames: Optional[int] = None) -> List[Any]:

@@ -89,9 +89,15 @@ def _export_csv(data: TLabelData, output_path: str):
         "temporal_deformation_rate", "contact_transition",
     ]
 
-    # v0.13: 新增primitive_label列
+    # v0.13: primitive_label列; v0.14: 新增primitive_source/confidence + event_type
     headers = ["frame_idx", "timestamp_s", "is_first", "is_last",
-               "manipulation_phase", "confidence", "primitive_label"] + TLABEL_DIMS
+               "manipulation_phase", "confidence", "primitive_label",
+               "primitive_source", "primitive_confidence"] + TLABEL_DIMS
+
+    # v0.14: 如果有tactile_events，追加event_type列
+    has_events = hasattr(data, 'tactile_events') and data.tactile_events
+    if has_events:
+        headers.append("event_type")
 
     with open(path, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
@@ -100,12 +106,16 @@ def _export_csv(data: TLabelData, output_path: str):
         for i, frame in enumerate(data.frames):
             is_first = (i == 0)
             is_last = (i == len(data.frames) - 1)
-            # v0.13: 获取该帧的primitive
+            # v0.13/v0.14: 获取该帧的primitive + source + confidence
             primitive = ""
+            primitive_source = ""
+            primitive_confidence = ""
             if hasattr(data, 'primitive_annotations') and data.primitive_annotations:
                 for p in data.primitive_annotations:
                     if p.start_frame <= frame.frame_idx <= p.end_frame:
                         primitive = p.primitive_name
+                        primitive_source = p.source
+                        primitive_confidence = round(p.confidence, 4)
                         break
             row = [
                 frame.frame_idx,
@@ -115,8 +125,19 @@ def _export_csv(data: TLabelData, output_path: str):
                 frame.manipulation_phase,
                 frame.confidence,
                 primitive,
+                primitive_source,
+                primitive_confidence,
             ]
             row.extend([frame.tlabel_v2.get(dim, 0.0) for dim in TLABEL_DIMS])
+
+            # v0.14: 获取该帧的事件类型
+            if has_events:
+                frame_events = []
+                for ev in data.tactile_events:
+                    if ev.contains_frame(frame.frame_idx):
+                        frame_events.append(ev.event_type)
+                row.append("|".join(frame_events) if frame_events else "")
+
             writer.writerow(row)
 
     return str(path)

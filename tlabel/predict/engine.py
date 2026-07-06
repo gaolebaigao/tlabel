@@ -292,41 +292,66 @@ class PredictEngine:
     # v0.13.0: Motor Primitive 预测
     # ============================================================
 
-    def predict_primitives(self, data: TLabelData) -> List[Dict]:
+    def predict_primitives(self, data: TLabelData,
+                           taxonomy=None) -> List[Dict]:
         """
         基于力/接触信号的规则推断 Motor Primitive
+
+        v0.14.0:
+        - 接入 TaxonomyConfig：只在 taxonomy 定义的 primitive 范围内输出
+        - 当force_magnitude全为0或缺失时，自动调用force_estimator推断力
+        - 推断出的primitive标注降低置信度（×0.7），标记source为"ai_predicted_estimated"
 
         启发式规则:
         - force 上升 + contact 建立 → grasp / press
         - force 稳定 + 位移 → wrap / wipe
-        - force 下降 → release (不标注primitive)
-        - 无接触 + 位移 → reach
+        - force 下降 → squeeze
+        - 无接触 + 低力 → reach
 
         Args:
             data: TLabelData 实例
+            taxonomy: TaxonomyConfig 实例，None 则使用默认 7 种
 
         Returns:
             List of primitive annotation dicts
         """
-        from tlabel.core.primitive import PRIMITIVE_PRESETS
+        from tlabel.core.taxonomy import get_default_taxonomy, default_taxonomy
+        from tlabel.predict.force_estimator import has_real_force_data, auto_force_estimate
 
         if not data.frames or len(data.frames) < 3:
             return []
+
+        # 确定 taxonomy
+        if taxonomy is None:
+            taxonomy = default_taxonomy()
+        valid_primitives = set(taxonomy.get_primitives())
+
+        # v0.14.0: 检测是否缺少力数据，自动推断
+        force_was_estimated = False
+        if not has_real_force_data(data):
+            auto_force_estimate(data)
+            force_was_estimated = True
 
         # 提取时序信号
         forces = []
         contacts = []
         deformations = []
+        shears = []
         for f in data.frames:
             tv2 = f.tlabel_v2
             forces.append(tv2.get("force_magnitude", 0.0))
             contacts.append(tv2.get("contact", 0.0))
             deformations.append(tv2.get("deformation_magnitude", 0.0))
+            shears.append(tv2.get("shear_field_magnitude", 0.0))
 
         # 计算力的变化率
         force_deltas = [0.0]
         for i in range(1, len(forces)):
             force_deltas.append(forces[i] - forces[i - 1])
+
+        # 估计惩罚因子：推断力来源时置信度乘以0.7
+        conf_penalty = 0.7 if force_was_estimated else 1.0
+        source_tag = 'ai_predicted_estimated' if force_was_estimated else 'ai_predicted'
 
         # 基于时序信号推断每帧的primitive
         frame_primitives = []
@@ -334,6 +359,7 @@ class PredictEngine:
             force = forces[i]
             contact = contacts[i]
             deform = deformations[i]
+            shear = shears[i]
             fd = force_deltas[i]
 
             # 计算力的趋势（短期平均）
@@ -346,7 +372,7 @@ class PredictEngine:
             if contact < 0.3 and force < 0.1:
                 # 无接触、低力 → reach
                 primitive = 'reach'
-                confidence = 0.5
+                confidence = 0.65
             elif contact > 0.5:
                 if avg_fd > 0.05:
                     # 力在上升 → grasp 或 press
@@ -358,7 +384,6 @@ class PredictEngine:
                         confidence = 0.55
                 elif abs(avg_fd) < 0.02 and force > 0.2:
                     # 力稳定、有接触 → wrap 或 wipe
-                    shear = data.frames[i].tlabel_v2.get("shear_field_magnitude", 0)
                     if shear > 0.1:
                         primitive = 'wipe'
                         confidence = 0.5
@@ -366,13 +391,22 @@ class PredictEngine:
                         primitive = 'wrap'
                         confidence = 0.5
                 elif avg_fd < -0.05:
-                    # 力在下降 → squeeze（释放前）
+                    # 力在下降 → squeeze
                     primitive = 'squeeze'
                     confidence = 0.45
                 else:
-                    # 有接触但不明确
+                    # 有接触但不明确 → grasp（低置信度）
                     primitive = 'grasp'
                     confidence = 0.35
+
+            # 应用估计惩罚
+            confidence *= conf_penalty
+
+            # v0.14.0: 只在 taxonomy 范围内输出
+            if primitive is not None and primitive not in valid_primitives:
+                # 该 primitive 不在当前 taxonomy 中，留空给用户手动标注
+                primitive = None
+                confidence = 0.0
 
             frame_primitives.append({
                 'frame_idx': data.frames[i].frame_idx,
@@ -396,7 +430,7 @@ class PredictEngine:
                     'start_frame': fp['frame_idx'],
                     'end_frame': fp['frame_idx'],
                     'confidence': fp['confidence'],
-                    'source': 'ai_predicted',
+                    'source': source_tag,
                 }
             elif current['primitive_name'] == fp['primitive']:
                 current['end_frame'] = fp['frame_idx']
@@ -409,7 +443,7 @@ class PredictEngine:
                     'start_frame': fp['frame_idx'],
                     'end_frame': fp['frame_idx'],
                     'confidence': fp['confidence'],
-                    'source': 'ai_predicted',
+                    'source': source_tag,
                 }
 
         if current is not None:
@@ -418,6 +452,11 @@ class PredictEngine:
         # 过滤掉太短的区间（< 3帧）和低置信度的
         annotations = [a for a in annotations
                        if a['end_frame'] - a['start_frame'] >= 2 and a['confidence'] >= 0.3]
+
+        # v0.14.0: 标记力推断信息
+        if force_was_estimated:
+            for ann in annotations:
+                ann['force_estimated'] = True
 
         return annotations
 
@@ -440,15 +479,274 @@ class PredictEngine:
         for ann in annotations:
             if ann['confidence'] >= min_confidence:
                 try:
+                    # v0.14: 映射 ai_predicted_estimated → ai_predicted for PrimitiveAnnotation
+                    source = ann.get('source', 'ai_predicted')
+                    if source == 'ai_predicted_estimated':
+                        source = 'ai_predicted'
                     pa = PrimitiveAnnotation(
                         name=ann['primitive_name'],
                         start=ann['start_frame'],
                         end=ann['end_frame'],
                         confidence=ann['confidence'],
-                        source='ai_predicted',
+                        source=source,
                     )
                     data.primitive_annotations.append(pa)
                     count += 1
                 except ValueError:
+                    pass
+        return count
+
+    # ============================================================
+    # v0.14.0: Tactile Event 预测
+    # ============================================================
+
+    def predict_events(self, data: TLabelData) -> List[Dict]:
+        """
+        基于阈值+统计的自动事件检测
+
+        检测6种事件类型:
+        - contact_onset: contact从0→1的跳变帧
+        - contact_loss: contact从1→0的跳变帧
+        - slip: slip_event > 阈值 且 contact > 0.5
+        - force_spike: 力值突变（delta > 2σ）
+        - deformation_anomaly: 形变异常（超出正常范围）
+        - stable_grip: 连续N帧contact稳定 + 力波动小
+
+        Args:
+            data: TLabelData 实例
+
+        Returns:
+            List of event annotation dicts
+        """
+        from tlabel.core.events import TactileEvent, EVENT_PRESETS
+
+        if not data.frames or len(data.frames) < 3:
+            return []
+
+        events = []
+        n = len(data.frames)
+
+        # 提取时序信号
+        contacts = [f.tlabel_v2.get("contact", 0.0) for f in data.frames]
+        slips = [f.tlabel_v2.get("slip_event", 0.0) for f in data.frames]
+        forces = [f.tlabel_v2.get("force_magnitude", 0.0) for f in data.frames]
+        deformations = [f.tlabel_v2.get("deformation_magnitude", 0.0) for f in data.frames]
+
+        # 计算力的统计量（用于force_spike检测）
+        force_mean = sum(forces) / n if n > 0 else 0.0
+        force_var = sum((f - force_mean) ** 2 for f in forces) / n if n > 0 else 0.0
+        force_std = math.sqrt(force_var) if force_var > 0 else 0.01
+
+        # 形变统计量（用于anomaly检测）
+        deform_mean = sum(deformations) / n if n > 0 else 0.0
+        deform_var = sum((d - deform_mean) ** 2 for d in deformations) / n if n > 0 else 0.0
+        deform_std = math.sqrt(deform_var) if deform_var > 0 else 0.01
+
+        # ── 1. contact_onset & contact_loss ──
+        for i in range(1, n):
+            prev_contact = contacts[i - 1]
+            curr_contact = contacts[i]
+            frame_idx = data.frames[i].frame_idx
+
+            if prev_contact <= 0.3 and curr_contact > 0.5:
+                events.append({
+                    "event_type": "contact_onset",
+                    "frame_idx": frame_idx,
+                    "confidence": 0.9,
+                    "source": "ai_predicted",
+                    "metadata": {"prev_contact": prev_contact, "curr_contact": curr_contact},
+                })
+            elif prev_contact > 0.5 and curr_contact <= 0.3:
+                events.append({
+                    "event_type": "contact_loss",
+                    "frame_idx": frame_idx,
+                    "confidence": 0.9,
+                    "source": "ai_predicted",
+                    "metadata": {"prev_contact": prev_contact, "curr_contact": curr_contact},
+                })
+
+        # ── 2. slip (区间事件) ──
+        slip_start = None
+        slip_threshold = 0.3
+        for i in range(n):
+            if slips[i] > slip_threshold and contacts[i] > 0.5:
+                if slip_start is None:
+                    slip_start = i
+            else:
+                if slip_start is not None:
+                    end_i = i - 1
+                    if end_i - slip_start >= 1:
+                        events.append({
+                            "event_type": "slip",
+                            "frame_idx": data.frames[slip_start].frame_idx,
+                            "start_frame": data.frames[slip_start].frame_idx,
+                            "end_frame": data.frames[end_i].frame_idx,
+                            "confidence": 0.7,
+                            "source": "ai_predicted",
+                            "metadata": {
+                                "max_slip": max(slips[slip_start:end_i + 1]),
+                                "duration_frames": end_i - slip_start + 1,
+                            },
+                        })
+                    slip_start = None
+        if slip_start is not None:
+            end_i = n - 1
+            if end_i - slip_start >= 1:
+                events.append({
+                    "event_type": "slip",
+                    "frame_idx": data.frames[slip_start].frame_idx,
+                    "start_frame": data.frames[slip_start].frame_idx,
+                    "end_frame": data.frames[end_i].frame_idx,
+                    "confidence": 0.7,
+                    "source": "ai_predicted",
+                    "metadata": {
+                        "max_slip": max(slips[slip_start:end_i + 1]),
+                        "duration_frames": end_i - slip_start + 1,
+                    },
+                })
+
+        # ── 3. force_spike ──
+        force_spike_threshold = 2.0 * force_std
+        for i in range(1, n):
+            delta = abs(forces[i] - forces[i - 1])
+            if delta > force_spike_threshold and delta > 0.01:
+                events.append({
+                    "event_type": "force_spike",
+                    "frame_idx": data.frames[i].frame_idx,
+                    "confidence": min(0.9, 0.5 + delta / (4 * force_std + 0.01)),
+                    "source": "ai_predicted",
+                    "metadata": {"delta": round(delta, 4), "threshold": round(force_spike_threshold, 4)},
+                })
+
+        # ── 4. deformation_anomaly (区间事件) ──
+        anomaly_threshold = deform_mean + 2.5 * deform_std
+        if anomaly_threshold > 0.01:
+            anomaly_start = None
+            for i in range(n):
+                if deformations[i] > anomaly_threshold:
+                    if anomaly_start is None:
+                        anomaly_start = i
+                else:
+                    if anomaly_start is not None:
+                        end_i = i - 1
+                        if end_i - anomaly_start >= 0:
+                            events.append({
+                                "event_type": "deformation_anomaly",
+                                "frame_idx": data.frames[anomaly_start].frame_idx,
+                                "start_frame": data.frames[anomaly_start].frame_idx,
+                                "end_frame": data.frames[end_i].frame_idx,
+                                "confidence": 0.6,
+                                "source": "ai_predicted",
+                                "metadata": {
+                                    "max_deformation": round(max(deformations[anomaly_start:end_i + 1]), 4),
+                                    "threshold": round(anomaly_threshold, 4),
+                                },
+                            })
+                        anomaly_start = None
+            if anomaly_start is not None:
+                end_i = n - 1
+                events.append({
+                    "event_type": "deformation_anomaly",
+                    "frame_idx": data.frames[anomaly_start].frame_idx,
+                    "start_frame": data.frames[anomaly_start].frame_idx,
+                    "end_frame": data.frames[end_i].frame_idx,
+                    "confidence": 0.6,
+                    "source": "ai_predicted",
+                    "metadata": {
+                        "max_deformation": round(max(deformations[anomaly_start:end_i + 1]), 4),
+                        "threshold": round(anomaly_threshold, 4),
+                    },
+                })
+
+        # ── 5. stable_grip (区间事件) ──
+        stable_threshold = 8  # 最少8帧
+        force_variation_threshold = 0.05 * force_mean if force_mean > 0 else 0.01
+        stable_start = None
+        for i in range(n):
+            is_stable = (contacts[i] > 0.8 and
+                         forces[i] > 0.1)
+            if is_stable:
+                if stable_start is None:
+                    stable_start = i
+            else:
+                if stable_start is not None:
+                    end_i = i - 1
+                    duration = end_i - stable_start + 1
+                    if duration >= stable_threshold:
+                        seg_forces = forces[stable_start:end_i + 1]
+                        seg_mean = sum(seg_forces) / len(seg_forces)
+                        seg_var = sum((f - seg_mean) ** 2 for f in seg_forces) / len(seg_forces)
+                        seg_std = math.sqrt(seg_var)
+                        if seg_std < force_variation_threshold:
+                            events.append({
+                                "event_type": "stable_grip",
+                                "frame_idx": data.frames[stable_start].frame_idx,
+                                "start_frame": data.frames[stable_start].frame_idx,
+                                "end_frame": data.frames[end_i].frame_idx,
+                                "confidence": 0.75,
+                                "source": "ai_predicted",
+                                "metadata": {
+                                    "duration_frames": duration,
+                                    "mean_force": round(seg_mean, 4),
+                                    "force_std": round(seg_std, 6),
+                                },
+                            })
+                    stable_start = None
+        if stable_start is not None:
+            end_i = n - 1
+            duration = end_i - stable_start + 1
+            if duration >= stable_threshold:
+                seg_forces = forces[stable_start:end_i + 1]
+                seg_mean = sum(seg_forces) / len(seg_forces)
+                seg_var = sum((f - seg_mean) ** 2 for f in seg_forces) / len(seg_forces)
+                seg_std = math.sqrt(seg_var)
+                if seg_std < force_variation_threshold:
+                    events.append({
+                        "event_type": "stable_grip",
+                        "frame_idx": data.frames[stable_start].frame_idx,
+                        "start_frame": data.frames[stable_start].frame_idx,
+                        "end_frame": data.frames[end_i].frame_idx,
+                        "confidence": 0.75,
+                        "source": "ai_predicted",
+                        "metadata": {
+                            "duration_frames": duration,
+                            "mean_force": round(seg_mean, 4),
+                            "force_std": round(seg_std, 6),
+                        },
+                    })
+
+        return events
+
+    def apply_events(self, data: TLabelData,
+                     min_confidence: float = 0.5) -> int:
+        """
+        将预测的触觉事件应用到TLabelData
+
+        Args:
+            data: TLabelData 实例
+            min_confidence: 最低置信度阈值
+
+        Returns:
+            应用的事件数量
+        """
+        from tlabel.core.events import TactileEvent
+
+        events = self.predict_events(data)
+        count = 0
+        for ev_dict in events:
+            if ev_dict['confidence'] >= min_confidence:
+                try:
+                    te = TactileEvent(
+                        event_type=ev_dict['event_type'],
+                        frame_idx=ev_dict['frame_idx'],
+                        confidence=ev_dict['confidence'],
+                        source=ev_dict['source'],
+                        start_frame=ev_dict.get('start_frame'),
+                        end_frame=ev_dict.get('end_frame'),
+                        metadata=ev_dict.get('metadata'),
+                    )
+                    data.tactile_events.append(te)
+                    count += 1
+                except (ValueError, KeyError):
                     pass
         return count
