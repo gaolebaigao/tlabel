@@ -603,6 +603,6 @@ We provide professional tactile data annotation and pipeline services:
 
 **Contact us:**
 - WeChat: `wxid_olqx5z6trmtn21`
-- Email: `375720783@qq.com`
+- Email: `luoxi@touchlabelai.cn`
 - Company: [NiuSu Tech / TouchLabel AI](https://github.com/liesliy/tlabel)
 
