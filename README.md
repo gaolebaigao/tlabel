@@ -589,3 +589,19 @@ We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 [⭐ Star on GitHub](https://github.com/liesliy/tlabel/stargazers) · [📦 Install from PyPI](https://pypi.org/project/tlabel/) · [🏆 Try the Benchmark](https://github.com/liesliy/tlabel-bench)
 
 </div>
+
+
+---
+
+## 🤝 Need Help with Tactile Data?
+
+We provide professional tactile data annotation and pipeline services:
+
+- **Custom sensor adapter development** — integrate your tactile sensor with TLabel in days, not weeks
+- **Data pipeline consulting** — design annotation workflows for your specific task (grasping, manipulation, slip detection, etc.)
+- **Embodied AI tooling** — end-to-end data solutions from raw sensor output to model-ready datasets
+
+**Contact us:**
+- WeChat: `wxid_olqx5z6trmtn21`
+- Email: `375720783@qq.com`
+- Company: [NiuSu Tech / TouchLabel AI](https://github.com/liesliy/tlabel)
