@@ -606,18 +606,3 @@ We provide professional tactile data annotation and pipeline services:
 - Email: `375720783@qq.com`
 - Company: [NiuSu Tech / TouchLabel AI](https://github.com/liesliy/tlabel)
 
-
----
-
-## 🤝 需要触觉数据方面的帮助？
-
-我们提供专业的触觉数据标注和数据处理服务：
-
-- **传感器适配器开发** — 几天内让你的触觉传感器接入 TLabel，而不是几周
-- **数据流程咨询** — 为你的具体任务（抓取、操作、滑移检测等）设计标注工作流
-- **具身智能数据方案** — 从原始传感器输出到模型可用数据集的端到端解决方案
-
-**联系我们：**
-- 微信: `wxid_olqx5z6trmtn21`
-- 邮箱: `375720783@qq.com`
-- 公司: [牛宿科技 / TouchLabel AI](https://github.com/liesliy/tlabel)
