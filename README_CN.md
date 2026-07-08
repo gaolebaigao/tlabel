@@ -603,5 +603,5 @@ tlabel/
 
 **联系我们：**
 - 微信: `wxid_olqx5z6trmtn21`
-- 邮箱: `375720783@qq.com`
+- 邮箱: `luoxi@touchlabelai.cn`
 - 公司: [牛宿科技 / TouchLabel AI](https://github.com/liesliy/tlabel)
