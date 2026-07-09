@@ -24,6 +24,11 @@
 
 ---
 
+## Community
+
+[![Discord](https://img.shields.io/discord/1234567890?color=5865F2&label=Discord&logo=discord&logoColor=white)](https://discord.gg/2ab8EWaBM)
+
+Join our [Discord community](https://discord.gg/2ab8EWaBM) for support, discussions, and contributions!
 ## 🆕 What's New
 
 ### v0.14.0 — Taxonomy System & Force-Inferred Primitive Prediction 🆕
