@@ -535,22 +535,144 @@ async function compareWithGolden() {
     }
 
     try {
-        const response = await fetch(`${API_BASE}/api/quality-compare`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                data_id: currentData.id,
-                profile_id: profileId
-            })
-        });
-
-        if (!response.ok) throw new Error('Quality comparison failed');
-
-        const result = await response.json();
+        // Standalone demo: client-side comparison logic (no backend needed)
+        const result = performLocalComparison(currentData, profileId);
         displayQualityComparison(result);
     } catch (error) {
         alert('质量比对失败: ' + error.message);
     }
+}
+
+// Embedded Golden Profile standards for client-side comparison
+const GOLDEN_PROFILES = {
+    "grasp_golden": {
+        id: "grasp_golden",
+        task: "robotic_grasp",
+        description: "Standard force profile for successful object grasping",
+        sensor_type: "gelsight_mini",
+        thresholds: {
+            force_peak_min: 0.8,    // N - minimum peak force for stable grasp
+            force_peak_max: 1.5,    // N - maximum safe force
+            contact_time_min: 1.5,  // s - minimum contact duration
+            slip_event_max: 0,      // no slip events during stable grasp
+            friction_ratio_min: 0.7 // minimum friction cone ratio
+        }
+    }
+};
+
+function performLocalComparison(data, profileId) {
+    const profile = GOLDEN_PROFILES[profileId];
+    if (!profile) {
+        throw new Error('Golden Profile not found: ' + profileId);
+    }
+
+    const features = data.features.features;
+    const timestamps = data.features.timestamps;
+    const th = profile.thresholds;
+    const deviations = [];
+    let qualityScore = 100;
+
+    // Check 1: Peak force magnitude
+    const forcePeak = features.force_peak || [];
+    const maxForce = Math.max(...forcePeak);
+    const minForce = Math.min(...forcePeak.filter(v => v > 0));
+    
+    if (maxForce < th.force_peak_min) {
+        deviations.push({
+            type: "force_peak_insufficient",
+            severity: "error",
+            phase: "grasp_hold",
+            expected: `≥ ${th.force_peak_min} N`,
+            actual: `${maxForce.toFixed(3)} N`,
+            timestamp: timestamps[forcePeak.indexOf(maxForce)] || 0
+        });
+        qualityScore -= 25;
+    }
+    if (maxForce > th.force_peak_max) {
+        deviations.push({
+            type: "force_peak_excessive",
+            severity: "warning",
+            phase: "grasp_hold",
+            expected: `≤ ${th.force_peak_max} N`,
+            actual: `${maxForce.toFixed(3)} N`,
+            timestamp: timestamps[forcePeak.indexOf(maxForce)] || 0
+        });
+        qualityScore -= 10;
+    }
+
+    // Check 2: Contact duration
+    const contact = features.contact || [];
+    const contactFrames = contact.filter(v => v > 0.5).length;
+    const contactDuration = (contactFrames / data.fps).toFixed(2);
+    
+    if (parseFloat(contactDuration) < th.contact_time_min) {
+        deviations.push({
+            type: "contact_duration_short",
+            severity: "warning",
+            phase: "grasp_hold",
+            expected: `≥ ${th.contact_time_min} s`,
+            actual: `${contactDuration} s`,
+            timestamp: 0
+        });
+        qualityScore -= 15;
+    }
+
+    // Check 3: Slip events during stable grasp
+    const slipEvent = features.slip_event || [];
+    const slipFrames = slipEvent.filter(v => v > 0).length;
+    
+    // Find frames where contact > 0.5 and check for slips
+    let slipDuringGrasp = 0;
+    for (let i = 0; i < contact.length; i++) {
+        if (contact[i] > 0.5 && slipEvent[i] > 0) {
+            slipDuringGrasp++;
+        }
+    }
+    
+    if (slipDuringGrasp > th.slip_event_max) {
+        deviations.push({
+            type: "slip_detected_during_grasp",
+            severity: "error",
+            phase: "grasp_hold",
+            expected: `${th.slip_event_max} slip events`,
+            actual: `${slipDuringGrasp} frames with slip`,
+            timestamp: timestamps[slipEvent.findIndex((v, i) => contact[i] > 0.5 && v > 0)] || 0
+        });
+        qualityScore -= 20;
+    }
+
+    // Check 4: Friction cone ratio during stable grasp
+    const frictionRatio = features.friction_cone_ratio || [];
+    let lowFrictionFrames = 0;
+    let lowFrictionStart = -1;
+    for (let i = 0; i < frictionRatio.length; i++) {
+        if (contact[i] > 0.5 && frictionRatio[i] < th.friction_ratio_min) {
+            lowFrictionFrames++;
+            if (lowFrictionStart < 0) lowFrictionStart = i;
+        }
+    }
+    
+    if (lowFrictionFrames > 5) {
+        deviations.push({
+            type: "friction_cone_low",
+            severity: "warning",
+            phase: "grasp_hold",
+            expected: `≥ ${th.friction_ratio_min}`,
+            actual: `${(frictionRatio.filter((v, i) => contact[i] > 0.5).reduce((a, b) => Math.min(a, b), 1)).toFixed(3)} min`,
+            timestamp: timestamps[lowFrictionStart] || 0
+        });
+        qualityScore -= 10;
+    }
+
+    qualityScore = Math.max(0, qualityScore);
+
+    return {
+        quality_score: qualityScore,
+        passed: qualityScore >= 70 && deviations.filter(d => d.severity === 'error').length === 0,
+        deviations: deviations,
+        profile_name: profile.task,
+        data_summary: `${data.num_frames} frames, ${data.duration_s.toFixed(2)}s`
+    };
 }
 
 function displayQualityComparison(result) {
