@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TLabel - 触觉数据标注工具与标准</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+        }
+        .container {
+            text-align: center;
+            max-width: 800px;
+            padding: 40px;
+        }
+        .logo {
+            font-size: 72px;
+            margin-bottom: 16px;
+        }
+        h1 {
+            font-size: 42px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: linear-gradient(90deg, #00d2ff, #3a7bd5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle {
+            font-size: 18px;
+            color: #aaa;
+            margin-bottom: 40px;
+        }
+        .cards {
+            display: flex;
+            gap: 24px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 40px;
+        }
+        .card {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 16px;
+            padding: 32px 24px;
+            width: 320px;
+            text-decoration: none;
+            color: #fff;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(0,210,255,0.5);
+            box-shadow: 0 8px 32px rgba(0,210,255,0.2);
+        }
+        .card-icon { font-size: 40px; margin-bottom: 16px; }
+        .card-title { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+        .card-desc { font-size: 14px; color: #999; line-height: 1.6; }
+        .links {
+            margin-top: 20px;
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+        }
+        .links a {
+            color: #3a7bd5;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .links a:hover { text-decoration: underline; }
+        .badge {
+            display: inline-block;
+            background: rgba(0,210,255,0.15);
+            color: #00d2ff;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-bottom: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🦞</div>
+        <h1>TLabel</h1>
+        <p class="subtitle">Tactile Data Annotation Tool & Standard</p>
+        <span class="badge">v0.14.0 · WAIC 2026</span>
+
+        <div class="cards">
+            <a href="demo-web.html" class="card">
+                <div class="card-icon">🎛️</div>
+                <div class="card-title">TLabel Web Demo</div>
+                <div class="card-desc">触觉数据全链路标注平台 Web 版。支持可视化标注、质量分级、多传感器时间线对齐。</div>
+            </a>
+            <a href="demo.html" class="card">
+                <div class="card-icon">🔬</div>
+                <div class="card-title">TLabel Panel Demo</div>
+                <div class="card-desc">经典面板演示。展示触觉原始动作（Primitive）分段与可视化能力。</div>
+            </a>
+        </div>
+
+        <div class="links">
+            <a href="https://github.com/liesliy/tlabel">📦 GitHub</a>
+            <a href="https://pypi.org/project/tlabel/">📦 PyPI</a>
+            <a href="whitepaper.html">📄 白皮书</a>
+            <a href="annotation-spec.html">📋 标注规范</a>
+        </div>
+    </div>
+</body>
+</html>
