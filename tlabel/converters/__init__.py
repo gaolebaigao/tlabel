@@ -8,7 +8,6 @@ TLabel 格式转换器
 - 未来支持: RLDS, ROS2, TFRecord
 """
 
-from tlabel.converters.lerobot import lerobot_to_tlabel, tlabel_to_lerobot
 from tlabel.converters.ftp1 import (
     tlabel_to_ftp1,
     batch_to_ftp1,
@@ -21,9 +20,14 @@ from tlabel.converters.ftp1 import (
     DEFAULT_AREA_MAPPINGS,
 )
 
+# LeRobot converter requires pyarrow (optional dependency)
+try:
+    from tlabel.converters.lerobot import lerobot_to_tlabel, tlabel_to_lerobot
+    _HAS_LEROBOT = True
+except ImportError:
+    _HAS_LEROBOT = False
+
 __all__ = [
-    "lerobot_to_tlabel",
-    "tlabel_to_lerobot",
     "tlabel_to_ftp1",
     "batch_to_ftp1",
     "list_functional_areas",
@@ -34,3 +38,7 @@ __all__ = [
     "FTP1_KNOWN_SENSORS",
     "DEFAULT_AREA_MAPPINGS",
 ]
+
+# Only add lerobot functions if available
+if _HAS_LEROBOT:
+    __all__.extend(["lerobot_to_tlabel", "tlabel_to_lerobot"])
