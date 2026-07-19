@@ -96,3 +96,6 @@ atomgit-mr-files/
 modelscope/
 screenshots/
 ph_assets/
+
+# Legacy src layout (do not re-add)
+/src/

@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+message: "If you use TLabel in your research, please cite it as follows."
+title: "TLabel: A Sensor-Agnostic Tactile Data Annotation Toolkit and Format Standard"
+authors:
+  - name: "Wu, Sheng"
+    affiliation: "Niusu Technology"
+  - name: "Luo, Xi"
+    affiliation: "Niusu Technology"
+version: "0.15.0"
+date-released: "2026-07-19"
+url: "https://github.com/liesliy/tlabel"
+doi: ""
+preferred-citation:
+  type: article
+  title: "TLabel: Unified Tactile Data Annotation and Interchange for Robotic Manipulation"
+  authors:
+    - name: "Wu, Sheng"
+    - name: "Luo, Xi"
+  year: 2026
+  journal: "Under review"
+abstract: >
+  TLabel is an open-source toolkit and format standard for tactile sensor data annotation.
+  It provides sensor-agnostic data loading, unified annotation workflows, quality scoring,
+  primitive prediction, and multi-format export (JSON, CSV, HDF5, FTP-1, LeRobot, RLDS, ROS2)
+  across 11 tactile sensor adapters.
+keywords:
+  - tactile sensing
+  - data annotation
+  - robot manipulation
+  - embodied AI
+  - data format standard
