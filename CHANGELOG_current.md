@@ -42,9 +42,9 @@ This release introduces **adapter architecture refactoring** with table-driven r
 - Version bumped from 0.14.0 to 0.15.0
 - Adapter registration moved from hardcoded if-blocks to declarative dict
 - Developer guide updated with new adapter SOP (Standard Operating Procedure)
-- Test suite: 68 passed, 1 pre-existing failure (unrelated to this release)
+- Test suite: 69 passed, all green ✅
 
-### 📦 Adapter Registry (11 total)
+### 📦 Adapter Registry (12 total: 11 functional + 1 placeholder)
 
 | Adapter Key | File | Type | Description |
 |-------------|------|------|-------------|

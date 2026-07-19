@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.15.0] - 2026-07-19
+
+### Added
+- **PaXini GEN3 Real-Time Adapter** — Full SDK integration (`paxini-sdk`), 22-dim feature extraction from live TactileFrame, slip detection, pseudo tactile image generation, auto layout detection (gen3_1/2/5)
+- **Daimon DM-Tac USB Adapter (skeleton)** — Placeholder for DM-Tac real-time UVC adapter, pending SDK/API from vendor
+- **PaXini PX6D placeholder** — Registered in adapter registry, awaiting Modbus register map
+
+### Changed
+- **Adapter architecture refactoring** — Table-driven registration (`_ADAPTER_MODULES` dict), adding new adapter requires only 1 line change
+- **File reorganization**: `paxini.py` → `paxini_dataset.py`, `daimon.py` → `daimon_dataset.py`
+- Standardized naming convention: `brand_model` pattern
+- 100% backward compatible: all existing `tlabel.load()` calls unchanged
+- Test suite: 69 passed, all green
+
+### Adapter Registry (12 total)
+- 9 dataset adapters: GelSight, PaXini, Daimon, TLabel, ToucHD, UniVTAC, VTouch, YCB-Slide, TacQuad
+- 2 real-time adapters: PaXini GEN3, Daimon DM-Tac (skeleton)
+- 1 placeholder: PaXini PX6D
+
 ## [0.14.0] - 2026-07-06
 
 ### Added

@@ -35,7 +35,7 @@
   - 自动布局检测：gen3_1/gen3_2/gen3_5 配置
   - 从 contact_mask + pressure_map 生成伪触觉图像
 - 🔄 **文件重组织**：`paxini.py` → `paxini_dataset.py`，`daimon.py` → `daimon_dataset.py`
-- ✅ **11 个适配器**：GelSight、PaXini（数据集 + GEN3 + PX6D）、Daimon（数据集 + DM-Tac）、ToucHD、UniVTAC、VTouch、YCB-Slide、TacQuad、TLabel
+- ✅ **12 个适配器注册**（11 个可用 + 1 个占位）：GelSight、PaXini（数据集 + GEN3 + PX6D）、Daimon（数据集 + DM-Tac）、ToucHD、UniVTAC、VTouch、YCB-Slide、TacQuad、TLabel
 - 🔒 **100% 向后兼容**：所有现有 `tlabel.load()` 调用无需修改
 
 ### v0.14.0 — Taxonomy 系统 & 力推断 Primitive 预标注 🆕

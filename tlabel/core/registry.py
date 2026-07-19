@@ -23,6 +23,7 @@ _ADAPTER_MODULES = {
     "ycb_slide":     ("tlabel.adapters.ycb_slide",      "YCBSlideAdapter"),
     "tacquad":       ("tlabel.adapters.tacquad",        "TacQuadAdapter"),
     "paxini_gen3":   ("tlabel.adapters.paxini_gen3",    "PaxiniGen3Adapter"),
+    "paxini_px6d":   ("tlabel.adapters.paxini_px6d",    "PaxiniPX6DAdapter"),  # placeholder
     "daimon_dm_tac": ("tlabel.adapters.daimon_dm_tac",  "DaimonDmTacAdapter"),
 }
 

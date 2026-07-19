@@ -40,7 +40,7 @@ Join our [Discord community](https://discord.gg/2ab8EWaBM) for support, discussi
   - Auto layout detection: gen3_1/gen3_2/gen3_5 configurations
   - Pseudo tactile image generation from contact_mask + pressure_map
 - 🔄 **File Reorganization**: `paxini.py` → `paxini_dataset.py`, `daimon.py` → `daimon_dataset.py`
-- ✅ **11 Adapters Registered**: GelSight, PaXini (dataset + GEN3 + PX6D), Daimon (dataset + DM-Tac), ToucHD, UniVTAC, VTouch, YCB-Slide, TacQuad, TLabel
+- ✅ **12 Adapters Registered** (11 functional + 1 placeholder): GelSight, PaXini (dataset + GEN3 + PX6D), Daimon (dataset + DM-Tac), ToucHD, UniVTAC, VTouch, YCB-Slide, TacQuad, TLabel
 - 🔒 **100% Backward Compatible**: All existing `tlabel.load()` calls work unchanged
 
 ### v0.14.0 — Taxonomy System & Force-Inferred Primitive Prediction 🆕
