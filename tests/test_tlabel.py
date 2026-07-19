@@ -15,11 +15,21 @@ class TestImport:
 
     def test_import_adapters(self):
         from tlabel.adapters.gelsight import GelSightAdapter
-        from tlabel.adapters.paxini import PaxiniAdapter
-        from tlabel.adapters.daimon import DaimonAdapter
+        from tlabel.adapters.paxini_dataset import PaxiniAdapter
+        from tlabel.adapters.daimon_dataset import DaimonAdapter
 
     def test_import_types(self):
         from tlabel.core.types import TLabelData, TLabelFrame
+
+    def test_import_new_adapters(self):
+        """新适配器模块可以导入（即使SDK不可用，模块本身不报错）"""
+        from tlabel.adapters.paxini_gen3 import PaxiniGen3Adapter
+        from tlabel.adapters.daimon_dm_tac import DaimonDmTacAdapter
+        # 验证类可以实例化（不调用load，不依赖SDK）
+        p = PaxiniGen3Adapter()
+        assert p.name == "paxini_gen3"
+        d = DaimonDmTacAdapter()
+        assert d.name == "daimon_dm_tac"
 
 
 class TestRegistry:
@@ -234,7 +244,7 @@ class TestLoaderErrors:
             f.write(b"test")
             path = f.name
         try:
-            with pytest.raises(ValueError, match="无法识别"):
+            with pytest.raises(ValueError, match="Cannot detect format"):
                 tlabel.load(path)
         finally:
             os.unlink(path)
@@ -468,7 +478,8 @@ class TestTLabelAdapter:
         _ensure_adapters()
         adapters = list_adapters()
         
-        expected = ["gelsight", "paxini", "daimon", "tlabel"]
+        expected = ["gelsight", "paxini", "daimon", "tlabel",
+                    "paxini_gen3", "daimon_dm_tac"]
         for name in expected:
             assert name in adapters, f"Adapter '{name}' not registered"
     
@@ -483,7 +494,7 @@ class TestTLabelAdapter:
         
         try:
             # 应该抛出 ValueError，提示无法识别格式
-            with pytest.raises(ValueError, match="无法识别文件格式"):
+            with pytest.raises(ValueError, match="Cannot detect format"):
                 tlabel.load(path)
         finally:
             os.unlink(path)
@@ -862,7 +873,9 @@ class TestV07SensorProfile:
         data = TLabelData(frames=frames, sensor_info={"type": "test"},
                           episode_info={"source": "test"}, capabilities={"contact": True})
         d = data.to_dict()
-        assert d["sensor_profile"] is None
+        # v0.14.0+: sensor_profile is auto-populated with elastomer defaults
+        assert d["sensor_profile"] is not None
+        assert "elastomer" in d["sensor_profile"]
 
     def test_sensor_profile_all_null(self):
         from tlabel.core.types import TLabelData, TLabelFrame

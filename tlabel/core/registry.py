@@ -2,11 +2,29 @@
 Sensor adapter registry
 
 Adapters digest format differences at load time, outputting unified TLabel Format v2.
+
+v0.14: 重构为表驱动注册，新增适配器只需在 _ADAPTER_MODULES 加一行。
+
 """
 
+import importlib
 from typing import Dict, Type, Optional
 
 _ADAPTERS: Dict[str, Type] = {}
+
+_ADAPTER_MODULES = {
+    "gelsight":      ("tlabel.adapters.gelsight",      "GelSightAdapter"),
+    "paxini":        ("tlabel.adapters.paxini_dataset", "PaxiniAdapter"),
+    "daimon":        ("tlabel.adapters.daimon_dataset", "DaimonAdapter"),
+    "tlabel":        ("tlabel.adapters.tlabel_format",  "TLabelAdapter"),
+    "touchd":        ("tlabel.adapters.touchd",         "ToucHDAdapter"),
+    "univtac":       ("tlabel.adapters.univtac",        "UniVTACAdapter"),
+    "vtouch":        ("tlabel.adapters.vtouch",         "VTouchAdapter"),
+    "ycb_slide":     ("tlabel.adapters.ycb_slide",      "YCBSlideAdapter"),
+    "tacquad":       ("tlabel.adapters.tacquad",        "TacQuadAdapter"),
+    "paxini_gen3":   ("tlabel.adapters.paxini_gen3",    "PaxiniGen3Adapter"),
+    "daimon_dm_tac": ("tlabel.adapters.daimon_dm_tac",  "DaimonDmTacAdapter"),
+}
 
 
 def register_adapter(name: str, adapter_cls: Type):
@@ -94,58 +112,13 @@ def auto_detect_format(file_path: str) -> Optional[str]:
 
 
 def _ensure_adapters():
-    """Lazy registration to avoid import errors when dependencies are missing"""
-    if "gelsight" not in _ADAPTERS:
-        try:
-            from tlabel.adapters.gelsight import GelSightAdapter
-            register_adapter("gelsight", GelSightAdapter)
-        except ImportError:
-            pass
-    if "paxini" not in _ADAPTERS:
-        try:
-            from tlabel.adapters.paxini import PaxiniAdapter
-            register_adapter("paxini", PaxiniAdapter)
-        except ImportError:
-            pass
-    if "daimon" not in _ADAPTERS:
-        try:
-            from tlabel.adapters.daimon import DaimonAdapter
-            register_adapter("daimon", DaimonAdapter)
-        except ImportError:
-            pass
-    if "tlabel" not in _ADAPTERS:
-        try:
-            from tlabel.adapters.tlabel_format import TLabelAdapter
-            register_adapter("tlabel", TLabelAdapter)
-        except ImportError:
-            pass
-    if "touchd" not in _ADAPTERS:
-        try:
-            from tlabel.adapters.touchd import ToucHDAdapter
-            register_adapter("touchd", ToucHDAdapter)
-        except ImportError:
-            pass
-    if "univtac" not in _ADAPTERS:
-        try:
-            from tlabel.adapters.univtac import UniVTACAdapter
-            register_adapter("univtac", UniVTACAdapter)
-        except ImportError:
-            pass
-    if "vtouch" not in _ADAPTERS:
-        try:
-            from tlabel.adapters.vtouch import VTouchAdapter
-            register_adapter("vtouch", VTouchAdapter)
-        except ImportError:
-            pass
-    if "ycb_slide" not in _ADAPTERS:
-        try:
-            from tlabel.adapters.ycb_slide import YCBSlideAdapter
-            register_adapter("ycb_slide", YCBSlideAdapter)
-        except ImportError:
-            pass
-    if "tacquad" not in _ADAPTERS:
-        try:
-            from tlabel.adapters.tacquad import TacQuadAdapter
-            register_adapter("tacquad", TacQuadAdapter)
-        except ImportError:
-            pass
+    """Lazy registration — 一张表搞定，新增适配器只需加一行"""
+    for name, (module_path, class_name) in _ADAPTER_MODULES.items():
+        if name not in _ADAPTERS:
+            try:
+                mod = importlib.import_module(module_path)
+                cls = getattr(mod, class_name)
+                register_adapter(name, cls)
+            except (ImportError, AttributeError):
+                pass
+

@@ -31,6 +31,18 @@
 Join our [Discord community](https://discord.gg/2ab8EWaBM) for support, discussions, and contributions!
 ## 🆕 What's New
 
+### v0.15.0 — Adapter Architecture Refactoring + PaXini GEN3 Real-Time SDK
+**Plugin-based adapter system with live tactile data acquisition.**
+- 🔌 **Table-Driven Adapter Registration**: Adding new adapters requires only 1 line change (was 5 files)
+- 🏷️ **Standardized Naming**: `brand_model` convention (e.g., `paxini_gen3`, `daimon_dm_tac`)
+- ⚡ **PaXini GEN3 Real-Time Adapter**: Full SDK integration with 22-dim feature extraction
+  - Pressure normalization (0-600kPa → 0-1), slip detection (centroid + force rate)
+  - Auto layout detection: gen3_1/gen3_2/gen3_5 configurations
+  - Pseudo tactile image generation from contact_mask + pressure_map
+- 🔄 **File Reorganization**: `paxini.py` → `paxini_dataset.py`, `daimon.py` → `daimon_dataset.py`
+- ✅ **11 Adapters Registered**: GelSight, PaXini (dataset + GEN3 + PX6D), Daimon (dataset + DM-Tac), ToucHD, UniVTAC, VTouch, YCB-Slide, TacQuad, TLabel
+- 🔒 **100% Backward Compatible**: All existing `tlabel.load()` calls work unchanged
+
 ### v0.14.0 — Taxonomy System & Force-Inferred Primitive Prediction 🆕
 **From visual-tactile images to force estimation to primitive annotation — fully automated pipeline.**
 - 🧬 **Taxonomy System**: Configurable primitive taxonomy with 7 default physics-grounded primitives (reach, grasp, press, squeeze, wrap, wipe, lift) selected from T-Rex 22, with Cutkosky grasp subtypes (power/precision/lateral)
@@ -41,82 +53,33 @@ Join our [Discord community](https://discord.gg/2ab8EWaBM) for support, discussi
 - 🎨 **Collapsible Prediction Panel**: In-panel taxonomy selector + prediction button + result statistics
 - 📦 **Batch Patch Support**: Bulk primitive correction with primitive type + confidence controls
 
-```python
-import tlabel
-
-# Load data and auto-predict primitives (uses default taxonomy)
-data = tlabel.demo('gelsight')
-data.predict_primitives()  # Auto-detect from force/contact patterns
-
-# Use custom taxonomy with minimum confidence threshold
-taxonomy = tlabel.get_default_taxonomy()
-taxonomy.register(tlabel.PrimitiveRule(
-    name='poke', min_force=0.1, max_deformation=0.15,
-    contact_required=True, min_confidence=0.5
-))
-data.predict_primitives(taxonomy=taxonomy, min_confidence=0.4)
-
-# Register custom primitives globally
-tlabel.register_custom_primitive('poke',
-    force_range=(0.1, 0.8), deformation_max=0.15,
-    contact_required=True, confidence=0.5)
-
-# Export with full metadata (source + confidence)
-data.export("output.csv")  # includes primitive_source, primitive_confidence columns
-```
-
 ### v0.13.0 — Motor Primitive Annotation System
 **The world's first tactile primitive annotation toolkit — inspired by T-Rex (Li Fei-Fei, Jim Fan, Xu Danfei et al.).**
 - 🏷️ **22 Motor Primitives**: wrap, lift, grasp, fold, cut, insert, press, wipe, peel, assemble, extract, twist, shake, dispense, disassemble, squeeze, pour, open, close, screw, unscrew, reach
 - 📊 **Primitive Timeline Track**: Canvas-rendered color-coded primitive segments in the Panel, with frame-level detail badges
-- 🤖 **AI Pre-Annotation**: `predict_primitives()` — heuristic inference from force/contact patterns (force rise→grasp/press, stable+motion→wrap/wipe, drop→squeeze, no contact→reach)
+- 🤖 **AI Pre-Annotation**: `predict_primitives()` — heuristic inference from force/contact patterns
 - 📈 **Structured Annotations**: `add_primitive(name, start_frame, end_frame)` API for time-interval primitive labeling
 - 💾 **Export Support**: CSV export with `primitive_label` column; JSON export with `primitive_annotations` array
-- 🔄 **Backward Compatible**: Old tlabel.json files load normally (no primitive_annotations → empty list)
-
-```python
-import tlabel
-
-# Load demo with primitive annotations
-data = tlabel.demo('primitives_demo')
-data.review()  # See primitive timeline track in Panel
-
-# Add primitive annotations programmatically
-data.add_primitive('reach', start_frame=0, end_frame=10)
-data.add_primitive('grasp', start_frame=10, end_frame=25)
-data.add_primitive('lift', start_frame=25, end_frame=40)
-
-# AI pre-annotation (heuristic-based)
-data.apply_primitives()  # Auto-detect primitives from force/contact patterns
-
-# Get primitive timeline
-timeline = data.get_primitive_timeline()
-# [('reach', 0, 10), ('grasp', 10, 25), ('lift', 25, 40)]
-```
 
 ### v0.12.0 — Tactile Image Visualization & Data Augmentation
 **Canvas-based tactile image playback, pure-numpy augmentation, and AnyTouch multi-sensor support.**
-- 🎬 **Tactile Image Sequence Visualization**: Canvas-rendered playback with 3-level strategy (real image / heatmap / placeholder), play/pause/seek/speed controls, dark mode & i18n
-- 📈 **Data Augmentation Module**: 5 methods (`time_warp`, `noise_inject`, `random_crop`, `force_scale`, `frame_dropout`), zero new deps (pure numpy), 3-level API
-- 🔌 **TacQuad Adapter**: GeWu-Lab AnyTouch (ICLR 2025) — GelSight Mini, DIGIT, DuraGel + optional Tac3D force field
-- 📦 `pip install tlabel[tacquad]`
-
-```python
-import tlabel
-
-# Data augmentation — one-liner
-data = tlabel.demo('gelsight')
-augmented = tlabel.augment(data, methods=["time_warp", "noise_inject"], seed=42)
-
-# TacQuad multi-sensor loading
-data = tlabel.load("anytouch_dataset/", format="tacquad", sensor="digit")
-```
+- 🎬 **Tactile Image Sequence Visualization**: Canvas-rendered playback with 3-level strategy
+- 📈 **Data Augmentation Module**: 5 methods, zero new deps (pure numpy), 3-level API
+- 🔌 **TacQuad Adapter**: GeWu-Lab AnyTouch (ICLR 2025)
 
 ### v0.10.2 — UniVTAC Adapter
 **Cross-dataset tactile interoperability — UniVTAC benchmark support.**
-- 🆕 **UniVTAC Adapter**: Load UniVTAC HDF5 datasets with auto-detection (dual GelSight Mini, 22 dims)
-- 🔍 **Smart HDF5 Detection**: Auto-distinguishes PaXini vs UniVTAC by internal structure
+- 🆕 **UniVTAC Adapter**: Load UniVTAC HDF5 datasets with auto-detection
 - 📦 `pip install tlabel[univtac]`
+
+### v0.9.0 — Interactive Panel Phase 1 + Exporter Plugin Registry
+**Professional tactile annotation experience with rich visualization and extensible export pipeline.**
+- 🎨 **Pseudo GelSight Visualization**: Real-time tactile contact heatmap with radial gradient and force rings
+- ⌨️ **Keyboard Shortcuts**: Space (toggle annotation), ←→ (frame navigation), ↑↓ (label adjust)
+- 📊 **Timeline Range Selection**: Click-to-jump + drag-to-select frame ranges for batch editing
+- 🤖 **AI Pre-Annotation**: One-click auto-label with confidence threshold control
+- 📦 **Unified Export Center**: Single tab for all formats — JSON, CSV, HDF5, FTP-1, LeRobot, RLDS(stub), ROS2(stub)
+- 🔌 **Exporter Plugin Registry**: `ExporterBase` + dynamic `register()`/`unregister()` — add new formats as subclasses
 
 ### v0.8.0 — FTP-1 / MTTS Export
 **Export labeled data directly to FTP-1's MTTS Zarr format for foundation model fine-tuning.**
@@ -335,10 +298,12 @@ data.review()
 | **GelSight Mini** | Vision-based | `.pkl` | 22 | ✅ | ✅ Stable |
 | **DIGIT** | Vision-based | `.pkl` | 22 | ✅ | ✅ Stable |
 | **Daimon DM-TacClaw** | Multimodal | `.parquet` / dir | 22 (video) / 20 (no video) | ✅ / — | ✅ Stable |
+| **Daimon DM-Tac** | Vision-based | `.avi` / `.bag` / USB | 22 | ✅ | 🆕 Skeleton |
 | **PaXini PXCap** | Force array | `.h5` / `.hdf5` | 20 | — | ✅ Stable |
-| **UniVTAC** | Vision-based (Dual GelSight Mini) | `.hdf5` / `.h5` | 22 | ✅ | ✅ New |
-| **TacQuad (AnyTouch)** | Vision-based multi-sensor | directory | 22 | ✅ | ✅ New |
-| **VTouch** | Vision-based | `.pkl` | 22 | ✅ | ✅ New |
+| **UniVTAC** | Vision-based (Dual GelSight Mini) | `.hdf5` / `.h5` | 22 | ✅ | ✅ Stable |
+| **TacQuad (AnyTouch)** | Vision-based multi-sensor | directory | 22 | ✅ | ✅ Stable |
+| **VTouch** | Vision-based | `.pkl` | 22 | ✅ | ✅ Stable |
+| **PaXini GEN3** | Force array | SDK / `.paxini` | 18 | — | 🆕 New |
 
 > Force-type sensors (PaXini) lack optical images → 20 dims. Image-type → full 22. Daimon gracefully degrades when no video is present. **No errors, no surprises.**
 
@@ -525,9 +490,13 @@ tlabel/
 ├── adapters/
 │   ├── base.py           # BaseAdapter interface
 │   ├── gelsight.py       # GelSight Mini / DIGIT
-│   ├── paxini.py         # PaXini PXCap
-│   ├── daimon.py         # Daimon DM-TacClaw (+ video decoding)
-│   └── tacquad.py        # TacQuad / AnyTouch (ICLR 2025)
+│   ├── paxini_dataset.py # PaXini PXCap dataset
+│   ├── paxini_gen3.py    # PaXini GEN3 realtime
+│   ├── paxini_px6d.py    # PaXini PX6D 6-axis force (placeholder)
+│   ├── daimon_dataset.py # Daimon DM-TacClaw dataset
+│   ├── daimon_dm_tac.py  # Daimon DM-Tac realtime (skeleton)
+│   ├── tacquad.py        # TacQuad / AnyTouch (ICLR 2025)
+│   └── ...               # touchd, vtouch, univtac, ycb_slide
 ├── augment/
 │   └── engine.py         # Data augmentation (time_warp, noise, crop, scale, dropout)
 ├── converters/

@@ -1,5 +1,8 @@
 """
-帕西尼适配器 — 将OmniSharingDB HDF5数据转换为TLabelData
+帕西尼数据集适配器 — 将OmniSharingDB HDF5数据转换为TLabelData
+
+这是PaXini的数据集（离线）适配器，用于加载PXCap采集的.h5/.hdf5格式数据。
+实时传感器适配器见 paxini_gen3.py。
 
 复用paxini_adapter.py的PaxiniParser核心逻辑，封装为BaseAdapter接口。
 """

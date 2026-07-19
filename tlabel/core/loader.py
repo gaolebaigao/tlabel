@@ -20,7 +20,8 @@ def load(file_path: Union[str, Path],
 
     Args:
         file_path: Data file path
-        format: Force format ("gelsight"/"paxini"/"daimon"/"tlabel"/"touchd"/"univtac"/"vtouch"/"ycb_slide"/"tacquad")
+        format: Force format ("gelsight"/"paxini"/"daimon"/"tlabel"/"touchd"/"univtac"/"vtouch"/"ycb_slide"/"tacquad"/"paxini_gen3"/"daimon_dm_tac")
+
         trajectory_id: Trajectory ID (for GelSight dataset)
         **kwargs: Extra args passed to adapter
 
@@ -59,14 +60,19 @@ def load(file_path: Union[str, Path],
     if adapter_cls is None:
         available = [k for k in [
             "gelsight", "paxini", "daimon", "tlabel",
-            "touchd", "univtac", "vtouch", "ycb_slide", "tacquad"
+            "touchd", "univtac", "vtouch", "ycb_slide", "tacquad",
+            "paxini_gen3", "daimon_dm_tac"
+
         ] if get_adapter(k)]
         raise ImportError(
             f"Adapter '{fmt}' unavailable (missing dependencies)\n"
             f"Available: {available or 'none'}\n"
             f"GelSight/DIGIT: pip install numpy opencv-python\n"
             f"PaXini: pip install h5py numpy\n"
+            f"PaXini GEN3: pip install paxini-sdk\n"
             f"Daimon: pip install pyarrow numpy\n"
+            f"DM-Tac: pip install opencv-python\n"
+
             f"UniVTAC: pip install h5py numpy\n"
             f"VTouch: pip install h5py numpy opencv-python\n"
             f"YCB-Slide: pip install numpy opencv-python\n"

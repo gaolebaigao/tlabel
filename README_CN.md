@@ -26,6 +26,18 @@
 
 ## 🆕 更新亮点
 
+### v0.15.0 — 适配器架构重构 + PaXini GEN3 实时 SDK
+**插件化适配器系统，支持实时触觉数据采集。**
+- 🔌 **表驱动注册**：新增适配器仅需改 1 行代码（原需 5 个文件）
+- 🏷️ **标准化命名**：`品牌_型号` 规范（如 `paxini_gen3`、`daimon_dm_tac`）
+- ⚡ **PaXini GEN3 实时适配器**：完整 SDK 集成，22 维特征提取
+  - 压力归一化（0-600kPa → 0-1）、滑移检测（质心偏移 + 力变化率）
+  - 自动布局检测：gen3_1/gen3_2/gen3_5 配置
+  - 从 contact_mask + pressure_map 生成伪触觉图像
+- 🔄 **文件重组织**：`paxini.py` → `paxini_dataset.py`，`daimon.py` → `daimon_dataset.py`
+- ✅ **11 个适配器**：GelSight、PaXini（数据集 + GEN3 + PX6D）、Daimon（数据集 + DM-Tac）、ToucHD、UniVTAC、VTouch、YCB-Slide、TacQuad、TLabel
+- 🔒 **100% 向后兼容**：所有现有 `tlabel.load()` 调用无需修改
+
 ### v0.14.0 — Taxonomy 系统 & 力推断 Primitive 预标注 🆕
 **从视触觉图像到力推断到 Primitive 标注 — 全自动工作流。**
 - 🧬 **Taxonomy 系统**：可配置的 primitive 分类体系，内置 7 种物理含义明确的默认子集（reach/grasp/press/squeeze/wrap/wipe/lift），源自 T-Rex 22 种，含 Cutkosky 抓握子分类（力量/精确/侧向抓握）
@@ -330,10 +342,12 @@ data.review()
 | **GelSight Mini** | 视觉型 | `.pkl` | 22 | ✅ | ✅ 稳定 |
 | **DIGIT** | 视觉型 | `.pkl` | 22 | ✅ | ✅ 稳定 |
 | **戴盟 DM-TacClaw** | 多模态 | `.parquet` / 目录 | 22（有视频）/ 20（无视频） | ✅ / — | ✅ 稳定 |
+| **戴盟 DM-Tac** | 视觉型 | `.avi` / `.bag` / USB | 22 | ✅ | 🆕 骨架 |
 | **帕西尼 PXCap** | 力觉阵列 | `.h5` / `.hdf5` | 20 | — | ✅ 稳定 |
-| **UniVTAC** | 视觉型（双 GelSight Mini） | `.hdf5` / `.h5` | 22 | ✅ | ✅ 新增 |
-| **TacQuad (AnyTouch)** | 视觉型多传感器 | 目录 | 22 | ✅ | ✅ 新增 |
-| **VTouch** | 视觉型 | `.pkl` | 22 | ✅ | ✅ 新增 |
+| **UniVTAC** | 视觉型（双 GelSight Mini） | `.hdf5` / `.h5` | 22 | ✅ | ✅ 稳定 |
+| **TacQuad (AnyTouch)** | 视觉型多传感器 | 目录 | 22 | ✅ | ✅ 稳定 |
+| **VTouch** | 视觉型 | `.pkl` | 22 | ✅ | ✅ 稳定 |
+| **帕西尼 GEN3** | 力觉阵列 | SDK / `.paxini` | 18 | — | 🆕 新增 |
 
 > 力觉型传感器（帕西尼）没有光学图像→20维；图像型→完整22维；戴盟在没有视频文件时自动降级到20维。不会报错，不会出幺蛾子。
 
@@ -520,9 +534,13 @@ tlabel/
 ├── adapters/
 │   ├── base.py           # BaseAdapter 接口
 │   ├── gelsight.py       # GelSight Mini / DIGIT
-│   ├── paxini.py         # 帕西尼 PXCap
-│   ├── daimon.py         # 戴盟 DM-TacClaw（+视频解码）
-│   └── tacquad.py        # TacQuad / AnyTouch (ICLR 2025)
+│   ├── paxini_dataset.py # 帕西尼 PXCap 数据集
+│   ├── paxini_gen3.py    # 帕西尼 GEN3 实时
+│   ├── paxini_px6d.py    # 帕西尼 PX6D 六维力（占位）
+│   ├── daimon_dataset.py # 戴盟 DM-TacClaw 数据集
+│   ├── daimon_dm_tac.py  # 戴盟 DM-Tac 实时（骨架）
+│   ├── tacquad.py        # TacQuad / AnyTouch (ICLR 2025)
+│   └── ...               # touchd, vtouch, univtac, ycb_slide
 ├── augment/
 │   └── engine.py         # 数据增强（time_warp, noise, crop, scale, dropout）
 ├── converters/

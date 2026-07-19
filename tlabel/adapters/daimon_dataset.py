@@ -1,5 +1,8 @@
 """
-戴盟(Daimon)适配器 — 将Daimon-Infinity Parquet数据转换为TLabelData
+戴盟(Daimon)数据集适配器 — 将Daimon-Infinity Parquet数据转换为TLabelData
+
+这是Daimon的数据集（离线）适配器，用于加载DM-TacClaw采集的.parquet/LeRobot格式数据。
+实时传感器适配器见 daimon_dm_tac.py。
 
 Daimon-Infinity数据格式特点:
 - 主数据: Parquet格式 (data/chunk-xxx/file-xxx.parquet)
