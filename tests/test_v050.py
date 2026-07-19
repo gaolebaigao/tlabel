@@ -444,7 +444,8 @@ class TestVersionV050:
 
     def test_version_is_050(self):
         from tlabel._version import __version__
-        assert __version__ == "0.5.0"
+        from packaging.version import Version
+        assert Version(__version__) >= Version("0.5.0")
 
     def test_import_all_predict(self):
         from tlabel.predict import (

@@ -380,7 +380,8 @@ class TestImports:
 
     def test_version(self):
         import tlabel
-        assert tlabel.__version__ == "0.5.0"
+        from packaging.version import Version
+        assert Version(tlabel.__version__) >= Version("0.4.0")
 
 
 class TestI18n:

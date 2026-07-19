@@ -36,7 +36,7 @@ daimon = ["pyarrow>=10.0", "opencv-python>=4.0", "scipy>=1.7"]
 ftp1 = ["zarr>=2.16"]
 ml = ["scikit-learn>=1.0", "joblib>=1.0"]
 all = ["opencv-python>=4.0", "h5py>=3.0", "pyarrow>=10.0", "scipy>=1.7", "pillow>=9.0", "scikit-learn>=1.0", "joblib>=1.0", "zarr>=2.16"]
-dev = ["pytest", "jupyter", "pyarrow", "zarr"]
+dev = ["pytest", "jupyter", "pyarrow", "zarr", "scikit-learn>=1.0"]
 
 [project.urls]
 Homepage = "https://github.com/liesliy/tlabel"
