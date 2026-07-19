@@ -143,8 +143,11 @@ def _zarr_create_dataset(group, key, data, chunks=None):
             kwargs['chunks'] = chunks
         return group.create_array(key, **kwargs)
     else:
-        # zarr v2
-        kwargs = dict(data=data)
+        # zarr v2: also convert object dtype to avoid "missing object_codec" error
+        arr = np.asarray(data)
+        if arr.dtype == object:
+            arr = arr.astype(str)
+        kwargs = dict(data=arr)
         if chunks is not None:
             kwargs['chunks'] = chunks
         return group.create_dataset(key, **kwargs)
