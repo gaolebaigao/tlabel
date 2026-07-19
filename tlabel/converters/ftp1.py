@@ -114,6 +114,53 @@ def _check_zarr():
         )
 
 
+def _zarr_create_dataset(group, key, data, chunks=None):
+    """兼容 zarr v2 (create_dataset) 和 v3 (create_array) 的数据集创建。
+    
+    zarr v3 要求 chunks 维度数必须与 data 维度数一致，
+    此函数会自动对齐维度，避免 chunk_grid/shape 维度不匹配错误。
+    """
+    data_shape = np.asarray(data).shape
+    # 对齐 chunks 维度到 data 维度
+    if chunks is not None:
+        if len(chunks) != len(data_shape):
+            if len(chunks) > len(data_shape):
+                # chunks 维度过多，截断到与 data 相同
+                chunks = chunks[:len(data_shape)]
+            else:
+                # chunks 维度过少，用完整维度填充
+                chunks = tuple(chunks) + data_shape[len(chunks):]
+        # 确保每个 chunk 维度不超过 data 对应维度
+        chunks = tuple(min(c, s) for c, s in zip(chunks, data_shape))
+
+    if hasattr(group, 'create_array'):
+        # zarr v3: object dtype 不支持，需转为 numpy 原生 string dtype
+        arr = np.asarray(data)
+        if arr.dtype == object:
+            arr = arr.astype(str)  # → <U{N} unicode string
+        kwargs = dict(data=arr)
+        if chunks is not None:
+            kwargs['chunks'] = chunks
+        return group.create_array(key, **kwargs)
+    else:
+        # zarr v2
+        kwargs = dict(data=data)
+        if chunks is not None:
+            kwargs['chunks'] = chunks
+        return group.create_dataset(key, **kwargs)
+
+
+def _zarr_resize(array, new_shape):
+    """兼容 zarr v2 (resize(*shape)) 和 v3 (resize(tuple))。"""
+    if isinstance(new_shape, tuple):
+        try:
+            array.resize(new_shape)
+        except TypeError:
+            array.resize(*new_shape)
+    else:
+        array.resize(new_shape)
+
+
 def _resize_image(img: np.ndarray, target_size: Tuple[int, int] = (224, 224)) -> np.ndarray:
     """
     将图像缩放到FTP-1要求的目标尺寸。
@@ -386,47 +433,47 @@ def tlabel_to_ftp1(
         # 追加模式：沿时间轴扩展
         existing = root[data_key]
         old_T = existing.shape[0]
-        existing.resize(old_T + T, *existing.shape[1:])
+        _zarr_resize(existing, (old_T + T, *existing.shape[1:]))
         if tactile_type == "image" and store_raw_uint8:
             existing[old_T:old_T + T] = tactile_data.astype(np.uint8)
         else:
             existing[old_T:old_T + T] = tactile_data
     else:
         if tactile_type == "image" and store_raw_uint8:
-            root.create_dataset(data_key, data=tactile_data.astype(np.uint8),
+            _zarr_create_dataset(root, data_key, data=tactile_data.astype(np.uint8),
                               chunks=(10, N, *tac_shape))
         else:
-            root.create_dataset(data_key, data=tactile_data,
+            _zarr_create_dataset(root, data_key, data=tactile_data,
                               chunks=(10, N, *tac_shape))
 
     # 功能区
     if area_key in root:
         existing = root[area_key]
         old_T = existing.shape[0]
-        existing.resize(old_T + T)
+        _zarr_resize(existing, old_T + T)
         existing[old_T:old_T + T] = area_data
     else:
-        root.create_dataset(area_key, data=area_data)
+        _zarr_create_dataset(root, area_key, data=area_data)
 
     # 传感器名
     if sensor_key in root:
         existing = root[sensor_key]
         old_T = existing.shape[0]
-        existing.resize(old_T + T)
+        _zarr_resize(existing, old_T + T)
         for i in range(T):
             existing[old_T + i] = sensor_name
     else:
-        root.create_dataset(sensor_key, data=sensor_data)
+        _zarr_create_dataset(root, sensor_key, data=sensor_data)
 
     # 类型
     if type_key in root:
         existing = root[type_key]
         old_T = existing.shape[0]
-        existing.resize(old_T + T)
+        _zarr_resize(existing, old_T + T)
         for i in range(T):
             existing[old_T + i] = tactile_type
     else:
-        root.create_dataset(type_key, data=type_data)
+        _zarr_create_dataset(root, type_key, data=type_data)
 
     # 写入元数据
     root.attrs.setdefault("ftp1_version", "1.0")

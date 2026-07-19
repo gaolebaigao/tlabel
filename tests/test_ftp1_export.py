@@ -83,7 +83,7 @@ try:
         print(f"     Zarr keys: {stats['zarr_keys']}")
         
         # 验证Zarr文件内容
-        root = zarr.open(str(output_path), 'r')
+        root = zarr.open(str(output_path), mode='r')
         for key in stats['zarr_keys']:
             if key in root:
                 arr = root[key]
