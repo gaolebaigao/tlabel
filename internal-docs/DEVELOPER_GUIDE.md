@@ -3,7 +3,7 @@
 > **这份文档是给"未来的Agent session"看的。**
 > 上下文溢出后新session醒来，读完这份文档就能独立开发，不会忘记之前的约定。
 >
-> 最后更新：2026-07-19 | 基线版本：v0.15.0
+> 最后更新：2026-07-22 | 基线版本：v0.16.0
 
 ---
 
@@ -35,7 +35,7 @@ UniVTAC ──┘          （传感器无关）                          ↑
 
 | 层 | 职责 | 代码位置 | 扩展方式 |
 |----|------|---------|---------|
-| **输入层（Adapter）** | 把各种传感器原始数据转成22维tlabel_v2 | `tlabel/adapters/` | 继承AdapterBase + register |
+| **输入层（Adapter）** | 把各种传感器原始数据转成22维tlabel_v2 | `tlabel/adapters/` | 继承 DataAdapterBase（数据集）或 SensorAdapterBase（实时传感器）+ register |
 | **核心层（Schema）** | 定义22维统一格式、cascade规则、验证 | `tlabel/core/` + `tlabel/schema/` | RFC流程 |
 | **输出层（Exporter）** | 把统一格式转成下游框架需要的格式 | `tlabel/export/` + `tlabel/converters/` | 继承ExporterBase + register |
 
@@ -50,7 +50,7 @@ tlabel/
 │   ├── loader.py         # tlabel.load() 入口，自动识别格式
 │   └── registry.py       # 适配器注册表
 ├── adapters/             # 每种传感器一个文件（表驱动注册）
-│   ├── base.py          # BaseAdapter 抽象基类
+│   ├── base.py          # DataAdapterBase + SensorAdapterBase 抽象基类（v0.16 分离）
 │   ├── gelsight.py      # GelSight Mini / DIGIT
 │   ├── paxini_dataset.py # PaXini PXCap 数据集适配器
 │   ├── paxini_gen3.py   # PaXini GEN3 实时传感器适配器
@@ -95,11 +95,18 @@ tlabel/
 3. **Cascade联动规则** —— contact=0时7个字段自动归零，这个逻辑不能改
 4. **向后兼容** —— 旧版本tlabel.json能被新版本load()正常读取
 
-### 3.2 适配器层原则
+### 3.2 适配器层原则（v0.16 架构更新）
 1. **一个传感器一个文件** —— 不要把多个传感器塞到一个文件里
 2. **适配器只负责"翻译"** —— 原始数据 → 22维tlabel_v2，不做质量判断
 3. **必须有demo数据** —— 每个适配器都要有 `tlabel.demo('sensor_name')` 可调用
 4. **必须有auto_detect支持** —— `tlabel.load()` 能自动识别该格式
+5. **两类基类，选对继承**：
+   - `DataAdapterBase`：数据集适配器，解析离线数据文件，只需实现 `load()`
+   - `SensorAdapterBase`：实时传感器适配器，需额外实现 `connect()/disconnect()/stream_frames()/is_connected()`
+   - `BaseAdapter` 是 `DataAdapterBase` 的别名（向后兼容）
+6. **社区适配器支持** —— 第三方可通过 entry_points 或 `register_external_adapter()` 注册适配器
+   - 模板仓库：`contrib/adapter-template/`
+   - 贡献指南：`CONTRIBUTING.md`
 
 ### 3.3 导出层原则
 1. **插件化注册** —— 新导出格式通过 `registry.register()` 注册，不改UI代码

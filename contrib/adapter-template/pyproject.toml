@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "tlabel-adapter-my-sensor"
+version = "0.1.0"
+description = "TLabel adapter for <SENSOR_NAME>"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+dependencies = [
+    "tlabel>=0.15.0",
+    "numpy",
+    # TODO: 添加你的额外依赖
+    # "opencv-python",
+    # "h5py",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
