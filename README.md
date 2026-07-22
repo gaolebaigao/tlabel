@@ -78,8 +78,8 @@ Any format ─────┘                    └── ROS2 (stub)
 
 | Feature | Description |
 |---------|-------------|
-| 🔌 **9 Built-in Adapters** | GelSight, DIGIT, PaXini, Daimon, ToucHD, UniVTAC, VTouch, YCB-Slide, TacQuad |
-| 🏗️ **Open Platform** | `DataAdapterBase` + `SensorAdapterBase` — anyone can add sensor support in 30 min |
+| 🔌 **9 Built-in Adapters** | 7 dataset (file loading) + 2 real-time (SDK/USB) — open for community extensions |
+| 🏗️ **Open Platform** | `DataAdapterBase` for datasets + `SensorAdapterBase` for live sensors — anyone can contribute |
 | 🛠️ **CLI Validation** | `tlabel validate` checks your data against the 22-dim schema |
 | 🤖 **AI Pre-Annotation** | `PredictEngine` auto-labels contact, slip, and manipulation phases |
 | 📈 **Data Augmentation** | 5 methods (time_warp, noise, crop, scale, dropout), pure numpy, zero extra deps |
@@ -113,19 +113,38 @@ augmented = tlabel.augment(data, methods=["time_warp", "noise_inject"], seed=42)
 
 ---
 
-## 📡 Supported Sensors
+## 📡 Supported Adapters
 
-| Sensor | Type | Format | Dims | Status |
-|:-------|:-----|:-------|:----:|:------:|
+TLabel provides two types of adapters — loading existing data, or connecting live hardware.
+
+### Dataset Adapters — load existing tactile data
+
+> Base class: `DataAdapterBase` · Input: file paths · Use case: research on public datasets, historical data processing
+
+| Sensor | Type | File Format | Dims | Status |
+|:-------|:-----|:------------|:----:|:------:|
 | **GelSight Mini / DIGIT** | Vision-based | `.pkl` | 22 | ✅ Stable |
 | **Daimon DM-TacClaw** | Multimodal | `.parquet` / dir | 22 | ✅ Stable |
-| **Daimon DM-Tac** | Vision-based | `.avi` / USB | 22 | 🆕 Skeleton |
-| **PaXini PXCap** | Force array | `.h5` | 20 | ✅ Stable |
-| **PaXini GEN3** | Force array | SDK / `.paxini` | 18 | 🆕 New |
+| **PaXini PXCap** | Force array | `.h5` / `.hdf5` | 20 | ✅ Stable |
 | **UniVTAC** | Vision-based | `.hdf5` | 22 | ✅ Stable |
 | **TacQuad (AnyTouch)** | Multi-sensor | directory | 22 | ✅ Stable |
 | **VTouch** | Vision-based | `.h5` | 22 | ✅ Stable |
 | **YCB-Slide** | Vision-based | `.npy` / dir | 22 | ✅ Stable |
+
+### Real-time Sensor Adapters — connect live hardware
+
+> Base class: `SensorAdapterBase` · Input: SDK / USB / stream · Use case: lab robots, production lines, real-time annotation
+
+| Sensor | Type | Connection | Dims | Status |
+|:-------|:-----|:-----------|:----:|:------:|
+| **PaXini GEN3** | Force array | SDK (live stream) | 18 | 🆕 New |
+| **Daimon DM-Tac** | Vision-based | USB / `.avi` / `.bag` | 22 | 🆕 Skeleton |
+
+### Which adapter should I build?
+
+- **I have recorded data files** → inherit `DataAdapterBase`, implement file parsing
+- **I have a physical sensor** → inherit `SensorAdapterBase`, implement SDK/stream connection
+- Both share the same export pipeline — once registered, `tlabel.load()` works automatically
 
 > Vision sensors → full 22 dims. Force-only sensors (PaXini) → 20 dims. **No errors, no surprises — just graceful degradation.**
 

@@ -78,8 +78,8 @@ VTouch .h5 ─────┤                    ├── LeRobot
 
 | 功能 | 说明 |
 |------|------|
-| 🔌 **9个内置适配器** | GelSight、DIGIT、PaXini、Daimon、ToucHD、UniVTAC、VTouch、YCB-Slide、TacQuad |
-| 🏗️ **开放平台** | `DataAdapterBase` + `SensorAdapterBase`，任何人 30 分钟即可贡献适配器 |
+| 🔌 **9个内置适配器** | 7个数据集适配器（文件加载）+ 2个实时适配器（SDK/USB）——开放社区扩展 |
+| 🏗️ **开放平台** | `DataAdapterBase`（数据集）+ `SensorAdapterBase`（实时传感器）——任何人可贡献 |
 | 🛠️ **CLI 校验** | `tlabel validate` 一键检查数据是否符合 22 维 schema |
 | 🤖 **AI 预标注** | `PredictEngine` 自动标注接触、滑移、操作阶段 |
 | 📈 **数据增强** | 5种方法（time_warp/noise/crop/scale/dropout），纯 numpy 零依赖 |
@@ -113,19 +113,38 @@ augmented = tlabel.augment(data, methods=["time_warp", "noise_inject"], seed=42)
 
 ---
 
-## 📡 支持的传感器
+## 📡 支持的适配器
 
-| 传感器 | 类型 | 格式 | 维度 | 状态 |
-|:-------|:-----|:-----|:----:|:----:|
+TLabel 提供两种适配器——加载已有数据，或连接实时硬件。
+
+### 数据集适配器 — 加载已有触觉数据
+
+> 基类：`DataAdapterBase` · 输入：文件路径 · 场景：公开数据集研究、历史数据处理
+
+| 传感器 | 类型 | 文件格式 | 维度 | 状态 |
+|:-------|:-----|:---------|:----:|:----:|
 | **GelSight Mini / DIGIT** | 视触觉 | `.pkl` | 22 | ✅ 稳定 |
 | **Daimon DM-TacClaw** | 多模态 | `.parquet` / dir | 22 | ✅ 稳定 |
-| **Daimon DM-Tac** | 视触觉 | `.avi` / USB | 22 | 🆕 骨架 |
-| **PaXini PXCap** | 力阵列 | `.h5` | 20 | ✅ 稳定 |
-| **PaXini GEN3** | 力阵列 | SDK / `.paxini` | 18 | 🆕 新增 |
+| **PaXini PXCap** | 力阵列 | `.h5` / `.hdf5` | 20 | ✅ 稳定 |
 | **UniVTAC** | 视触觉 | `.hdf5` | 22 | ✅ 稳定 |
 | **TacQuad (AnyTouch)** | 多传感器 | directory | 22 | ✅ 稳定 |
 | **VTouch** | 视触觉 | `.h5` | 22 | ✅ 稳定 |
 | **YCB-Slide** | 视触觉 | `.npy` / dir | 22 | ✅ 稳定 |
+
+### 实时传感器适配器 — 连接硬件设备
+
+> 基类：`SensorAdapterBase` · 输入：SDK / USB / 数据流 · 场景：实验室机器人、产线、实时标注
+
+| 传感器 | 类型 | 连接方式 | 维度 | 状态 |
+|:-------|:-----|:---------|:----:|:----:|
+| **PaXini GEN3** | 力阵列 | SDK（实时流） | 18 | 🆕 新增 |
+| **Daimon DM-Tac** | 视触觉 | USB / `.avi` / `.bag` | 22 | 🆕 骨架 |
+
+### 我该贡献哪种适配器？
+
+- **我有采集好的数据文件** → 继承 `DataAdapterBase`，实现文件解析
+- **我有一台物理传感器** → 继承 `SensorAdapterBase`，实现 SDK/流连接
+- 两种适配器共享同一套导出管线——注册后 `tlabel.load()` 自动识别
 
 > 视觉传感器 → 完整 22 维。力传感器（PaXini）→ 20 维。**无报错，优雅降级。**
 
