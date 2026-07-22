@@ -6,6 +6,45 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
+## [0.16.0] - 2026-07-22 (In Development)
+
+### 🎉 Major Highlights
+
+This release introduces **adapter architecture separation** (DataAdapterBase vs SensorAdapterBase) and **community contribution infrastructure** — laying the foundation for TLabel to become the open standard for tactile data.
+
+### ✨ Added
+
+#### Adapter Architecture Separation
+- **`DataAdapterBase`**: New base class for offline dataset adapters (gelsight, paxini, daimon, etc.)
+- **`SensorAdapterBase`**: New base class for real-time sensor SDK adapters with:
+  - `connect(device_id)` — Connect to sensor hardware
+  - `disconnect()` — Release resources
+  - `stream_frames(num_frames)` — Iterator yielding TLabelFrame in real-time
+  - `is_connected()` — Connection status check
+  - `collect(num_frames)` — Convenience method returning TLabelData
+- `BaseAdapter` retained as alias to `DataAdapterBase` for backward compatibility
+- Migrated `PaxiniGen3Adapter` and `DaimonDmTacAdapter` to `SensorAdapterBase`
+
+#### Community Contribution Infrastructure
+- **`CONTRIBUTING.md`**: Comprehensive contributor guide with 22-dim reference table
+- **`contrib/adapter-template/`**: Complete template for new adapter development
+  - Data Adapter and Sensor Adapter templates
+  - CI/CD workflow template (GitHub Actions)
+  - Test templates (basic + e2e)
+  - Example Jupyter notebook
+  - pyproject.toml template
+- **External adapter registration**: `register_external_adapter()` API
+- **Entry points auto-discovery**: Community adapters auto-registered via `tlabel.adapters` entry point group
+- `list_builtin_adapters()` and `list_external_adapters()` helper functions
+
+### 🔄 Changed
+- `tlabel/adapters/base.py`: Refactored from single BaseAdapter to DataAdapterBase + SensorAdapterBase
+- `tlabel/adapters/__init__.py`: Now exports both base classes, categorizes adapters by type
+- `tlabel/core/registry.py`: Added community adapter discovery and registration
+- `internal-docs/DEVELOPER_GUIDE.md`: Updated adapter architecture documentation
+
+---
+
 ## [0.15.0] - 2026-07-19
 
 ### 🎉 Major Highlights
