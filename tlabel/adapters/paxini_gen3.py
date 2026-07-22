@@ -29,13 +29,17 @@ PaXini GEN3 实时传感器适配器 — 通过PaXini SDK读取GEN3系列传感�
 
 依赖: pip install paxini-sdk  (或 pip install "paxini-sdk[viz]")
 数据集(离线)适配器见 paxini_dataset.py
+
+v0.16.0 架构升级：
+- 继承SensorAdapterBase，实现connect/disconnect/stream_frames实时接口
+- 保留load()向后兼容（用于处理录制好的.paxini文件）
 """
 
 import numpy as np
 from pathlib import Path
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Iterator
 
-from tlabel.adapters.base import BaseAdapter
+from tlabel.adapters.base import SensorAdapterBase
 from tlabel.core.types import TLabelData, TLabelFrame
 
 try:
@@ -80,15 +84,32 @@ SLIP_CENTROID_SHIFT_THRESHOLD = 0.15   # 质心归一化偏移
 SLIP_FORCE_RATE_THRESHOLD = 0.25       # 力变化率
 
 
-class PaxiniGen3Adapter(BaseAdapter):
+class PaxiniGen3Adapter(SensorAdapterBase):
     """PaXini GEN3 实时传感器 → TLabelData
 
     支持两种工作模式:
-      1. 实时流采集: file_path 为空字符串或 None, 从 USB/BLE 传感器读取
-      2. 文件加载: file_path 为 .paxini 录制文件路径
+      1. 实时流采集: 使用connect() + stream_frames() + disconnect()
+      2. 文件加载: 使用load()加载.paxini录制文件（向后兼容）
 
     依赖: pip install paxini-sdk
+
+    用法示例:
+        # 实时采集模式
+        adapter = PaxiniGen3Adapter()
+        adapter.connect("auto")
+        for frame in adapter.stream_frames(num_frames=100):
+            process(frame)
+        adapter.disconnect()
+
+        # 录制文件处理模式（向后兼容）
+        data = adapter.load("recording.paxini")
     """
+
+    def __init__(self):
+        self._sensor = None
+        self._connected = False
+        self._sensor_index = 0
+        self._sample_rate = 100
 
     @property
     def name(self) -> str:
@@ -127,7 +148,7 @@ class PaxiniGen3Adapter(BaseAdapter):
         }
 
     def get_sensor_info(self, file_path=None) -> Dict[str, Any]:
-        return {
+        info = {
             "type": "distributed_taxel_array",
             "manufacturer": "paxini",
             "model": "GEN3",
@@ -135,8 +156,183 @@ class PaxiniGen3Adapter(BaseAdapter):
             "pressure_range_kpa": "0-600",
             "sampling_rate_range_hz": "50-500 (USB) / 50-200 (BLE)",
         }
+        if self._connected and self._sensor is not None:
+            info["connection"] = {
+                "type": "usb" if hasattr(self._sensor, 'connection_type') and 'usb' in str(self._sensor.connection_type).lower() else "ble",
+                "firmware_version": str(getattr(self._sensor, 'firmware_version', 'unknown')),
+                "status": "connected",
+            }
+        else:
+            info["connection"] = {"status": "disconnected"}
+        return info
 
-    # ─── 核心加载逻辑 ────────────────────────────────────────
+    # ─── SensorAdapterBase 实时接口实现 ─────────────────────────────────
+
+    def connect(self, device_id: str = "auto", **kwargs) -> bool:
+        """连接到PaXini GEN3传感器
+
+        参数:
+            device_id: 设备标识符
+                - "auto": 自动检测第一个可用传感器（index=0）
+                - 数字字符串: 传感器索引（如"0"）
+                - 序列号: 传感器序列号（暂不支持）
+            **kwargs:
+                - sample_rate: 期望采样率Hz，默认100
+
+        返回:
+            bool — 连接是否成功
+
+        异常:
+            ImportError: 缺少paxini-sdk
+            RuntimeError: 传感器连接失败
+        """
+        if not HAS_PAXINI_SDK:
+            raise ImportError(
+                "PaXini GEN3 适配器需要 paxini-sdk:\n"
+                "  pip install paxini-sdk\n"
+                "  pip install \"paxini-sdk[viz]\"  # 含可视化依赖"
+            )
+
+        if self._connected:
+            self.disconnect()
+
+        # 解析device_id
+        if device_id == "auto":
+            sensor_index = kwargs.get("sensor_index", 0)
+        else:
+            try:
+                sensor_index = int(device_id)
+            except ValueError:
+                sensor_index = 0
+
+        self._sample_rate = kwargs.get("sample_rate", 100)
+
+        try:
+            self._sensor = paxini.Sensor(index=sensor_index)
+            self._sensor.start()
+            self._sensor_index = sensor_index
+            self._connected = True
+            return True
+        except Exception as e:
+            raise RuntimeError(
+                f"无法连接PaXini GEN3传感器 (index={sensor_index}): {e}"
+            )
+
+    def disconnect(self) -> None:
+        """断开传感器连接，释放资源"""
+        if self._sensor is not None:
+            try:
+                self._sensor.stop()
+            except Exception:
+                pass  # 静默处理断开时的异常
+            self._sensor = None
+        self._connected = False
+
+    def is_connected(self) -> bool:
+        """检查当前连接状态"""
+        return self._connected and self._sensor is not None
+
+    def stream_frames(self, num_frames: int = -1,
+                      **kwargs) -> Iterator[TLabelFrame]:
+        """实时数据流生成器
+
+        参数:
+            num_frames: 采集帧数，-1表示无限采集直到手动停止
+            **kwargs:
+                - slip_threshold: 滑移质心偏移阈值，默认0.15
+                - force_slip_threshold: 滑移力变化率阈值，默认0.25
+
+        返回:
+            Iterator[TLabelFrame] — 逐帧产出TLabelFrame
+
+        异常:
+            RuntimeError: 未连接时调用
+        """
+        if not self.is_connected():
+            raise RuntimeError(
+                f"传感器 {self.name} 未连接，请先调用 connect()"
+            )
+
+        slip_threshold = kwargs.get("slip_threshold", SLIP_CENTROID_SHIFT_THRESHOLD)
+        force_slip_threshold = kwargs.get("force_slip_threshold", SLIP_FORCE_RATE_THRESHOLD)
+
+        dt = 1.0 / self._sample_rate
+        prev_state = None
+        frame_idx = 0
+        max_frames = num_frames if num_frames > 0 else float('inf')
+
+        # 使用 SDK 的 stream() 迭代器
+        for seq, tframe in enumerate(self._sensor.stream()):
+            if frame_idx >= max_frames:
+                break
+
+            # ── 从 TactileFrame 提取数据 ──
+            timestamp_s = tframe.timestamp_ns / 1e9  # ns → s
+            pressure_map = tframe.pressure_map        # ndarray (H, W), float32, kPa
+            contact_mask = tframe.contact_mask        # ndarray (H, W), bool
+            total_force_n = tframe.total_force_n      # float, Newtons
+            centroid = tframe.contact_centroid         # tuple (row, col)
+            in_contact = tframe.in_contact             # bool
+            contact_area_mm2 = tframe.contact_area_mm2  # float
+
+            # ── 归一化计算 ──
+            pmap = np.asarray(pressure_map, dtype=np.float32)
+            cmask = np.asarray(contact_mask, dtype=bool)
+
+            # 压力归一化到 0-1 (相对于 600kPa 满量程)
+            pmap_norm = np.clip(pmap / MAX_PRESSURE_KPA, 0.0, 1.0)
+
+            # 22维特征计算
+            tlabel_v2, prev_state = self._compute_tlabel_v2(
+                pressure_map_norm=pmap_norm,
+                contact_mask=cmask,
+                total_force_n=total_force_n,
+                centroid=centroid,
+                in_contact=in_contact,
+                contact_area_mm2=contact_area_mm2,
+                timestamp_s=timestamp_s,
+                dt=dt,
+                prev_state=prev_state,
+                slip_threshold=slip_threshold,
+                force_slip_threshold=force_slip_threshold,
+            )
+
+            # 操作阶段推断
+            phase = self._infer_phase(tlabel_v2, frame_idx, max_frames if max_frames != float('inf') else 1000)
+
+            # 置信度
+            confidence = self._compute_confidence(tlabel_v2)
+
+            # 生成伪触觉图像 (用于可视化): 压力阵列 → 灰度图
+            pseudo_image = self._make_pseudo_image(pmap_norm)
+
+            # 传感器特有数据
+            sensor_specific = {
+                "seq": tframe.seq if hasattr(tframe, 'seq') else seq,
+                "pressure_map_shape": list(pmap.shape),
+                "max_pressure_kpa": float(pmap.max()),
+                "mean_pressure_kpa": float(pmap.mean()),
+                "total_force_n": float(total_force_n),
+                "contact_area_mm2": float(contact_area_mm2),
+                "centroid_raw": list(centroid) if centroid is not None else None,
+                "in_contact_sdk": bool(in_contact),
+                "source": "paxini_gen3_realtime",
+            }
+
+            frame = TLabelFrame(
+                frame_idx=frame_idx,
+                timestamp_s=round(timestamp_s, 6),
+                tlabel_v2=tlabel_v2,
+                manipulation_phase=phase,
+                confidence=confidence,
+                sensor_specific=sensor_specific,
+                image=pseudo_image,  # 用于 viewer 可视化
+            )
+            yield frame
+
+            frame_idx += 1
+
+    # ─── 向后兼容：load() 方法 ─────────────────────────────────────────
 
     def load(self, file_path: str,
              trajectory_id: Optional[int] = None,
@@ -217,12 +413,12 @@ class PaxiniGen3Adapter(BaseAdapter):
             sensor_id=f"paxini_gen3_idx{sensor_index}",
         )
 
-    # ─── 流式采集 ─────────────────────────────────────────────
+    # ─── 流式采集（供load()内部使用）─────────────────────────────
 
     def _capture_stream(self, sensor, num_frames: int, sample_rate: int,
                         slip_threshold: float, force_slip_threshold: float
                         ) -> List[TLabelFrame]:
-        """从传感器实时采集帧并转换为 TLabelFrame 列表"""
+        """从传感器实时采集帧并转换为 TLabelFrame 列表（供load()使用）"""
 
         dt = 1.0 / sample_rate
         frames: List[TLabelFrame] = []
@@ -283,6 +479,7 @@ class PaxiniGen3Adapter(BaseAdapter):
                 "contact_area_mm2": float(contact_area_mm2),
                 "centroid_raw": list(centroid) if centroid is not None else None,
                 "in_contact_sdk": bool(in_contact),
+                "source": "paxini_gen3_load",
             }
 
             frame = TLabelFrame(
