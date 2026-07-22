@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
-## [0.16.0] - 2026-07-22 (In Development)
+## [0.16.0] - 2026-07-22
 
 ### 🎉 Major Highlights
 
@@ -36,6 +36,22 @@ This release introduces **adapter architecture separation** (DataAdapterBase vs 
 - **External adapter registration**: `register_external_adapter()` API
 - **Entry points auto-discovery**: Community adapters auto-registered via `tlabel.adapters` entry point group
 - `list_builtin_adapters()` and `list_external_adapters()` helper functions
+
+#### CLI Tool (New)
+- **`tlabel validate <path>`**: Validate data files against tlabel_v2 22-dim schema
+  - Supports JSON, HDF5, Parquet, and directory formats
+  - Auto-detects data format and validates frame-level tlabel_v2 dimensions
+  - Reports errors, warnings, and dimension coverage statistics
+- **`tlabel list`**: List all registered adapters (builtin + community)
+- **`tlabel info <name>`**: Show adapter details (type, capabilities, sensor info)
+- **`tlabel version`**: Display current version
+- Installed as console script: `pip install tlabel && tlabel --help`
+
+#### Developer Experience
+- **Adapter contribution PR template**: `.github/PULL_REQUEST_TEMPLATE/adapter_contribution.md`
+  - Structured checklist for new adapter submissions
+  - 22-dim capability table template
+  - Testing and validation instructions
 
 ### 🔄 Changed
 - `tlabel/adapters/base.py`: Refactored from single BaseAdapter to DataAdapterBase + SensorAdapterBase
