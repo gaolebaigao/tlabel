@@ -24,6 +24,10 @@
 
 ---
 
+> *Tactile data shouldn't be locked inside any single company's format. Just as RGB images don't belong to any camera manufacturer, tactile data deserves a unified "Unicode". That's what TLabel does — defining a universal language for tactile data, and giving it to everyone.*
+
+---
+
 ## Community
 
 [![Discord](https://img.shields.io/discord/1234567890?color=5865F2&label=Discord&logo=discord&logoColor=white)](https://discord.gg/2ab8EWaBM)
