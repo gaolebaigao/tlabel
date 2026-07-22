@@ -26,6 +26,23 @@
 
 ## 🆕 更新亮点
 
+### v0.16.0 — 开放平台架构 + 社区贡献体系 🆕
+**TLabel 正式成为开放平台——任何人都可以为它添加传感器支持。**
+- 🏗️ **双基类架构**：`DataAdapterBase`（数据集加载器）与 `SensorAdapterBase`（实时传感器）清晰分离，贡献者只需实现 3 个方法
+- 🔌 **外部适配器注册**：`register_external_adapter()` API + Python `entry_points` 自动发现——第三方包无需修改 TLabel 源码即可接入
+- 🛠️ **CLI 命令行工具**：`tlabel validate/list/info/version`——校验数据文件、查看已注册适配器、检查兼容性
+- 📦 **社区贡献工具包**：完整的适配器模板（`contrib/adapter-template/`）、PR 模板、详细指南见 [CONTRIBUTING.md](CONTRIBUTING.md)
+- 🧩 **适配器数量**：9 个内置适配器 + 通过 entry_points 支持无限社区适配器
+- 📖 **开放文档**：CONTRIBUTING.md、适配器开发指南、架构全景——构建和提交新适配器所需的一切
+
+```bash
+# 安装并体验 CLI
+pip install tlabel==0.16.0
+tlabel list          # 查看所有已注册适配器
+tlabel validate data.json  # 校验 tlabel_v2 schema 兼容性
+tlabel info paxini_gen3    # 查看适配器详情
+```
+
 ### v0.15.0 — 适配器架构重构 + PaXini GEN3 实时 SDK
 **插件化适配器系统，支持实时触觉数据采集。**
 - 🔌 **表驱动注册**：新增适配器仅需改 1 行代码（原需 5 个文件）
@@ -575,14 +592,37 @@ tlabel/
 
 ## 🤝 贡献
 
-欢迎贡献！参见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+**TLabel 是一个开放平台——任何人都可以为它扩展传感器支持。**
 
-**适合新手上手的Issue：**
-- 🔌 加一个新的传感器适配器（SynTouch？XELA？你说了算）
+### 三种参与方式
+
+**1. 添加传感器适配器（最有价值）**
+- 📖 阅读 [CONTRIBUTING.md](CONTRIBUTING.md) 获取完整指南
+- 📦 使用现成模板：`contrib/adapter-template/`
+- 🏗️ 继承 `DataAdapterBase`（数据集）或 `SensorAdapterBase`（实时传感器）
+- ✅ 只需实现 3 个方法：`name`、`_load_single_file()`、`supported_formats`
+- 🔌 提交 PR — CI 自动校验你的适配器
+
+**2. 构建第三方适配器包**
+- 📦 将适配器作为独立 Python 包发布
+- 🔌 使用 `tlabel` entry_points 组实现自动发现——无需提交 PR
+- 📖 参考 `contrib/adapter-template/pyproject.toml` 配置
+
+**3. 其他贡献**
 - 📊 改进雷达图UI（暗色模式、交互悬停）
 - 🌐 加更多语言（日本語、한국어）
 - 🧪 补集成测试
 - 🤖 改进预标注模型（用轻量ML替代规则？）
+
+### 当前适配器生态
+
+| 类型 | 内置 | 社区 | 合计 |
+|------|------|------|------|
+| 数据集适配器 | 7 | 0（等你！） | 7 |
+| 实时传感器适配器 | 2 | 0（等你！） | 2 |
+| **合计** | **9** | — | **9** |
+
+*想加入你的适配器？参考 [CONTRIBUTING.md](CONTRIBUTING.md)，30 分钟即可上手。*
 
 ---
 

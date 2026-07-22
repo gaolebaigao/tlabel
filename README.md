@@ -31,6 +31,23 @@
 Join our [Discord community](https://discord.gg/2ab8EWaBM) for support, discussions, and contributions!
 ## 🆕 What's New
 
+### v0.16.0 — Open Platform Architecture + Community Contribution System 🆕
+**TLabel is now an open, extensible platform. Anyone can add sensor support.**
+- 🏗️ **Dual-Base Architecture**: Clean separation of `DataAdapterBase` (dataset loaders) and `SensorAdapterBase` (real-time sensors) — contributors only need to implement 3 methods
+- 🔌 **External Adapter Registration**: `register_external_adapter()` API + Python `entry_points` auto-discovery — third-party packages can plug in without modifying TLabel source code
+- 🛠️ **CLI Tools**: `tlabel validate/list/info/version` — validate data files, inspect registered adapters, check compatibility
+- 📦 **Community Contribution Kit**: Full adapter template (`contrib/adapter-template/`), PR templates, step-by-step guide in [CONTRIBUTING.md](CONTRIBUTING.md)
+- 🧩 **Adapter Count**: 9 built-in adapters + unlimited community adapters via entry_points
+- 📖 **Open Documentation**: CONTRIBUTING.md, adapter development guide, architecture overview — everything needed to build and submit a new adapter
+
+```bash
+# Install and try the CLI
+pip install tlabel==0.16.0
+tlabel list          # see all registered adapters
+tlabel validate data.json  # validate tlabel_v2 schema compliance
+tlabel info paxini_gen3    # adapter details + capabilities
+```
+
 ### v0.15.0 — Adapter Architecture Refactoring + PaXini GEN3 Real-Time SDK
 **Plugin-based adapter system with live tactile data acquisition.**
 - 🔌 **Table-Driven Adapter Registration**: Adding new adapters requires only 1 line change (was 5 files)
@@ -531,14 +548,37 @@ If you use TLabel in your research, please cite:
 
 ## 🤝 Contributing
 
-We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+**TLabel is an open platform — anyone can extend it with new sensor support.**
 
-**Good first issues:**
-- 🔌 Add a new sensor adapter (SynTouch? XELA? Your call.)
+### Three ways to contribute
+
+**1. Add a sensor adapter (most impactful)**
+- 📖 Read [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide
+- 📦 Use the starter template: `contrib/adapter-template/`
+- 🏗️ Inherit from `DataAdapterBase` (dataset) or `SensorAdapterBase` (real-time)
+- ✅ Implement just 3 methods: `name`, `_load_single_file()`, `supported_formats`
+- 🔌 Submit a PR — CI auto-validates your adapter
+
+**2. Build a third-party adapter package**
+- 📦 Ship your adapter as an independent Python package
+- 🔌 Use `tlabel` entry_points group for auto-discovery — no PR needed
+- 📖 See `contrib/adapter-template/pyproject.toml` for the setup
+
+**3. Other contributions**
 - 📊 Improve radar chart UI (dark mode, interactive hover)
 - 🌐 Add more language support (日本語, 한국어)
 - 🧪 Add integration tests for edge cases
 - 🤖 Improve pre-annotation models (replace rules with lightweight ML?)
+
+### Current adapter ecosystem
+
+| Type | Built-in | Community | Total |
+|------|----------|-----------|-------|
+| Dataset adapters | 7 | 0 (yet!) | 7 |
+| Real-time sensors | 2 | 0 (yet!) | 2 |
+| **Total** | **9** | — | **9** |
+
+*Want to add yours? See [CONTRIBUTING.md](CONTRIBUTING.md) to get started in 30 minutes.*
 
 ---
 
