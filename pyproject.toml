@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tlabel"
-version = "0.15.0"
+version = "0.16.0"
 description = "TouchLabel AI - Tactile Data Annotation Toolkit"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -37,6 +37,9 @@ ftp1 = ["zarr>=2.16"]
 ml = ["scikit-learn>=1.0", "joblib>=1.0"]
 all = ["opencv-python>=4.0", "h5py>=3.0", "pyarrow>=10.0", "scipy>=1.7", "pillow>=9.0", "scikit-learn>=1.0", "joblib>=1.0", "zarr>=2.16"]
 dev = ["pytest", "jupyter", "pyarrow", "zarr", "scikit-learn>=1.0"]
+
+[project.scripts]
+tlabel = "tlabel.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/liesliy/tlabel"
