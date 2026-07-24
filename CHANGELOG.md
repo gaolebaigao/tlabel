@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.17.1] - 2026-07-24
+
+### 🐛 Bug Fixes
+
+- **Panel rendering fix**: `data.review()` was crashing with `TypeError: tv2.contact.toFixed is not a function` because `contact` and `slip_event` are booleans in Schema V2, not floats. Updated JS template to display ✅/— instead of calling `.toFixed()` on booleans.
+- **Panel null safety**: Added null guards for `force_magnitude` and other optional fields.
+- **Panel keyboard shortcuts**: Space/S key toggles now correctly handle boolean values.
+- **Schema JSON**: Removed invalid `enum` constraint on `feature_names_v2` array (was at array level instead of items level, causing conformance test failures).
+- **HTML template**: Removed `<!DOCTYPE html>` wrapper (unnecessary in Jupyter iframe context).
+
+### 🔧 Test Fixes
+
+- Migrated all 6 test files from legacy `tlabel_v2=` API to new `schema_v2=TLabelSchemaV2(...)` API.
+- Fixed `DaimonDmTacAdapter` instantiation test (now abstract base class).
+- All **147 tests passing**.
+
+---
+
 ## [0.17.0] - 2026-07-24
 
 ### ⚠️ Breaking Change — Schema V2 Only
