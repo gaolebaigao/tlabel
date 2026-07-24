@@ -1,5 +1,5 @@
 {
-  "schema_version": "0.2.0",
+  "schema_version": "2.1.0",
   "sensor_info": {
     "sensor_name": "Daimon-Infinity",
     "sensor_type": "vision_based",
@@ -8,19 +8,22 @@
     "resolution": "640x480",
     "frame_rate": 30,
     "adapter_name": "tlabel-daimon",
-    "adapter_version": "0.2.0"
+    "adapter_version": "2.1.0"
   },
   "capabilities": {
     "contact": true,
+    "contact_centroid": true,
     "contact_region": true,
     "force_magnitude": true,
-    "force_direction": true,
+    "force_vector": false,
+    "torque_vector": false,
     "slip_event": true,
-    "slip_direction": true,
+    "slip_velocity": true,
     "manipulation_phase": true,
-    "texture": true,
-    "whole_hand_coordination": false,
-    "object_deformation": false
+    "texture_class": true,
+    "object_deformation": true,
+    "temperature": false,
+    "confidence": true
   },
   "episodes": [
     {
@@ -36,49 +39,73 @@
           "frame_idx": 0,
           "timestamp_s": 0.0,
           "contact": false,
+          "contact_centroid": null,
           "contact_region": null,
           "force_magnitude": 0.0,
-          "force_direction": null,
+          "force_vector": null,
+          "torque_vector": null,
           "slip_event": false,
-          "slip_direction": null,
+          "slip_velocity": null,
           "manipulation_phase": "approach",
-          "texture": null
+          "texture_class": null,
+          "object_deformation": null,
+          "temperature": null,
+          "confidence": 0.95,
+          "compliance_level": "L2"
         },
         {
           "frame_idx": 30,
           "timestamp_s": 1.0,
           "contact": true,
+          "contact_centroid": [310, 245],
           "contact_region": "fingertip_left",
-          "force_magnitude": 0.45,
-          "force_direction": [0.1, -0.2, 0.97],
+          "force_magnitude": 1.2,
+          "force_vector": null,
+          "torque_vector": null,
           "slip_event": false,
-          "slip_direction": null,
-          "manipulation_phase": "hold",
-          "texture": "smooth_plastic"
+          "slip_velocity": null,
+          "manipulation_phase": "grasp",
+          "texture_class": "smooth_plastic",
+          "object_deformation": 0.3,
+          "temperature": null,
+          "confidence": 0.92,
+          "compliance_level": "L2"
         },
         {
           "frame_idx": 60,
           "timestamp_s": 2.0,
           "contact": true,
+          "contact_centroid": [315, 240],
           "contact_region": "fingertip_left",
-          "force_magnitude": 0.52,
-          "force_direction": [0.05, -0.15, 0.99],
+          "force_magnitude": 1.8,
+          "force_vector": null,
+          "torque_vector": null,
           "slip_event": true,
-          "slip_direction": [0.85, 0.35, 0.40],
+          "slip_velocity": [12.5, -3.2],
           "manipulation_phase": "hold",
-          "texture": "smooth_plastic"
+          "texture_class": "smooth_plastic",
+          "object_deformation": 0.5,
+          "temperature": null,
+          "confidence": 0.88,
+          "compliance_level": "L2"
         },
         {
           "frame_idx": 89,
           "timestamp_s": 2.97,
           "contact": false,
+          "contact_centroid": null,
           "contact_region": null,
           "force_magnitude": 0.0,
-          "force_direction": null,
+          "force_vector": null,
+          "torque_vector": null,
           "slip_event": false,
-          "slip_direction": null,
+          "slip_velocity": null,
           "manipulation_phase": "release",
-          "texture": null
+          "texture_class": null,
+          "object_deformation": null,
+          "temperature": null,
+          "confidence": 0.97,
+          "compliance_level": "L2"
         }
       ]
     }

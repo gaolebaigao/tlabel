@@ -1,101 +1,38 @@
-# ===== Build & Distribution =====
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
 dist/
 build/
-*.egg-info/
-eggs/
-
-# ===== Python =====
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
 *.egg
+.eggs/
+*.whl
 
-# ===== IDE =====
-.idea/
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
 .vscode/
+.idea/
 *.swp
 *.swo
-*~
 
-# ===== OS =====
+# OS
 .DS_Store
 Thumbs.db
 
-# ===== Test & Coverage =====
+# Testing / Coverage
+.pytest_cache/
 .coverage
 htmlcov/
-test_results/
-.pytest_cache/
-.tox/
 
-# ===== Backup & Old Versions =====
+# Internal docs (not for public repo)
+docs/DESIGN-INTERNAL.md
+
+# Temporary files
+tmp/
+*.tmp
 *.bak
-*.bak.*
-tlabel.bak.*/
-tlabel-v050-src/
-
-# ===== One-off / Working Scripts (root only) =====
-/bump_v060.py
-/fix_v060.py
-/demo_v2.py
-/download_touchd.py
-/gen_touchd_demo.py
-/push_demo.py
-/push_touchd.py
-/touchd_explore.py
-/touchd_test.py
-/vtouch_adapter.py
-/release_regression.py
-/release_v062.py
-/run_regression_test.py
-
-# ===== Working Documents (root only — agent workspace, not for repo) =====
-/*_草稿.md
-/*_方案.md
-/*_报告*.md
-/*_分析*.md
-/*分析_*.md
-/*_战略*.md
-/CSDN_*.md
-/FTP-1*.md
-/TLabel_质量指标体系.md
-/TLabel快速上手指南.md
-/TLabel推广计划*.md
-/TLabel发版规范*.md
-/TLabel-Bench*.md
-/TLabel_Panel操作指南.*
-/TLabel_v0.7_RFC_*.md
-/TLabel功能规划与标准推广兼容性分析*.md
-/TA-Label_*.md
-/论文打假*.md
-/TacEva*.md
-/TaCo*.md
-/ZhuoChen_*.md
-/GeWu-Lab_*.md
-/ToucHD*.md
-/VTouch*.md
-/AtomGit_*.md
-/RA-L*.md
-/文件转移_*.md
-/冯若轩_*.md
-/论文投稿策略*.md
-/demo_touchd.json
-/tlabel_demo_panel*.html
-
-# ===== Old / Superseded Files (root only) =====
-/CHANGELOG_v2.md
-/README_v2.md
-/README_CN_v2.md
-/tlabel_panel_standalone_phase1.html
-/tlabel_panel_v050.html
-
-# ===== Temp Directories =====
-taco_adaptation/
-atomgit-mr-files/
-modelscope/
-screenshots/
-ph_assets/
-
-# Legacy src layout (do not re-add)
-/src/

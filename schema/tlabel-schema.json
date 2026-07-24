@@ -1,633 +1,303 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "TLabel Schema V2.1",
+  "title": "TLabel Annotation Format",
   "version": "2.1.0",
-  "description": "TLabel Schema V2.1 — 14维结构化触觉语义标注规范，支持 Compliance Level (L1-L4) 分层",
+  "description": "Schema for TLabel cross-sensor tactile annotation files. Defines a 14-dimensional semantic space with Compliance Level (L1-L4) stratification.",
   "type": "object",
-  "required": [
-    "schema_version",
-    "format",
-    "sensor",
-    "capabilities",
-    "frames"
-  ],
+  "required": ["schema_version", "sensor_info", "capabilities", "episodes"],
   "properties": {
     "schema_version": {
       "type": "string",
-      "description": "TLabel schema version (semver)",
-      "examples": [
-        "2.1.0"
-      ]
+      "pattern": "^2\\.1\\.0$",
+      "description": "TLabel schema version. Must be exactly 2.1.0."
     },
-    "format": {
-      "type": "string",
-      "const": "tlabel_schema_v2",
-      "description": "Format identifier for Schema V2.1"
-    },
-    "schema_version_v2": {
-      "type": "string",
-      "const": "2.1",
-      "description": "Schema V2 major.minor version"
-    },
-    "tlabel_dimensions": {
-      "type": "integer",
-      "const": 14,
-      "description": "Number of Schema V2.1 semantic dimensions"
-    },
-    "feature_names_v2": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "description": "Ordered list of the 14 Schema V2.1 dimension keys",
-      "minItems": 14,
-      "maxItems": 14
-    },
-    "sensor": {
+    "sensor_info": {
       "type": "object",
-      "required": [
-        "sensor_name",
-        "sensor_type",
-        "adapter_name",
-        "adapter_version"
-      ],
+      "required": ["sensor_name", "sensor_type", "adapter_name", "adapter_version"],
+      "description": "Hardware and adapter software description.",
       "properties": {
         "sensor_name": {
           "type": "string",
-          "description": "Sensor product name"
+          "description": "Sensor product name (e.g., Daimon-Infinity, PaXini-PXCap)"
         },
         "sensor_type": {
           "type": "string",
-          "enum": [
-            "vision_based",
-            "distributed_array",
-            "hybrid"
-          ],
+          "enum": ["vision_based", "distributed_array", "hybrid"],
           "description": "Sensor category"
         },
         "manufacturer": {
-          "type": "string"
+          "type": "string",
+          "description": "Sensor hardware manufacturer"
         },
         "model": {
-          "type": "string"
+          "type": "string",
+          "description": "Sensor hardware model"
         },
         "resolution": {
-          "type": "string"
+          "type": "string",
+          "description": "Sensor spatial resolution (e.g., 640x480 for vision-based)"
         },
         "frame_rate": {
           "type": "number",
-          "minimum": 1
+          "minimum": 1,
+          "description": "Sensor sampling rate in Hz"
         },
         "adapter_name": {
           "type": "string",
-          "description": "TLabel adapter identifier"
+          "description": "TLabel adapter identifier (e.g., tlabel-daimon)"
         },
         "adapter_version": {
           "type": "string",
-          "description": "Adapter version (semver)"
-        },
-        "compliance_level": {
-          "type": "string",
-          "enum": [
-            "L1",
-            "L2",
-            "L3",
-            "L4"
-          ],
-          "description": "Default compliance level for this sensor adapter"
-        }
-      }
-    },
-    "sensor_id": {
-      "type": [
-        "string",
-        "null"
-      ],
-      "description": "Instance identifier (e.g. 'left_gripper', 'finger_2')"
-    },
-    "sensor_profile": {
-      "type": [
-        "object",
-        "null"
-      ],
-      "description": "Sensor physical properties — elastomer, optical, calibration",
-      "properties": {
-        "sensor_type": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "manufacturer": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "model": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "elastomer": {
-          "type": [
-            "object",
-            "null"
-          ],
-          "properties": {
-            "material": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "modulus_pa": {
-              "type": [
-                "number",
-                "null"
-              ],
-              "minimum": 0
-            },
-            "thickness_mm": {
-              "type": [
-                "number",
-                "null"
-              ],
-              "minimum": 0
-            },
-            "friction_coefficient": {
-              "type": [
-                "number",
-                "null"
-              ],
-              "minimum": 0
-            },
-            "source": {
-              "type": [
-                "string",
-                "null"
-              ]
-            }
-          }
-        },
-        "optical": {
-          "type": [
-            "object",
-            "null"
-          ],
-          "properties": {
-            "light_source": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "led_wavelength_nm": {
-              "type": [
-                "number",
-                "null"
-              ],
-              "minimum": 0
-            }
-          }
-        },
-        "calibration": {
-          "type": [
-            "object",
-            "null"
-          ],
-          "properties": {
-            "method": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "reference_doi": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "pixel_to_force_coefficient": {
-              "type": [
-                "number",
-                "null"
-              ],
-              "minimum": 0
-            },
-            "pixel_to_force_unit": {
-              "type": [
-                "string",
-                "null"
-              ]
-            }
-          }
-        },
-        "notes": {
-          "type": [
-            "string",
-            "null"
-          ]
-        }
-      }
-    },
-    "calibration": {
-      "type": [
-        "object",
-        "null"
-      ],
-      "description": "Legacy calibration params (prefer sensor_profile.calibration)"
-    },
-    "episode": {
-      "type": "object",
-      "required": [
-        "episode_id",
-        "task"
-      ],
-      "properties": {
-        "episode_id": {
-          "type": "string"
-        },
-        "task": {
-          "type": "string"
-        },
-        "object": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "num_frames": {
-          "type": "integer"
-        },
-        "duration_s": {
-          "type": "number"
-        },
-        "stats": {
-          "type": "object",
-          "properties": {
-            "contact_frames": {
-              "type": "integer"
-            },
-            "contact_ratio": {
-              "type": "number",
-              "minimum": 0,
-              "maximum": 1
-            },
-            "slip_frames": {
-              "type": "integer"
-            },
-            "slip_ratio": {
-              "type": "number",
-              "minimum": 0,
-              "maximum": 1
-            },
-            "modified_frames": {
-              "type": "integer"
-            }
-          }
-        },
-        "episode_label": {
-          "type": [
-            "object",
-            "null"
-          ],
-          "properties": {
-            "outcome": {
-              "type": "string",
-              "enum": [
-                "success",
-                "partial",
-                "failure",
-                "inconclusive"
-              ]
-            },
-            "manipulation_type": {
-              "type": "string",
-              "enum": [
-                "grasp",
-                "pinch",
-                "poke",
-                "slide",
-                "push",
-                "pull",
-                "tap",
-                "lift",
-                "place",
-                "other"
-              ]
-            },
-            "difficulty": {
-              "type": "string",
-              "enum": [
-                "easy",
-                "medium",
-                "hard"
-              ]
-            },
-            "notes": {
-              "type": "string"
-            },
-            "annotator": {
-              "type": "string"
-            },
-            "verified": {
-              "type": "boolean"
-            }
-          }
+          "description": "Adapter software version (semver)"
         }
       }
     },
     "capabilities": {
       "type": "object",
-      "description": "Schema V2.1 per-field capability flags",
+      "required": [
+        "contact", "contact_centroid", "force_magnitude", "force_vector",
+        "torque_vector", "slip_event", "slip_velocity",
+        "manipulation_phase", "texture_class",
+        "object_deformation", "temperature", "confidence"
+      ],
+      "description": "Boolean declarations for each semantic dimension. Indicates whether the adapter can populate the corresponding field.",
       "properties": {
         "contact": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Binary contact detection capability"
         },
         "contact_centroid": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Contact center coordinate [x, y] capability"
         },
         "contact_region": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Coarse-grained contact region label capability"
         },
         "force_magnitude": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Normal contact force scalar (N) capability"
         },
         "force_vector": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "3D contact force vector [Fx, Fy, Fz] (N) capability (L3+)"
         },
         "torque_vector": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "3D torque vector [Mx, My, Mz] (N·m) capability"
         },
         "slip_event": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Binary slip detection capability"
         },
         "slip_velocity": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Slip velocity vector [vx, vy] (mm/s) capability"
         },
         "manipulation_phase": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Manipulation phase classification capability"
         },
         "texture_class": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Surface texture classification capability"
         },
         "object_deformation": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Object deformation measurement capability"
         },
         "temperature": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Contact surface temperature measurement capability"
         },
         "confidence": {
-          "type": "boolean"
-        },
-        "compliance_level": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Annotation confidence score capability"
         }
       },
       "additionalProperties": false
     },
-    "frames": {
+    "episodes": {
       "type": "array",
+      "description": "Array of annotated episodes.",
       "items": {
         "type": "object",
-        "required": [
-          "frame_idx",
-          "timestamp_s",
-          "schema_v2",
-          "confidence"
-        ],
+        "required": ["episode_id", "task", "frames"],
         "properties": {
-          "frame_idx": {
-            "type": "integer"
-          },
-          "timestamp_s": {
-            "type": "number"
-          },
-          "is_first": {
-            "type": "boolean"
-          },
-          "is_last": {
-            "type": "boolean"
-          },
-          "schema_v2": {
-            "type": "object",
-            "description": "TLabel Schema V2.1 — 14维结构化语义标注",
-            "required": [
-              "contact",
-              "slip_event",
-              "confidence",
-              "compliance_level"
-            ],
-            "properties": {
-              "contact": {
-                "type": "boolean",
-                "description": "接触状态",
-                "required": true
-              },
-              "contact_centroid": {
-                "type": [
-                  "array",
-                  "null"
-                ],
-                "items": {
-                  "type": "number"
-                },
-                "minItems": 2,
-                "maxItems": 2,
-                "description": "接触中心坐标 [x, y]，单位：传感器像素坐标或mm。contact=true 时必填",
-                "required_when": "contact=true"
-              },
-              "contact_region": {
-                "type": [
-                  "string",
-                  "null"
-                ],
-                "enum": [
-                  "palmar",
-                  "digital",
-                  "lateral",
-                  "proximal",
-                  "distal",
-                  "dorsal",
-                  "other",
-                  null
-                ],
-                "description": "粗粒度接触区域枚举"
-              },
-              "force_magnitude": {
-                "type": [
-                  "number",
-                  "null"
-                ],
-                "minimum": 0,
-                "unit": "N",
-                "description": "法向接触力标量。compliance_level >= L2 时约定必填",
-                "required_when": "compliance_level >= L2"
-              },
-              "force_vector": {
-                "type": [
-                  "array",
-                  "null"
-                ],
-                "items": {
-                  "type": "number"
-                },
-                "minItems": 3,
-                "maxItems": 3,
-                "unit": "N",
-                "description": "三维接触力 [Fx, Fy, Fz]。compliance_level >= L3 时必填",
-                "required_when": "compliance_level >= L3"
-              },
-              "torque_vector": {
-                "type": [
-                  "array",
-                  "null"
-                ],
-                "items": {
-                  "type": "number"
-                },
-                "minItems": 3,
-                "maxItems": 3,
-                "unit": "N·m",
-                "description": "三维力矩 [Mx, My, Mz]"
-              },
-              "slip_event": {
-                "type": "boolean",
-                "description": "滑动检测",
-                "required": true
-              },
-              "slip_velocity": {
-                "type": [
-                  "array",
-                  "null"
-                ],
-                "items": {
-                  "type": "number"
-                },
-                "minItems": 2,
-                "maxItems": 2,
-                "unit": "mm/s",
-                "description": "滑动速度向量 [vx, vy]。slip_event=true 时建议填写"
-              },
-              "manipulation_phase": {
-                "type": [
-                  "string",
-                  "null"
-                ],
-                "enum": [
-                  "pre_contact",
-                  "approach",
-                  "grasp",
-                  "lift",
-                  "hold",
-                  "place",
-                  null
-                ],
-                "description": "操作阶段枚举"
-              },
-              "texture_class": {
-                "type": [
-                  "string",
-                  "null"
-                ],
-                "enum": [
-                  "smooth",
-                  "rough",
-                  "granular",
-                  "fibrous",
-                  "sticky",
-                  "slippery",
-                  null
-                ],
-                "description": "纹理类别枚举"
-              },
-              "object_deformation": {
-                "type": [
-                  "number",
-                  "null"
-                ],
-                "unit": "mm or ratio",
-                "description": "物体形变量"
-              },
-              "temperature": {
-                "type": [
-                  "number",
-                  "null"
-                ],
-                "unit": "°C",
-                "description": "接触面温度"
-              },
-              "confidence": {
-                "type": "number",
-                "minimum": 0.0,
-                "maximum": 1.0,
-                "description": "标注置信度",
-                "required": true
-              },
-              "compliance_level": {
-                "type": "string",
-                "enum": [
-                  "L1",
-                  "L2",
-                  "L3",
-                  "L4"
-                ],
-                "description": "合规等级。L1=基础触觉, L2=力感知, L3=完整力向量, L4=完整语义",
-                "required": true
-              }
-            },
-            "additionalProperties": false
-          },
-          "tlabel_v2": {
-            "type": [
-              "object",
-              "null"
-            ],
-            "description": "DEPRECATED since v2.1: 旧版22维 flat dict，保留向后兼容"
-          },
-          "manipulation_phase": {
+          "episode_id": {
             "type": "string",
-            "description": "DEPRECATED: use schema_v2.manipulation_phase"
+            "description": "Unique episode identifier"
           },
-          "confidence": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 1,
-            "description": "Frame-level confidence (also in schema_v2)"
+          "task": {
+            "type": "string",
+            "description": "Task label (e.g., pick_place, peg_in_hole)"
           },
-          "sensor_specific": {
-            "type": "object"
+          "object": {
+            "type": "string",
+            "description": "Object being manipulated"
           },
-          "patches": {
+          "metadata": {
+            "type": "object",
+            "description": "Episode-level metadata.",
+            "properties": {
+              "duration_s": {
+                "type": "number",
+                "description": "Episode duration in seconds"
+              },
+              "num_frames": {
+                "type": "integer",
+                "description": "Total number of frames in episode"
+              }
+            }
+          },
+          "frames": {
             "type": "array",
+            "description": "Per-frame annotation sequence.",
             "items": {
               "type": "object",
-              "required": [
-                "field",
-                "old_value",
-                "new_value"
-              ],
+              "required": ["frame_idx", "timestamp_s", "contact", "slip_event", "confidence", "compliance_level"],
+              "description": "Single frame annotation conforming to the 14-dimensional schema.",
               "properties": {
-                "field": {
-                  "type": "string"
+                "frame_idx": {
+                  "type": "integer",
+                  "description": "Frame index within the episode"
                 },
-                "old_value": {},
-                "new_value": {},
-                "cascade": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "field": {
-                        "type": "string"
-                      },
-                      "old_value": {},
-                      "new_value": {}
-                    }
-                  }
+                "timestamp_s": {
+                  "type": "number",
+                  "description": "Timestamp in seconds from episode start"
+                },
+                "contact": {
+                  "type": "boolean",
+                  "description": "Required. True when any detectable contact between sensor and object."
+                },
+                "contact_centroid": {
+                  "description": "Required if contact=true. Contact center coordinate [x, y] in sensor-local frame (pixels or mm). null when contact=false.",
+                  "oneOf": [
+                    {
+                      "type": "array",
+                      "items": { "type": "number" },
+                      "minItems": 2,
+                      "maxItems": 2
+                    },
+                    { "type": "null" }
+                  ]
+                },
+                "contact_region": {
+                  "description": "Optional. Coarse-grained contact region label (sensor-specific vocabulary).",
+                  "oneOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "fingertip_left", "fingertip_right", "thumb", "index",
+                        "middle", "ring", "pinky", "palm",
+                        "taxel_group_1", "taxel_group_2", "taxel_group_3",
+                        "taxel_group_thumb", "taxel_group_index",
+                        "proximal", "distal", "dorsal"
+                      ]
+                    },
+                    { "type": "null" }
+                  ]
+                },
+                "force_magnitude": {
+                  "description": "Required at Compliance Level L2+. Normal contact force scalar in Newtons. null if sensor cannot measure force.",
+                  "oneOf": [
+                    { "type": "number", "minimum": 0 },
+                    { "type": "null" }
+                  ]
+                },
+                "force_vector": {
+                  "description": "Optional L3+. 3D contact force [Fx, Fy, Fz] in Newtons, sensor-local frame. null if sensor cannot measure 3D force.",
+                  "oneOf": [
+                    {
+                      "type": "array",
+                      "items": { "type": "number" },
+                      "minItems": 3,
+                      "maxItems": 3
+                    },
+                    { "type": "null" }
+                  ]
+                },
+                "torque_vector": {
+                  "description": "Optional. 3D torque [Mx, My, Mz] in N·m, sensor-local frame. null if not available.",
+                  "oneOf": [
+                    {
+                      "type": "array",
+                      "items": { "type": "number" },
+                      "minItems": 3,
+                      "maxItems": 3
+                    },
+                    { "type": "null" }
+                  ]
+                },
+                "slip_event": {
+                  "type": "boolean",
+                  "description": "Required. True when detectable relative motion between sensor surface and contact object."
+                },
+                "slip_velocity": {
+                  "description": "Optional if slip_event=true. Slip velocity [vx, vy] in mm/s. null when no slip or sensor cannot measure velocity.",
+                  "oneOf": [
+                    {
+                      "type": "array",
+                      "items": { "type": "number" },
+                      "minItems": 2,
+                      "maxItems": 2
+                    },
+                    { "type": "null" }
+                  ]
+                },
+                "manipulation_phase": {
+                  "description": "Optional. Current manipulation phase.",
+                  "oneOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "idle", "approach", "grasp", "contact",
+                        "lift", "hold", "translate", "place",
+                        "release", "retract"
+                      ]
+                    },
+                    { "type": "null" }
+                  ]
+                },
+                "texture_class": {
+                  "description": "Optional. Surface texture classification label.",
+                  "oneOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "smooth", "rough", "granular", "fibrous",
+                        "ridged", "slimy", "sticky", "hard", "soft",
+                        "smooth_plastic", "rough_cloth", "metal_grid",
+                        "rubber", "wood", "glass", "ceramic"
+                      ]
+                    },
+                    { "type": "null" }
+                  ]
+                },
+                "object_deformation": {
+                  "description": "Optional. Object deformation magnitude (mm or ratio). null if sensor cannot detect deformation.",
+                  "oneOf": [
+                    { "type": "number" },
+                    { "type": "null" }
+                  ]
+                },
+                "temperature": {
+                  "description": "Optional. Contact surface temperature in °C. null if sensor cannot measure temperature.",
+                  "oneOf": [
+                    { "type": "number" },
+                    { "type": "null" }
+                  ]
+                },
+                "confidence": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "description": "Required. Annotation confidence score [0.0, 1.0]. 1.0 = fully confident, 0.0 = no confidence."
+                },
+                "compliance_level": {
+                  "type": "string",
+                  "enum": ["L1", "L2", "L3", "L4"],
+                  "description": "Required. Compliance Level indicating data information density: L1 (Basic), L2 (Force-Aware), L3 (Full-Vector), L4 (Rich-Semantic)."
                 }
               }
             }
