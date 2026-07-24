@@ -1,35 +1,39 @@
 <div align="center">
 
-# 🦞 TouchLabel AI
+# 🦞 TLabel
 
-### **The World's First Sensor-Agnostic Tactile Data Annotation Toolkit**
+**A Unified Tactile Data Annotation Standard & Toolkit**
 
-**Load any tactile sensor → Annotate visually → Export a unified schema**
+Load any sensor · Annotate in one format · Export everywhere
 
 [![PyPI](https://img.shields.io/pypi/v/tlabel?color=e85d75&label=PyPI)](https://pypi.org/project/tlabel/)
-[![Python](https://img.shields.io/pypi/pyversions/tlabel?label=Python)](https://pypi.org/project/tlabel/)
-[![License](https://img.shields.io/pypi/l/tlabel?label=License)](https://github.com/liesliy/tlabel/blob/main/LICENSE)
-[![Downloads](https://img.shields.io/pepy/dt/tlabel?color=blue&label=Downloads)](https://pepy.tech/projects/tlabel)
-[![GitHub Stars](https://img.shields.io/github/stars/liesliy/tlabel?style=social)](https://github.com/liesliy/tlabel/stargazers)
+[![Python](https://img.shields.io/pypi/pyversions/tlabel)](https://pypi.org/project/tlabel/)
+[![License](https://img.shields.io/pypi/l/tlabel)](LICENSE)
+[![Downloads](https://img.shields.io/pepy/dt/tlabel?color=blue)](https://pepy.tech/projects/tlabel)
+[![arXiv](https://img.shields.io/badge/arXiv-2507.xxxxx-b31b1b)](https://arxiv.org/abs/xxxx.xxxxx)
 [![中文文档](https://img.shields.io/badge/文档-中文-blue)](README_CN.md)
-
-**GelSight · DIGIT · PaXini · Daimon — one tool, one format, all sensors**
-
-[🚀 Quick Start](#-quick-start) · [📡 Sensors](#-supported-sensors) · [🤝 Contributing](#-contributing)
 
 </div>
 
 ---
 
-> ⚠️ **v0.17.0 Breaking Change** — Schema V2 Only. The legacy 22-dim `tlabel_v2` format has been removed. All data now uses the 14-dim Schema V2 with Compliance Levels (L1-L4). See [MIGRATION.md](MIGRATION.md) for upgrade instructions.
+## What is TLabel?
+
+Every tactile sensor speaks a different language. TLabel defines a **single annotation schema** (14 semantic dimensions, 4 compliance levels) and provides **adapters** that translate each sensor's native format into it.
+
+```
+ GelSight .pkl ──┐                        ┌── JSON / CSV
+ PaXini .h5 ─────┤   TLabel Adapter       ├── FTP-1 Zarr
+ Daimon .parquet─┤   ─────────────────►   ├── LeRobot / RLDS
+ VTouch .h5 ─────┤                        └── ROS2
+ Any format ─────┘
+```
+
+Think of it as **Unicode for tactile data** — one schema, all sensors.
 
 ---
 
-> *Tactile data shouldn't be locked inside any single company's format. Just as RGB images don't belong to any camera manufacturer, tactile data deserves a unified "Unicode". That's what TLabel does — defining a universal language for tactile data, and giving it to everyone.*
-
----
-
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
 pip install tlabel
@@ -38,119 +42,80 @@ pip install tlabel
 ```python
 import tlabel
 
-# Load data from any sensor — auto-detected
-data = tlabel.load("path/to/your/data")
+# Load data from any sensor (auto-detected)
+data = tlabel.load("path/to/data")
 
-# Or try built-in demo (30 seconds)
+# Or try built-in demo
 data = tlabel.demo("gelsight")
 
-# Review in Jupyter — interactive annotation panel
+# Interactive annotation panel (Jupyter)
 data.review()
 
-# Export to unified format
-data.export("output.json")      # JSON (tlabel_v2 schema)
-data.export("output.csv")       # CSV
-data.export_ftp1("out.zarr")    # FTP-1 Zarr (foundation model ready)
+# Export
+data.export("output.json")
+data.export_ftp1("out.zarr")
 ```
-
-### CLI Tools
 
 ```bash
-tlabel version               # Check version
-tlabel list                  # List all registered adapters
-tlabel info gelsight         # Adapter details & capabilities
-tlabel validate your_data.json  # Validate tlabel_v2 schema compliance
+# CLI
+tlabel list                    # All registered adapters
+tlabel info gelsight           # Adapter details
+tlabel validate data.json      # Schema compliance check
 ```
 
 ---
 
-## 🎯 What Does TLabel Do?
+## Schema V2 — 14 Dimensions, 4 Compliance Levels
 
-**Problem:** Every tactile sensor outputs different data formats. Switch sensors → rewrite code.
+TLabel Schema V2 defines **14 semantic dimensions** organized by mandatory/optional tiers, with **Compliance Levels (L1–L4)** indicating annotation completeness:
 
-**Solution:** TLabel defines a unified 22-dimension feature space ([tlabel_v2](docs/annotation-spec.md)) and provides adapters that translate each sensor's native format into it.
+| # | Dimension | Type | Required |
+|---|-----------|------|----------|
+| 1 | `contact` | bool | ✅ Required |
+| 2 | `contact_centroid` | [float × 2] | ✅ (if contact) |
+| 3 | `force_magnitude` | float | ✅ (L2+) |
+| 4 | `slip_event` | bool | ✅ Required |
+| 5 | `confidence` | float | ✅ Required |
+| 6 | `compliance_level` | L1 / L2 / L3 / L4 | ✅ Required |
+| 7 | `contact_region` | enum | Optional |
+| 8 | `force_vector` | [float × 3] | Optional (L3+) |
+| 9 | `torque_vector` | [float × 3] | Optional |
+| 10 | `slip_velocity` | [float × 2] | Optional |
+| 11 | `manipulation_phase` | enum | Optional |
+| 12 | `texture_class` | enum | Optional |
+| 13 | `object_deformation` | float | Optional |
+| 14 | `temperature` | float | Optional |
 
-```
-GelSight .pkl ──┐                    ┌── JSON (tlabel_v2)
-PaXini .h5 ─────┤   TLabel Adapter   ├── CSV
-Daimon .parquet─┤   ──────────────►  ├── FTP-1 Zarr
-VTouch .h5 ─────┤                    ├── LeRobot
-Any format ─────┘                    └── ROS2 (stub)
-```
+**Compliance Levels:**
+- **L1** — Contact + slip + confidence (minimal annotation)
+- **L2** — L1 + force_magnitude (force-aware)
+- **L3** — L2 + force_vector (full 3D contact wrench)
+- **L4** — L3 + all optional fields (complete annotation)
 
-### Core Capabilities
-
-| Feature | Description |
-|---------|-------------|
-| 🔌 **9 Built-in Adapters** | 7 dataset (file loading) + 2 real-time (SDK/USB) — open for community extensions |
-| 🏗️ **Open Platform** | `DataAdapterBase` for datasets + `SensorAdapterBase` for live sensors — anyone can contribute |
-| 🛠️ **CLI Validation** | `tlabel validate` checks your data against the 22-dim schema |
-| 🤖 **AI Pre-Annotation** | `PredictEngine` auto-labels contact, slip, and manipulation phases |
-| 📈 **Data Augmentation** | 5 methods (time_warp, noise, crop, scale, dropout), pure numpy, zero extra deps |
-| 📤 **Multi-Format Export** | JSON, CSV, FTP-1 Zarr, LeRobot, RLDS, ROS2 |
-| 🌐 **Bilingual Panel** | Interactive Jupyter annotation panel (中/EN) |
-
-### API at a Glance
-
-```python
-# Loading
-data = tlabel.load(path)                     # Auto-detect format
-data = tlabel.load(path, format="paxini")    # Force adapter
-
-# Patching & Annotation
-frame = data[0]
-frame.patch("contact", 0)                    # Cascade rules auto-apply
-data.batch_patch(10, 50, "slip_event", 1)   # Range patch
-
-# AI Pre-Annotation
-from tlabel.predict import PredictEngine
-engine = PredictEngine()
-engine.fit(data)                             # Learn from partial labels
-results = engine.predict(data)
-engine.apply(data, results, min_confidence=0.7)
-
-# Augmentation
-augmented = tlabel.augment(data, methods=["time_warp", "noise_inject"], seed=42)
-```
-
-📖 **Full API Reference** → [docs/API.md](docs/API.md) · **22-Dim Schema** → [docs/annotation-spec.md](docs/annotation-spec.md)
+📖 Full spec → [docs/annotation-spec.md](docs/annotation-spec.md) · Schema JSON → [schema/tlabel-schema.json](schema/tlabel-schema.json)
 
 ---
 
-## 📡 Supported Adapters
+## Supported Sensors
 
-TLabel provides two types of adapters — loading existing data, or connecting live hardware.
+### Dataset Adapters (offline data loading)
 
-### Dataset Adapters — load existing tactile data
+| Sensor | Type | Format | Compliance |
+|:-------|:-----|:-------|:----------:|
+| GelSight Mini / DIGIT | Vision-based | `.pkl` | L3 |
+| Daimon DM-TacClaw | Multimodal | `.parquet` | L3 |
+| PaXini PXCap | Force array | `.h5` | L2 |
+| UniVTAC | Vision-based | `.hdf5` | L3 |
+| TacQuad (AnyTouch) | Multi-sensor | directory | L3 |
+| VTouch | Vision-based | `.h5` | L3 |
+| YCB-Slide | Vision-based | `.npy` | L3 |
 
-> Base class: `DataAdapterBase` · Input: file paths · Use case: research on public datasets, historical data processing
+### Real-time Sensor Adapters (live hardware)
 
-| Sensor | Type | File Format | Dims | Status |
-|:-------|:-----|:------------|:----:|:------:|
-| **GelSight Mini / DIGIT** | Vision-based | `.pkl` | 22 | ✅ Stable |
-| **Daimon DM-TacClaw** | Multimodal | `.parquet` / dir | 22 | ✅ Stable |
-| **PaXini PXCap** | Force array | `.h5` / `.hdf5` | 20 | ✅ Stable |
-| **UniVTAC** | Vision-based | `.hdf5` | 22 | ✅ Stable |
-| **TacQuad (AnyTouch)** | Multi-sensor | directory | 22 | ✅ Stable |
-| **VTouch** | Vision-based | `.h5` | 22 | ✅ Stable |
-| **YCB-Slide** | Vision-based | `.npy` / dir | 22 | ✅ Stable |
-
-### Real-time Sensor Adapters — connect live hardware
-
-> Base class: `SensorAdapterBase` · Input: SDK / USB / stream · Use case: lab robots, production lines, real-time annotation
-
-| Sensor | Type | Connection | Dims | Status |
-|:-------|:-----|:-----------|:----:|:------:|
-| **PaXini GEN3** | Force array | SDK (live stream) | 18 | 🆕 New |
-| **Daimon DM-Tac** | Vision-based | USB / `.avi` / `.bag` | 22 | 🆕 Skeleton |
-
-### Which adapter should I build?
-
-- **I have recorded data files** → inherit `DataAdapterBase`, implement file parsing
-- **I have a physical sensor** → inherit `SensorAdapterBase`, implement SDK/stream connection
-- Both share the same export pipeline — once registered, `tlabel.load()` works automatically
-
-> Vision sensors → full 22 dims. Force-only sensors (PaXini) → 20 dims. **No errors, no surprises — just graceful degradation.**
+| Sensor | Type | Connection | Compliance |
+|:-------|:-----|:-----------|:----------:|
+| PaXini GEN3 | Force array | SDK | L2 |
+| Daimon DM-Tac | Vision-based | USB / `.avi` | L3 |
 
 ```bash
 # Per-sensor dependencies
@@ -162,79 +127,90 @@ pip install tlabel[all]        # Everything
 
 ---
 
-## 🆕 What's New
+## Architecture
 
-### v0.16.0 — Open Platform Architecture
+```
+┌─────────────────────────────────────────────────┐
+│  Layer 1: Schema                                │
+│  14-dim semantic standard + Compliance Levels   │
+├─────────────────────────────────────────────────┤
+│  Layer 2: Adapters                              │
+│  DataAdapterBase │ SensorAdapterBase             │
+│  (7 built-in + community extensible)            │
+├─────────────────────────────────────────────────┤
+│  Layer 3: Downstream                            │
+│  Feature derivation · Augmentation · Export     │
+│  PredictEngine · FTP-1 · LeRobot · RLDS · ROS2 │
+└─────────────────────────────────────────────────┘
+```
 
-TLabel is now an **open, extensible platform**:
-- 🏗️ Dual-base architecture (`DataAdapterBase` / `SensorAdapterBase`)
-- 🔌 External adapter registration via `entry_points` — third-party packages auto-discovered
-- 🛠️ CLI tools: `tlabel validate / list / info / version`
-- 📦 Community contribution kit: templates + PR templates + [CONTRIBUTING.md](CONTRIBUTING.md)
-
-📖 **Full changelog** → [CHANGELOG_current.md](CHANGELOG_current.md)
-
----
-
-## 🤝 Contributing
-
-**TLabel is an open platform — anyone can extend it with new sensor support.**
-
-| Way | Effort | Impact |
-|-----|--------|--------|
-| **Submit a PR** — use `contrib/adapter-template/`, inherit from `DataAdapterBase` or `SensorAdapterBase` | ~30 min | Your sensor works with the whole ecosystem |
-| **Ship an independent package** — use `tlabel` entry_points for auto-discovery | ~1 hour | No PR needed, fully independent |
-| **Other** — bug fixes, docs, tests, UI improvements | varies | Always welcome |
-
-| Current Ecosystem | Count |
-|-------------------|-------|
-| Built-in adapters | 9 |
-| Community adapters | 0 *(your name here?)* |
-
-📖 **Get started** → [CONTRIBUTING.md](CONTRIBUTING.md) · **Adapter Template** → [contrib/adapter-template/](contrib/adapter-template/)
+- **DataAdapterBase** — inherit this to add file-based sensor support (~30 min)
+- **SensorAdapterBase** — inherit this to add live hardware support
+- Both share the same export pipeline
 
 ---
 
-## 🏆 Benchmark
+## Export Formats
 
-**[TLabel-Bench](https://github.com/liesliy/tlabel-bench)** — The first cross-sensor unified tactile annotation benchmark. Same objects, different sensors, one format.
+| Format | Use Case | Command |
+|--------|----------|---------|
+| JSON / CSV | General analysis | `data.export("out.json")` |
+| FTP-1 Zarr | Foundation model training | `data.export_ftp1("out.zarr")` |
+| LeRobot | LeRobot framework | `data.export_lerobot("out/")` |
+| RLDS | RLDS/TFDS pipeline | `data.export_rlds("out/")` |
+| ROS2 | Robot runtime | Stub (coming soon) |
 
 ---
 
-## 📝 Citing TLabel
+## Key Features
+
+| Feature | Description |
+|---------|-------------|
+| 🤖 **AI Pre-Annotation** | `PredictEngine` auto-labels contact, slip, manipulation phases |
+| 📈 **Data Augmentation** | 5 methods (time_warp, noise, crop, scale, dropout) |
+| 🌐 **Interactive Panel** | Bilingual Jupyter annotation panel (中/EN) |
+| 🔌 **Open Platform** | Community adapters via `entry_points` auto-discovery |
+
+---
+
+## Contributing
+
+TLabel is extensible by design. Add your sensor in ~30 minutes:
+
+1. Fork from [contrib/adapter-template/](contrib/adapter-template/)
+2. Inherit `DataAdapterBase` or `SensorAdapterBase`
+3. Submit a PR or ship as an independent package
+
+📖 [CONTRIBUTING.md](CONTRIBUTING.md)
+
+---
+
+## Citation
 
 ```bibtex
 @software{tlabel2026,
-  title = {TLabel: A Sensor-Agnostic Tactile Data Annotation Toolkit},
-  author = {NiuZhu Tech},
-  year = {2026},
-  url = {https://github.com/liesliy/tlabel}
+  title  = {TLabel: A Sensor-Agnostic Tactile Data Annotation Toolkit and Format Standard},
+  author = {Wu, Sheng and Luo, Xi},
+  year   = {2026},
+  url    = {https://github.com/liesliy/tlabel}
 }
 ```
 
 ---
 
-## 📄 License
+## License
 
-[MIT](LICENSE) © NiuZhu Tech
+[MIT](LICENSE) © 2026 NiuZhu Tech
 
 ---
 
 <div align="center">
 
-**If TLabel saved you from manually labeling tactile data, a ⭐ would make our day!**
+**If TLabel helps your tactile data workflow, consider giving us a ⭐**
 
-[⭐ Star on GitHub](https://github.com/liesliy/tlabel/stargazers) · [📦 PyPI](https://pypi.org/project/tlabel/) · [🏆 Benchmark](https://github.com/liesliy/tlabel-bench) · [💬 Discord](https://discord.gg/2ab8EWaBM)
+[⭐ Star](https://github.com/liesliy/tlabel/stargazers) · [📦 PyPI](https://pypi.org/project/tlabel/) · [💬 Discord](https://discord.gg/2ab8EWaBM)
+
+**Services:** Custom adapter development · Data pipeline consulting · Embodied AI tooling
+**Contact:** WeChat `wxid_olqx5z6trmtn21` · Email `luoxi@touchlabelai.cn`
 
 </div>
-
----
-
-## 🤝 Need Help with Tactile Data?
-
-We provide professional tactile data annotation and pipeline services:
-- **Custom sensor adapter development** — integrate your sensor with TLabel in days
-- **Data pipeline consulting** — annotation workflows for grasping, manipulation, slip detection
-- **Embodied AI tooling** — end-to-end data solutions from raw sensor to model-ready datasets
-
-**Contact:** WeChat `wxid_olqx5z6trmtn21` · Email `luoxi@touchlabelai.cn`
