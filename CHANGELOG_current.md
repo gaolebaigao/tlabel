@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
+## [0.17.1] - 2026-07-24
+
+### 🐛 Bug Fixes
+
+- **Panel rendering fix**: `data.review()` crashing with `TypeError: tv2.contact.toFixed is not a function` — `contact`/`slip_event` are booleans, not floats. Fixed JS template to display ✅/—.
+- **Panel null safety**: Added null guards for `force_magnitude` and optional fields.
+- **Panel keyboard shortcuts**: Space/S key toggles adapt to boolean values.
+- **Schema JSON**: Removed invalid `enum` on `feature_names_v2` array.
+- **HTML template**: Removed `<!DOCTYPE html>` (unnecessary in Jupyter iframe).
+
+### 🔧 Test Fixes
+
+- Migrated all 6 test files from `tlabel_v2=` to `schema_v2=TLabelSchemaV2(...)` API.
+- All **147 tests passing**.
+
+## [0.17.0] - 2026-07-24
+
+### ⚠️ Breaking Change — Schema V2 Only
+
+Complete migration to 14-dim Schema V2 with Compliance Level (L1-L4). Removes all legacy `tlabel_v2` compatibility code.
+
 ## [0.16.0] - 2026-07-22
 
 ### 🎉 Major Highlights
