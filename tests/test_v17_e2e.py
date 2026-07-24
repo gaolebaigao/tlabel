@@ -7,7 +7,7 @@ TLabel v0.17 Phase 1-3 全流程端到端测试
   Test 2:  TLabelFrame + TLabelData 集成 (新旧格式双轨兼容)
   Test 3:  适配器 extract_schema() (paxini_gen3, touchd, gelsight, ycb_slide, tacquad)
   Test 4:  CLI 校验 (新旧格式校验、非法数据)
-  Test 5:  导出双模式 (CSV/HDF5 新旧格式、_detect_schema_version)
+  Test 5:  导出 (Schema V2 only: CSV/HDF5/JSON、_flatten_schema_v2)
   Test 6:  质量评分 (新旧数据 QualityScorer.score())
   Test 7:  预测引擎 (新旧数据 PredictEngine)
   Test 8:  数据增强 (16列/22列矩阵 AugmentEngine)
@@ -628,123 +628,56 @@ def test_4_cli_validation():
 
 
 # ============================================================================
-# Test 5: 导出双模式
+# Test 5: 导出 (Schema V2 only, v0.17+)
 # ============================================================================
 
-def test_5_export_dual_mode():
+def test_5_export_v2():
     print("\n" + "=" * 60)
-    print("Test 5: 导出双模式")
+    print("Test 5: 导出 (Schema V2)")
     print("=" * 60)
 
-    from tlabel.export.writer import _detect_schema_version, export_data, _flatten_schema_v2
+    from tlabel.export.writer import export_data, _flatten_schema_v2
 
-    # 5.1 _detect_schema_version 正确识别
+    # 5.1 CSV导出 (27列: 7基础 + 20展开)
     try:
-        data_new = make_new_tlabel_data(n_frames=5)
-        data_legacy = make_legacy_tlabel_data(n_frames=5)
-        ver_new = _detect_schema_version(data_new)
-        ver_legacy = _detect_schema_version(data_legacy)
-        assert ver_new == "v2", f"新格式应为 v2, got {ver_new}"
-        assert ver_legacy == "legacy", f"旧格式应为 legacy, got {ver_legacy}"
-        record_test("5.1 _detect_schema_version", True,
-                     f"new={ver_new}, legacy={ver_legacy}")
-    except Exception as e:
-        record_test("5.1 _detect_schema_version", False, str(e))
-
-    # 5.2 CSV导出新格式 (20列展开)
-    try:
-        data_new = make_new_tlabel_data(n_frames=5)
+        data = make_new_tlabel_data(n_frames=5)
         with tempfile.TemporaryDirectory() as tmpdir:
-            csv_path = os.path.join(tmpdir, "test_new.csv")
-            result = export_data(data_new, csv_path, format="csv")
-            # 读取CSV验证列数
+            csv_path = os.path.join(tmpdir, "test_v2.csv")
+            export_data(data, csv_path, format="csv")
             import csv as csv_mod
             with open(csv_path, "r") as f:
                 reader = csv_mod.reader(f)
                 headers = next(reader)
-                # 新格式: frame_idx + timestamp_s + is_first + is_last +
-                #          primitive_label + primitive_source + primitive_confidence +
-                #          20个V2展开列 = 27列
-                v2_flat_cols = 20  # contact(1) + centroid_x/y(2) + contact_region(1) +
-                                   # force_magnitude(1) + force_x/y/z(3) +
-                                   # torque_x/y/z(3) + slip_event(1) + slip_vx/vy(2) +
-                                   # manipulation_phase(1) + texture_class(1) +
-                                   # object_deformation(1) + temperature(1) +
-                                   # confidence(1) + compliance_level(1) = 20
-                expected = 7 + v2_flat_cols  # 7基础列 + 20展开列
+                v2_flat_cols = 20
+                expected = 7 + v2_flat_cols
                 assert len(headers) == expected, \
-                    f"新格式CSV应有 {expected} 列, got {len(headers)}: {headers}"
-            record_test("5.2a CSV导出新格式", True, f"{len(headers)} 列 (预期 {expected})")
+                    f"CSV应有 {expected} 列, got {len(headers)}: {headers}"
+            record_test("5.1 CSV导出", True, f"{len(headers)} 列 (预期 {expected})")
     except Exception as e:
-        record_test("5.2a CSV导出新格式", False, str(e))
+        record_test("5.1 CSV导出", False, str(e))
 
-    # 5.3 CSV导出旧格式 (22列)
-    try:
-        data_legacy = make_legacy_tlabel_data(n_frames=5)
-        with tempfile.TemporaryDirectory() as tmpdir:
-            csv_path = os.path.join(tmpdir, "test_legacy.csv")
-            result = export_data(data_legacy, csv_path, format="csv")
-            import csv as csv_mod
-            with open(csv_path, "r") as f:
-                reader = csv_mod.reader(f)
-                headers = next(reader)
-                # 旧格式: frame_idx + timestamp_s + is_first + is_last +
-                #          manipulation_phase + confidence + primitive_label +
-                #          primitive_source + primitive_confidence + 22维度 = 31列
-                expected_legacy = 9 + 22
-                assert len(headers) == expected_legacy, \
-                    f"旧格式CSV应有 {expected_legacy} 列, got {len(headers)}"
-            record_test("5.2b CSV导出旧格式", True, f"{len(headers)} 列 (预期 {expected_legacy})")
-    except Exception as e:
-        record_test("5.2b CSV导出旧格式", False, str(e))
-
-    # 5.4 HDF5导出新格式
+    # 5.2 HDF5导出 (16数值维度)
     try:
         import h5py
-        data_new = make_new_tlabel_data(n_frames=5)
+        data = make_new_tlabel_data(n_frames=5)
         with tempfile.TemporaryDirectory() as tmpdir:
-            h5_path = os.path.join(tmpdir, "test_new.h5")
-            result = export_data(data_new, h5_path, format="hdf5")
+            h5_path = os.path.join(tmpdir, "test_v2.h5")
+            export_data(data, h5_path, format="hdf5")
             with h5py.File(h5_path, "r") as f:
                 features = f["tactile_features"]
                 shape = features.shape
                 assert shape[0] == 5, f"应有5帧, got {shape[0]}"
-                # 新格式: 16个数值维度（向量展开后）
-                # contact(1) + centroid_x/y(2) + force_magnitude(1) +
-                # force_x/y/z(3) + torque_x/y/z(3) + slip_event(1) +
-                # slip_vx/vy(2) + object_deformation(1) + temperature(1) + confidence(1) = 16
-                assert shape[1] == 16, f"新格式HDF5应有16列, got {shape[1]}"
+                assert shape[1] == 16, f"HDF5应有16列, got {shape[1]}"
                 sv = features.attrs.get("schema_version", "")
                 assert sv == "v2", f"schema_version 应为 v2, got {sv}"
-            record_test("5.3a HDF5导出新格式", True,
+            record_test("5.2 HDF5导出", True,
                          f"shape={shape}, schema={sv}")
     except ImportError:
-        record_test("5.3a HDF5导出新格式", False, "h5py 未安装，跳过")
+        record_test("5.2 HDF5导出", False, "h5py 未安装，跳过")
     except Exception as e:
-        record_test("5.3a HDF5导出新格式", False, str(e))
+        record_test("5.2 HDF5导出", False, str(e))
 
-    # 5.5 HDF5导出旧格式
-    try:
-        import h5py
-        data_legacy = make_legacy_tlabel_data(n_frames=5)
-        with tempfile.TemporaryDirectory() as tmpdir:
-            h5_path = os.path.join(tmpdir, "test_legacy.h5")
-            result = export_data(data_legacy, h5_path, format="hdf5")
-            with h5py.File(h5_path, "r") as f:
-                features = f["tactile_features"]
-                shape = features.shape
-                assert shape[0] == 5
-                assert shape[1] == 22, f"旧格式HDF5应有22列, got {shape[1]}"
-                sv = features.attrs.get("schema_version", "")
-                assert sv == "legacy", f"schema_version 应为 legacy, got {sv}"
-            record_test("5.3b HDF5导出旧格式", True,
-                         f"shape={shape}, schema={sv}")
-    except ImportError:
-        record_test("5.3b HDF5导出旧格式", False, "h5py 未安装，跳过")
-    except Exception as e:
-        record_test("5.3b HDF5导出旧格式", False, str(e))
-
-    # 5.6 _flatten_schema_v2 验证
+    # 5.3 _flatten_schema_v2 验证
     try:
         from tlabel.core.schema import TLabelSchemaV2
         schema = TLabelSchemaV2(
@@ -761,9 +694,25 @@ def test_5_export_dual_mode():
         assert "centroid_x" in flat and "centroid_y" in flat, "contact_centroid 应展开"
         assert "force_x" in flat and "force_y" in flat and "force_z" in flat, "force_vector 应展开"
         assert "compliance_level" in flat, "compliance_level 应保留"
-        record_test("5.4 _flatten_schema_v2", True, f"展开后 {len(flat)} 个字段")
+        record_test("5.3 _flatten_schema_v2", True, f"展开后 {len(flat)} 个字段")
     except Exception as e:
-        record_test("5.4 _flatten_schema_v2", False, str(e))
+        record_test("5.3 _flatten_schema_v2", False, str(e))
+
+    # 5.4 JSON导出验证
+    try:
+        data = make_new_tlabel_data(n_frames=3)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            json_path = os.path.join(tmpdir, "test_v2.json")
+            export_data(data, json_path, format="json")
+            with open(json_path, "r") as f:
+                loaded = json.load(f)
+            assert "metadata" in loaded, "JSON应含metadata"
+            assert "frames" in loaded, "JSON应含frames"
+            sv = loaded.get("metadata", {}).get("schema_version", "")
+            assert sv == "v2", f"schema_version 应为 v2, got {sv}"
+            record_test("5.4 JSON导出", True, f"schema_version={sv}")
+    except Exception as e:
+        record_test("5.4 JSON导出", False, str(e))
 
 
 # ============================================================================
