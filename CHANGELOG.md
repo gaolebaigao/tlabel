@@ -1,5 +1,87 @@
 # Changelog
 
+## [0.17.0] - 2026-07-24
+
+### ⚠️ Breaking Change — Schema V2 Only
+
+**彻底移除旧版 `tlabel_v2` (22维) 数据格式兼容，所有数据路径统一走 Schema V2 (14维结构化)。**
+
+旧版 22 维架构存在根本问题：大量字段填 0/None 导致数据质量不可控，同名字段语义不一致，下游模型引入噪声。v0.17 通过 14 维语义 Schema + Compliance Level (L1-L4) 解决这些问题。
+
+### Added
+- **`TLabelSchemaV2` dataclass** — 14维结构化触觉语义标注，含 Compliance Level (L1-L4) 分层
+- **`TLabelFrame.schema_v2`** — 必填属性，替代旧 `tlabel_v2` 字典
+- **`DataAdapterBase.extract_schema()`** — 将原始数据转换为 `TLabelSchemaV2` 的标准接口
+- **`SensorAdapterBase.extract_schema()`** — 实时传感器的 Schema V2 提取接口
+- **`DataAdapterBase.default_compliance_level`** — 适配器声明其数据合规等级
+- **`tlabel.core.schema` 模块** — Schema V2.1 定义 (14维字段 + 枚举验证 + JSON Schema)
+- **`schema/tlabel-schema.json` v2.1.0** — JSON Schema 规范文件
+- **`MIGRATION.md`** — 从 v0.16 迁移到 v0.17 的详细指南
+- **`tlabel.core.types._sv2_scalar()`** — 辅助函数，安全读取 Schema V2 标量字段
+
+### Changed
+- **三层架构确立** — Layer1=Schema(14维语义标准+Compliance Level) / Layer2=Adapter(数据接入) / Layer3=下游派生(Primitive/ML/DataAugmentation)
+- **`TLabelFrame.__init__()`** — `schema_v2` 参数改为必填，传 None 抛 ValueError
+- **`TLabelFrame.from_dict()` / `to_dict()`** — 只支持 Schema V2 格式
+- **`predict/engine.py`** — 预标注引擎完全重写，只读 Schema V2 字段
+- **`predict/force_estimator.py`** — 力推断结果写入 `schema_v2.force_magnitude`
+- **`predict/ml_engine.py`** — ML特征字段缩减为 5 个 V2 核心字段
+- **`quality/scorer.py`** — 评分规则基于 14 维 Schema + Compliance Level
+- **`export/writer.py`** — CSV 导出 20 列 (V2 展开)，HDF5 只写 V2 路径
+- **`viewer/templates.py`** — 雷达图改为 14 维，帧详情读 Schema V2
+- **`augment/transforms.py`** — 特征名改为 V2 展开列 (16列)
+- **`core/taxonomy.py`** — PrimitiveRule 条件字段适配 Schema V2
+- **`predict/postprocess.py`** — HMM 时序平滑适配 V2 字段
+- **`converters/lerobot.py` / `ftp1.py`** — 维度描述适配 V2
+- **所有 10 个适配器** — 统一改为 `TLabelFrame(schema_v2=TLabelSchemaV2.from_tlabel_v1(...))`
+
+### Removed
+- `TLabelFrame.tlabel_v2` 属性（旧 22 维数据格式）
+- `TLabelFrame._original_tlabel` 属性
+- `predict/_compat.py` 兼容层（已清空）
+- 所有 `_detect_schema_version()` / `_detect_use_schema_v2()` 自动检测逻辑
+- `quality/scorer.py` 中的 `LEGACY_V2_DIMS` 常量
+- `augment/transforms.py` 中的 `LEGACY_V2_FEATURE_NAMES` 常量
+- `export/writer.py` 中的 legacy 22 列 CSV 导出模式
+
+### 14维 Schema V2 字段定义
+
+| # | 字段 | 类型 | Required/Optional |
+|---|------|------|-------------------|
+| 1 | contact | bool | Required |
+| 2 | contact_centroid | [f,f] | Required (if contact) |
+| 3 | contact_region | enum | Optional |
+| 4 | force_magnitude | float | Required (L2+) |
+| 5 | force_vector | [f×3] | Optional (L3+) |
+| 6 | torque_vector | [f×3] | Optional |
+| 7 | slip_event | bool | Required |
+| 8 | slip_velocity | [f×2] | Optional (if slip) |
+| 9 | manipulation_phase | enum | Optional |
+| 10 | texture_class | enum | Optional |
+| 11 | object_deformation | float | Optional |
+| 12 | temperature | float | Optional |
+| 13 | confidence | float | Required |
+| 14 | compliance_level | enum (L1/L2/L3/L4) | Required |
+
+### Compliance Level 分层
+
+| Level | 名称 | 必填字段 | 典型适配器 |
+|-------|------|----------|-----------|
+| L1 | Basic | contact, contact_centroid, slip_event, confidence | tacquad |
+| L2 | Force-Aware | L1 + force_magnitude | paxini_gen3, paxini_dataset, ycb_slide, vtouch |
+| L2→L3 | Force-Aware+ | 有标定数据时自动升级 | gelsight, daimon_dataset, univtac, daimon_dm_tac |
+| L3 | Full-Vector | L2 + force_vector [Fx,Fy,Fz] | touchd |
+
+### Adapter Registry (12 total, all Schema V2)
+- 9 dataset adapters: GelSight, PaXini (dataset), Daimon, TLabel format, ToucHD, UniVTAC, VTouch, YCB-Slide, TacQuad
+- 2 real-time adapters: PaXini GEN3, Daimon DM-Tac (skeleton)
+- 1 placeholder: PaXini PX6D
+
+### Migration
+See [MIGRATION.md](MIGRATION.md) for detailed migration guide.
+
+---
+
 ## [0.15.0] - 2026-07-19
 
 ### Added

@@ -374,14 +374,23 @@ def tlabel_to_ftp1(
     elif tactile_type == "binary":
         tactile_data = _extract_binary_data(data)
 
-    # 如果没找到raw数据，尝试从tlabel_v2特征构造降级数据
+    # 如果没找到raw数据，尝试从 Schema V2 特征构造降级数据
     if tactile_data is None:
-        # 降级方案：用tlabel_v2的22维特征作为matrix数据
+        # 降级方案：用 Schema V2 (14维) 特征作为matrix数据
         feature_matrix = []
         for frame in data.frames:
-            row = [frame.tlabel_v2.get(k, 0.0) for k in sorted(frame.tlabel_v2.keys())]
+            sv2 = frame.schema_v2
+            row = [
+                1.0 if sv2.contact else 0.0,
+                sv2.contact_centroid[0] if sv2.contact_centroid else 0.0,
+                sv2.contact_centroid[1] if sv2.contact_centroid else 0.0,
+                sv2.force_magnitude if sv2.force_magnitude is not None else 0.0,
+                1.0 if sv2.slip_event else 0.0,
+                sv2.object_deformation if sv2.object_deformation is not None else 0.0,
+                sv2.confidence,
+            ]
             feature_matrix.append(row)
-        tactile_data = np.array(feature_matrix, dtype=np.float32)  # (T, 22)
+        tactile_data = np.array(feature_matrix, dtype=np.float32)  # (T, 14 or 22)
         tactile_type = "matrix"  # 降级为matrix类型
 
     # 处理图像数据

@@ -21,6 +21,7 @@ from typing import Optional, Dict, Any, Iterator, List
 
 from tlabel.adapters.base import SensorAdapterBase
 from tlabel.core.types import TLabelData, TLabelFrame
+from tlabel.core.schema import TLabelSchemaV2
 
 
 class DaimonDmTacAdapter(SensorAdapterBase):
@@ -253,7 +254,7 @@ class DaimonDmTacAdapter(SensorAdapterBase):
             frame_data = TLabelFrame(
                 frame_idx=frame_idx,
                 timestamp_s=round(frame_idx * dt, 4),
-                tlabel_v2=tlabel_v2,
+                schema_v2=TLabelSchemaV2.from_tlabel_v1(tlabel_v2),
                 manipulation_phase="idle",
                 confidence=0.8 if contact > 0.5 else 0.95,
                 sensor_specific={
@@ -386,7 +387,7 @@ class DaimonDmTacAdapter(SensorAdapterBase):
                 frame_data = TLabelFrame(
                     frame_idx=fi,
                     timestamp_s=round(fi / sample_rate, 4),
-                    tlabel_v2=tlabel_v2,
+                    schema_v2=TLabelSchemaV2.from_tlabel_v1(tlabel_v2),
                     manipulation_phase="idle",
                     confidence=0.8 if contact > 0.5 else 0.95,
                     sensor_specific={

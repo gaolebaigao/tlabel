@@ -13,6 +13,7 @@ from typing import Optional, Dict, Any, List
 
 from tlabel.adapters.base import BaseAdapter
 from tlabel.core.types import TLabelData, TLabelFrame
+from tlabel.core.schema import TLabelSchemaV2
 
 try:
     import h5py
@@ -36,7 +37,12 @@ CONTACT_THRESHOLD = 0.3
 
 
 class PaxiniAdapter(BaseAdapter):
-    """帕西尼 HDF5 → TLabelData"""
+    """帕西尼 HDF5 → TLabelData
+
+    Compliance Level: L2（只有法向力标量，无剪切力）
+    """
+
+    default_compliance_level: str = "L2"
 
     @property
     def name(self) -> str:
@@ -45,6 +51,53 @@ class PaxiniAdapter(BaseAdapter):
     @property
     def supported_extensions(self):
         return [".h5", ".hdf5"]
+
+    def extract_schema(self, raw_frame_data) -> TLabelSchemaV2:
+        """将原始数据帧转换为 TLabel Schema V2（14维）
+
+        参数:
+            raw_frame_data: dict，包含以下键：
+                - contacts: list[dict] 各区域接触检测结果
+                - slip_detected: bool 是否检测到滑移
+                - prev_contacts: list[dict] 或 None 上一帧接触状态
+                - prev_tlabel_v2: dict 或 None 上一帧22维特征
+                - dt: float 帧间隔
+
+        返回:
+            TLabelSchemaV2 — L2级别，force_magnitude 从压力均值映射，
+            force_vector 为 None（无法测3D力）
+        """
+        # 复用现有 _extract_tlabel_v2 静态方法获取22维dict
+        tlabel_v2 = self._extract_tlabel_v2(
+            contacts=raw_frame_data["contacts"],
+            slip_detected=raw_frame_data["slip_detected"],
+            prev_contacts=raw_frame_data.get("prev_contacts"),
+            prev_tlabel_v2=raw_frame_data.get("prev_tlabel_v2"),
+            dt=raw_frame_data.get("dt", 1.0),
+        )
+
+        contact = float(tlabel_v2["contact"]) > 0.5
+        centroid_x = tlabel_v2.get("centroid_x", 0.5)
+
+        return TLabelSchemaV2(
+            contact=contact,
+            contact_centroid=[float(centroid_x), 0.0] if contact else None,
+            contact_region=None,
+            force_magnitude=float(tlabel_v2["force_magnitude"]),
+            force_vector=None,  # L2: 无法测3D力
+            torque_vector=None,
+            slip_event=float(tlabel_v2["slip_event"]) > 0.5,
+            slip_velocity=None,
+            manipulation_phase=None,
+            texture_class=None,
+            object_deformation=float(tlabel_v2["deformation_magnitude"]),
+            temperature=None,
+            confidence=self._compute_confidence(
+                any(c["state"] != "no_contact" for c in raw_frame_data["contacts"]),
+                raw_frame_data["slip_detected"],
+            ),
+            compliance_level=self.default_compliance_level,
+        )
 
     def get_capabilities(self) -> Dict[str, bool]:
         return {
@@ -185,7 +238,7 @@ class PaxiniAdapter(BaseAdapter):
             frame = TLabelFrame(
                 frame_idx=fi,
                 timestamp_s=round(float(timestamps[fi]) / 1000.0, 4),
-                tlabel_v2=tlabel_v2,
+                schema_v2=TLabelSchemaV2.from_tlabel_v1(tlabel_v2),
                 manipulation_phase=phase,
                 confidence=confidence,
                 sensor_specific=sensor_specific,

@@ -11,12 +11,14 @@
 """
 
 import json
+import math
 import numpy as np
 from pathlib import Path
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Union
 
 from tlabel.adapters.base import BaseAdapter
 from tlabel.core.types import TLabelData, TLabelFrame
+from tlabel.core.schema import TLabelSchemaV2
 
 try:
     import h5py
@@ -316,6 +318,9 @@ class VTouchAdapter(BaseAdapter):
     每个构型有4个GelSight风格视触觉传感器
     """
 
+    # v0.17: Compliance Level L2 — VTouch有GelSight风格触觉，可从图像估算force_magnitude
+    default_compliance_level: str = "L2"
+
     @property
     def name(self) -> str:
         return "vtouch"
@@ -348,6 +353,72 @@ class VTouchAdapter(BaseAdapter):
             "manufacturer": "纬钛科技 (Weitai/VTouch)",
             "model": "GelSight-style VTouch Sensor",
         }
+
+    def extract_schema(self, raw_frame_data: Union[TLabelFrame, Dict]) -> TLabelSchemaV2:
+        """将原始数据帧转换为 TLabel Schema V2 (14维结构化)
+
+        VTouch适配器策略（L2）:
+          - contact: 从tlabel_v2.contact推断
+          - contact_centroid: 从centroid_x估算 [cx, cy]
+          - force_magnitude: 从deformation估算（GelSight风格背景减除）
+          - force_vector: None（VTouch无力矢量数据，仅L2）
+          - object_deformation: 从deformation_magnitude提取
+          - compliance_level: L2
+
+        Args:
+            raw_frame_data: TLabelFrame实例或tlabel_v2字典
+
+        Returns:
+            TLabelSchemaV2 — 14维结构化标注
+        """
+        # 统一获取 tlabel_v2 字典和 sensor_specific
+        if isinstance(raw_frame_data, TLabelFrame):
+            v2_dict = raw_frame_data.schema_v2.to_dict() if hasattr(raw_frame_data, 'schema_v2') and raw_frame_data.schema_v2 is not None else raw_frame_data
+            sensor_specific = raw_frame_data.sensor_specific or {}
+        elif isinstance(raw_frame_data, dict):
+            v2_dict = raw_frame_data
+            sensor_specific = raw_frame_data.get("sensor_specific", {})
+        else:
+            raise TypeError(f"raw_frame_data 类型不支持: {type(raw_frame_data)}")
+
+        # 基础字段：复用 from_tlabel_v1 通用映射
+        v1_dict = dict(v2_dict)
+        v1_dict["confidence"] = v2_dict.get("confidence", 1.0)
+        schema = TLabelSchemaV2.from_tlabel_v1(v1_dict)
+
+        # --- VTouch特有增强 ---
+
+        # 1. contact_centroid: 从centroid_x估算
+        centroid_x = v2_dict.get("centroid_x")
+        if centroid_x is not None and schema.contact:
+            schema.contact_centroid = [float(centroid_x), 0.0]
+
+        # 2. force_magnitude: 从deformation估算（GelSight风格）
+        fm = v2_dict.get("force_magnitude")
+        if fm is not None and fm > 0:
+            schema.force_magnitude = float(fm)
+
+        # 3. force_vector: VTouch无力矢量数据，保持None
+        schema.force_vector = None
+
+        # 4. object_deformation: 从deformation_magnitude提取
+        deform = v2_dict.get("deformation_magnitude")
+        if deform is not None and deform > 0:
+            schema.object_deformation = float(deform)
+
+        # 5. slip_velocity: 从optical_flow提取
+        if schema.slip_event:
+            of_mag = v2_dict.get("optical_flow_magnitude", 0.0)
+            of_dir = v2_dict.get("optical_flow_direction", 0.0)
+            if of_mag > 1e-6:
+                of_rad = math.radians(of_dir)
+                schema.slip_velocity = [round(of_mag * math.cos(of_rad), 4),
+                                        round(of_mag * math.sin(of_rad), 4)]
+
+        # 6. compliance_level: VTouch始终L2
+        schema.compliance_level = self.default_compliance_level
+
+        return schema
 
     def load(self, file_path: str,
              trajectory_id: Optional[int] = None,
@@ -592,7 +663,7 @@ class VTouchAdapter(BaseAdapter):
             frame = TLabelFrame(
                 frame_idx=i,
                 timestamp_s=round(i * dt, 4),
-                tlabel_v2=tlabel_v2,
+                schema_v2=TLabelSchemaV2.from_tlabel_v1(tlabel_v2),
                 manipulation_phase=phases[i],
                 confidence=confidence,
                 sensor_specific=sensor_specific,

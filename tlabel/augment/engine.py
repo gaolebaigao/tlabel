@@ -17,7 +17,7 @@ class AugmentEngine:
     """
     触觉数据增强引擎 / Tactile data augmentation engine
 
-    支持对 (T, 22) 特征矩阵链式应用多种增强方法。
+    支持对 (T, D) 特征矩阵链式应用多种增强方法（v0.17: 适配 Schema V2 16列展开）。
 
     Attributes:
         AVAILABLE_METHODS: 可用的增强方法注册表
@@ -44,17 +44,17 @@ class AugmentEngine:
                 params: Optional[Dict[str, dict]] = None,
                 seed: Optional[int] = None) -> np.ndarray:
         """
-        对22维特征序列应用增强 / Apply augmentation to 22-dim feature sequence
+        对特征序列应用增强 / Apply augmentation to feature sequence (v0.17: Schema V2 16-dim)
 
         Args:
-            features: shape (T, 22) 的特征矩阵
+            features: shape (T, D) 的特征矩阵
             methods: 增强方法名列表，如 ['time_warp', 'noise_inject']
             params: 各方法的参数覆盖，如 {'time_warp': {'sigma': 0.2}}
             seed: 主随机种子。若提供，将为每个方法派生确定性子种子以保证可复现。
                   若不提供，各方法使用各自 params 中的 seed 或自行生成随机种子。
 
         Returns:
-            增强后的 (T, 22) 特征矩阵
+            增强后的 (T, D) 特征矩阵
 
         Raises:
             ValueError: 特征矩阵维度不正确或方法名无效

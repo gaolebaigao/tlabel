@@ -11,48 +11,39 @@ QualityScorer — 数据质量评分引擎
 
 综合评分 = 加权平均，映射到 0-100
 等级: A(≥90) / B(≥75) / C(≥60) / D(≥40) / F(<40)
+
+v0.17 Breaking Change: 移除旧 22 维兼容逻辑，只使用 Schema V2 (14维)。
 """
 
 import math
 from typing import Dict, List, Optional
 
-from tlabel.core.types import TLabelData, TLabelFrame
+from tlabel.core.types import TLabelData, TLabelFrame, _sv2_scalar
 
 
-# 22维特征完整列表
-TLABEL_DIMS = [
-    "contact", "deformation_magnitude", "force_magnitude", "force_peak",
-    "force_direction", "slip_entropy", "slip_event", "texture_energy",
-    "edge_density", "contact_area", "centroid_x",
-    "normal_field_magnitude", "normal_field_variance",
-    "shear_field_magnitude", "shear_field_direction",
-    "delta_force_normal", "delta_force_shear", "friction_cone_ratio",
-    "optical_flow_magnitude", "optical_flow_direction",
-    "temporal_deformation_rate", "contact_transition",
+# 14 维 Schema V2 特征完整列表
+SCHEMA_V2_DIMS = [
+    "contact", "contact_centroid", "contact_region", "force_magnitude",
+    "force_vector", "torque_vector", "slip_event", "slip_velocity",
+    "manipulation_phase", "texture_class", "object_deformation",
+    "temperature", "confidence", "compliance_level",
+]
+
+# Schema V2 标量数值字段（用于时序平滑度检测）
+SCALAR_DIMS = [
+    "contact", "force_magnitude", "slip_event",
+    "object_deformation", "temperature", "confidence",
 ]
 
 
 class QualityScorer:
-    """数据质量评分器"""
+    """数据质量评分器 — 只使用 Schema V2"""
 
     def __init__(self, verbose: bool = False):
         self.verbose = verbose
 
     def score(self, data: TLabelData) -> Dict:
-        """
-        计算数据质量评分
-
-        Returns:
-            {
-                "overall": float,          # 0-100
-                "physical_consistency": float,
-                "temporal_smoothness": float,
-                "completeness": float,
-                "coverage": float,
-                "warnings": List[str],
-                "grade": str,
-            }
-        """
+        """计算数据质量评分"""
         if not data.frames:
             return {
                 "overall": 0.0,
@@ -66,23 +57,18 @@ class QualityScorer:
 
         warnings = []
 
-        # 1. 物理一致性
         phys_score, phys_warnings = self._physical_consistency(data)
         warnings.extend(phys_warnings)
 
-        # 2. 时序平滑度
         temporal_score, temporal_warnings = self._temporal_smoothness(data)
         warnings.extend(temporal_warnings)
 
-        # 3. 完整性
         comp_score, comp_warnings = self._completeness(data)
         warnings.extend(comp_warnings)
 
-        # 4. 覆盖率
         cov_score, cov_warnings = self._coverage(data)
         warnings.extend(cov_warnings)
 
-        # 加权综合
         overall = (
             phys_score * 0.30 +
             temporal_score * 0.25 +
@@ -90,7 +76,6 @@ class QualityScorer:
             cov_score * 0.20
         )
         overall = round(overall, 1)
-
         grade = self._grade(overall)
 
         return {
@@ -105,23 +90,23 @@ class QualityScorer:
 
     def _physical_consistency(self, data: TLabelData) -> tuple:
         """
-        物理一致性检查：
+        物理一致性检查（Schema V2 字段名）：
         - contact=0 时，force_magnitude应为0
         - contact=0 时，slip_event应为0
         - slip_event>0 时，contact应>0
         - force_magnitude>0 时，contact应>0
-        - contact_area>0 时，contact应>0
+        - object_deformation>0 时，contact应>0
         """
         violations = 0
         total_checks = 0
         warnings = []
 
         for frame in data.frames:
-            tv2 = frame.tlabel_v2
-            contact = tv2.get("contact", 0)
-            force = tv2.get("force_magnitude", 0)
-            slip = tv2.get("slip_event", 0)
-            area = tv2.get("contact_area", 0)
+            sv2 = frame.schema_v2
+            contact = 1.0 if sv2.contact else 0.0
+            force = sv2.force_magnitude if sv2.force_magnitude is not None else 0.0
+            slip = 1.0 if sv2.slip_event else 0.0
+            deformation = sv2.object_deformation if sv2.object_deformation is not None else 0.0
 
             # Rule 1: contact=0 → force should be ~0
             if contact < 0.1:
@@ -153,8 +138,8 @@ class QualityScorer:
                 if contact < 0.1:
                     violations += 1
 
-            # Rule 5: area>0 → contact should be >0
-            if area > 0.1:
+            # Rule 5: object_deformation>0 → contact should be >0
+            if deformation > 0.1:
                 total_checks += 1
                 if contact < 0.1:
                     violations += 1
@@ -170,22 +155,16 @@ class QualityScorer:
         return consistency, warnings
 
     def _temporal_smoothness(self, data: TLabelData) -> tuple:
-        """
-        时序平滑度：检查相邻帧之间的突变
-
-        对每个维度，计算相邻帧差值，超过3倍标准差视为突变
-        """
+        """时序平滑度：检查相邻帧之间的突变（Schema V2 标量字段）"""
         warnings = []
         if len(data.frames) < 2:
             return 100.0, []
 
-        # 计算每个维度的差值
-        keys = data.dimension_keys
         total_jumps = 0
         total_pairs = 0
 
-        for key in keys:
-            values = [f.tlabel_v2.get(key, 0.0) for f in data.frames]
+        for key in SCALAR_DIMS:
+            values = [_sv2_scalar(f, key) for f in data.frames]
             diffs = [abs(values[i+1] - values[i]) for i in range(len(values) - 1)]
 
             if not diffs:
@@ -213,51 +192,41 @@ class QualityScorer:
         return smoothness, warnings
 
     def _completeness(self, data: TLabelData) -> tuple:
-        """
-        完整性：检查字段缺失和全零比例
-
-        - 期望22维特征都存在
-        - 全零帧比例不应过高
-        """
+        """完整性：检查字段缺失和全零比例（Schema V2 14维）"""
         warnings = []
 
-        # Check dimension count
         keys = data.dimension_keys
-        expected_dims = 22
+        expected_dims = len(SCHEMA_V2_DIMS)  # 14
         dim_ratio = min(len(keys) / expected_dims, 1.0)
-
         if len(keys) < expected_dims:
-            warnings.append(f"维度不完整: {len(keys)}/{expected_dims}")
+            warnings.append(f"维度不完整: {len(keys)}/{expected_dims} (Schema V2)")
 
         # Check all-zero frames
         all_zero_count = 0
         for frame in data.frames:
-            non_zero = sum(1 for v in frame.tlabel_v2.values() if v != 0)
-            # centroid_x and force_direction can be non-zero in idle, so use contact-related dims
-            if frame.contact < 0.1:
-                contact_related = [
-                    frame.tlabel_v2.get("force_magnitude", 0),
-                    frame.tlabel_v2.get("slip_event", 0),
-                    frame.tlabel_v2.get("contact_area", 0),
-                    frame.tlabel_v2.get("deformation_magnitude", 0),
-                ]
+            sv2 = frame.schema_v2
+            contact_related = [
+                sv2.force_magnitude if sv2.force_magnitude is not None else 0.0,
+                1.0 if sv2.slip_event else 0.0,
+                sv2.object_deformation if sv2.object_deformation is not None else 0.0,
+            ]
+            if not sv2.contact:
                 if all(v == 0 for v in contact_related):
                     all_zero_count += 1
 
-        # all-zero frames in non-contact regions are OK
-        # But check if contact frames have meaningful data
+        # Check if contact frames have meaningful data
         contact_frames = [f for f in data.frames if f.contact > 0.5]
         empty_contact = 0
         for f in contact_frames:
-            has_force = f.tlabel_v2.get("force_magnitude", 0) > 0
-            has_deform = f.tlabel_v2.get("deformation_magnitude", 0) > 0
-            has_area = f.tlabel_v2.get("contact_area", 0) > 0
-            if not (has_force or has_deform or has_area):
+            sv2 = f.schema_v2
+            has_force = sv2.force_magnitude is not None and sv2.force_magnitude > 0
+            has_deform = sv2.object_deformation is not None and sv2.object_deformation > 0
+            if not (has_force or has_deform):
                 empty_contact += 1
 
         if contact_frames and empty_contact > 0:
             empty_ratio = empty_contact / len(contact_frames)
-            warnings.append(f"接触帧中{empty_ratio:.0%}缺少力度/形变/面积数据")
+            warnings.append(f"接触帧中{empty_ratio:.0%}缺少力度/形变数据")
             contact_quality = (1 - empty_ratio) * 100
         else:
             contact_quality = 100.0
@@ -267,32 +236,22 @@ class QualityScorer:
         return completeness, warnings
 
     def _coverage(self, data: TLabelData) -> tuple:
-        """
-        覆盖率：有意义的标注占比
-
-        - 接触帧占比不应为0
-        - 置信度>0.5的帧占比
-        - 至少有一些slip事件（如果数据足够长）
-        """
+        """覆盖率：有意义的标注占比"""
         warnings = []
 
         total = len(data.frames)
         if total == 0:
             return 0.0, ["无帧数据"]
 
-        # Contact coverage
         contact_count = sum(1 for f in data.frames if f.contact > 0.5)
         contact_ratio = contact_count / total
 
-        # Confidence coverage
         high_conf = sum(1 for f in data.frames if f.confidence > 0.5)
         conf_ratio = high_conf / total
 
-        # Phase diversity
         phases = set(f.manipulation_phase for f in data.frames)
-        phase_diversity = min(len(phases) / 5, 1.0)  # 5 phases = good diversity
+        phase_diversity = min(len(phases) / 5, 1.0)
 
-        # Slip coverage (for long episodes)
         slip_count = sum(1 for f in data.frames if f.slip_event > 0.5)
         has_slip = 1.0 if slip_count > 0 else (0.5 if total < 50 else 0.0)
 
@@ -304,7 +263,7 @@ class QualityScorer:
             warnings.append("无滑移事件标注，建议补充slip_event")
 
         coverage = (
-            min(contact_ratio * 5, 1.0) * 0.3 +  # 接触比例，20%以上即满分
+            min(contact_ratio * 5, 1.0) * 0.3 +
             conf_ratio * 0.3 +
             phase_diversity * 0.2 +
             has_slip * 0.2

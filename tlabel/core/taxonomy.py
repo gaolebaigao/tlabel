@@ -1,5 +1,5 @@
 """
-Taxonomy 系统 — v0.14.0 新增
+Taxonomy 系统 — v0.14.0 新增, v0.17 Breaking Change: Schema V2 Only
 
 管理可用的 Motor Primitive 子集，支持内置默认 + 用户自定义扩展。
 
@@ -7,10 +7,16 @@ Taxonomy 系统 — v0.14.0 新增
 - 内置默认 7 种 primitive（从 T-Rex 22 种中选取物理含义明确、力信号特征清晰的子集）
 - 支持用户自定义扩展（PrimitiveRule）
 - 规则引擎定位为"辅助预标注"，不是权威分类器
+
+v0.17 Breaking Change:
+- conditions 字段名更新为 Schema V2 (14维) 字段名
+  - deformation_magnitude → object_deformation
+  - shear_field_magnitude → force_vector_magnitude (从 force_vector 计算，L3-only)
+- evaluate_rule() 直接访问 frame.schema_v2，不再使用 _resolve_condition_field
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 
 @dataclass
@@ -20,7 +26,7 @@ class PrimitiveRule:
     description: str                   # 物理含义描述
     physical_definition: str           # 物理定义（文字）
 
-    # 判定条件（基于 tlabel_v2 字段）
+    # 判定条件（基于 Schema V2 字段）
     # 格式: {"field_name": {"op": ">", "threshold": 0.2}}
     # 支持的 op: ">", "<", ">=", "<=", "==", "between"
     # "between" 使用 "range": (low, high) 代替 "threshold"
@@ -56,7 +62,7 @@ DEFAULT_PRIMITIVE_RULES: Dict[str, PrimitiveRule] = {
         conditions={
             'contact': {'op': '>', 'threshold': 0.5},
             'force_magnitude': {'op': '>', 'threshold': 0.2},
-            'deformation_magnitude': {'op': '>', 'threshold': 0.2},
+            'object_deformation': {'op': '>', 'threshold': 0.2},  # V2: was deformation_magnitude
         },
         base_confidence=0.6,
         reference='Cutkosky (1992) Power Grasp',
@@ -68,7 +74,7 @@ DEFAULT_PRIMITIVE_RULES: Dict[str, PrimitiveRule] = {
         conditions={
             'contact': {'op': '>', 'threshold': 0.5},
             'force_magnitude': {'op': '>', 'threshold': 0.15},
-            'deformation_magnitude': {'op': '<', 'threshold': 0.2},
+            'object_deformation': {'op': '<', 'threshold': 0.2},  # V2: was deformation_magnitude
         },
         base_confidence=0.55,
         reference='T-Rex (2024)',
@@ -90,7 +96,7 @@ DEFAULT_PRIMITIVE_RULES: Dict[str, PrimitiveRule] = {
         conditions={
             'contact': {'op': '>', 'threshold': 0.5},
             'force_magnitude': {'op': '>', 'threshold': 0.1},
-            'shear_field_magnitude': {'op': '<', 'threshold': 0.1},
+            'force_vector_magnitude': {'op': '<', 'threshold': 0.1},  # V2: was shear_field_magnitude; L3-only, computed from force_vector
         },
         base_confidence=0.5,
         reference='T-Rex (2024)',
@@ -101,7 +107,7 @@ DEFAULT_PRIMITIVE_RULES: Dict[str, PrimitiveRule] = {
         physical_definition='contact>0.5 + 高剪切力(shear>0.1) + force稳定',
         conditions={
             'contact': {'op': '>', 'threshold': 0.5},
-            'shear_field_magnitude': {'op': '>', 'threshold': 0.1},
+            'force_vector_magnitude': {'op': '>', 'threshold': 0.1},  # V2: was shear_field_magnitude; L3-only, computed from force_vector
             'force_magnitude': {'op': '>', 'threshold': 0.1},
         },
         base_confidence=0.5,
@@ -123,6 +129,90 @@ DEFAULT_PRIMITIVE_RULES: Dict[str, PrimitiveRule] = {
 # 默认启用的 primitive 列表（有序）
 DEFAULT_PRIMITIVE_NAMES = list(DEFAULT_PRIMITIVE_RULES.keys())
 
+
+def evaluate_rule(rule: "PrimitiveRule", frame) -> Tuple[bool, float]:
+    """
+    评估 PrimitiveRule 对单帧的匹配度（Schema V2 only）。
+
+    直接从 frame.schema_v2 获取字段值。
+
+    Args:
+        rule: PrimitiveRule 实例
+        frame: TLabelFrame 实例
+
+    Returns:
+        (matched, confidence): 是否匹配 + 匹配置信度
+    """
+    import math
+
+    if not rule.conditions:
+        return True, rule.base_confidence
+
+    sv2 = frame.schema_v2
+
+    for field_name, cond in rule.conditions.items():
+        # 从 schema_v2 获取字段值
+        value = _resolve_field_value(sv2, frame, field_name)
+        op = cond.get("op", ">")
+        threshold = cond.get("threshold", 0.0)
+
+        if op == ">" and not (value > threshold):
+            return False, 0.0
+        elif op == "<" and not (value < threshold):
+            return False, 0.0
+        elif op == ">=" and not (value >= threshold):
+            return False, 0.0
+        elif op == "<=" and not (value <= threshold):
+            return False, 0.0
+        elif op == "==" and not (abs(value - threshold) < 1e-9):
+            return False, 0.0
+        elif op == "between":
+            rng = cond.get("range", (0.0, 1.0))
+            if not (rng[0] <= value <= rng[1]):
+                return False, 0.0
+
+    return True, rule.base_confidence
+
+
+def _resolve_field_value(sv2, frame, field_name: str) -> float:
+    """
+    从 schema_v2 解析字段值，处理特殊字段名映射。
+
+    Args:
+        sv2: TLabelSchemaV2 实例
+        frame: TLabelFrame 实例
+        field_name: 条件中的字段名
+
+    Returns:
+        字段值 (float)
+    """
+    # 特殊字段处理
+    if field_name == "force_vector_magnitude":
+        # 从 force_vector 水平分量计算剪切力模长
+        if sv2.force_vector is not None:
+            fv = sv2.force_vector
+            if len(fv) >= 2:
+                return math.sqrt(fv[0] ** 2 + fv[1] ** 2)
+        return 0.0
+
+    if field_name == "contact_area":
+        # Schema V2 中 contact_area 在 sensor_specific
+        ss = frame.sensor_specific
+        if ss and "contact_area" in ss:
+            return float(ss["contact_area"])
+        return 0.0
+
+    # 通用字段访问
+    val = getattr(sv2, field_name, None)
+    if val is None:
+        return 0.0
+    if isinstance(val, bool):
+        return 1.0 if val else 0.0
+    if isinstance(val, (int, float)):
+        return float(val)
+    # 向量/列表/枚举 — 返回 0
+    return 0.0
+
 # grasp 子分类（参考 Cutkosky 1992）— 用于高级用户扩展
 GRASP_SUBTYPES = {
     'power_grasp': PrimitiveRule(
@@ -130,7 +220,7 @@ GRASP_SUBTYPES = {
         description='力量抓握 — 全手指接触，大力',
         physical_definition='contact_area大 + 力大 + 多指接触',
         conditions={
-            'contact_area': {'op': '>', 'threshold': 0.4},
+            'contact_area': {'op': '>', 'threshold': 0.4},  # legacy: V2 中在 sensor_specific
             'force_magnitude': {'op': '>', 'threshold': 0.5},
             'contact': {'op': '>', 'threshold': 0.8},
         },
@@ -142,7 +232,7 @@ GRASP_SUBTYPES = {
         description='精确抓握 — 指尖接触，精细力',
         physical_definition='contact_area小 + 精细力控制',
         conditions={
-            'contact_area': {'op': '<', 'threshold': 0.15},
+            'contact_area': {'op': '<', 'threshold': 0.15},  # legacy: V2 中在 sensor_specific
             'force_magnitude': {'op': '>', 'threshold': 0.05},
             'contact': {'op': '>', 'threshold': 0.5},
         },
@@ -154,7 +244,7 @@ GRASP_SUBTYPES = {
         description='侧向抓握 — 拇指侧面，如捏钥匙',
         physical_definition='侧向力为主 + 接触面积中等',
         conditions={
-            'shear_field_magnitude': {'op': '>', 'threshold': 0.15},
+            'force_vector_magnitude': {'op': '>', 'threshold': 0.15},  # V2: was shear_field_magnitude; L3-only
             'force_magnitude': {'op': '>', 'threshold': 0.1},
             'contact': {'op': '>', 'threshold': 0.5},
         },

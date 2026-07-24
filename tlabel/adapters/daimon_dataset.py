@@ -36,15 +36,17 @@ Daimon-Infinity数据格式特点:
   3. 指定parquet文件 (直接加载)
 """
 
+import math
 import json
 import struct
 import tempfile
 import numpy as np
 from pathlib import Path
-from typing import Optional, Dict, Any, List, Tuple
+from typing import Optional, Dict, Any, List, Tuple, Union
 
 from tlabel.adapters.base import BaseAdapter
 from tlabel.core.types import TLabelData, TLabelFrame
+from tlabel.core.schema import TLabelSchemaV2
 
 try:
     import pyarrow.parquet as pq
@@ -867,6 +869,10 @@ def _infer_phases(frames_contact, frames_slip):
 class DaimonAdapter(BaseAdapter):
     """戴盟 Daimon-Infinity Parquet → TLabelData"""
 
+    # v0.17: Compliance Level — Daimon有deformation视频估算force_magnitude(L2)，
+    # 有shear视频时可合成force_vector(L3)，默认L2
+    default_compliance_level: str = "L2"
+
     @property
     def name(self) -> str:
         return "daimon"
@@ -907,6 +913,92 @@ class DaimonAdapter(BaseAdapter):
             "manufacturer": "daimon",
             "model": "DM-TacClaw",
         }
+
+    def extract_schema(self, raw_frame_data: Union[TLabelFrame, Dict]) -> TLabelSchemaV2:
+        """将原始数据帧转换为 TLabel Schema V2 (14维结构化)
+
+        Daimon适配器策略:
+          - contact: 从tlabel_v2.contact或视频特征推断
+          - contact_centroid: 从centroid_x估算 [cx, cy]
+          - force_magnitude: 从deformation视频估算（视频优先 > gripper估算）
+          - force_vector: 如果有shear视频数据可合成 [Fx, Fy, Fz]，否则None
+          - object_deformation: 从deformation_magnitude提取
+          - compliance_level: 有shear视频时L3，否则L2
+
+        Args:
+            raw_frame_data: TLabelFrame实例或tlabel_v2字典
+
+        Returns:
+            TLabelSchemaV2 — 14维结构化标注
+        """
+        # 统一获取 tlabel_v2 字典和 sensor_specific
+        if isinstance(raw_frame_data, TLabelFrame):
+            v2_dict = raw_frame_data.schema_v2.to_dict() if hasattr(raw_frame_data, 'schema_v2') and raw_frame_data.schema_v2 is not None else raw_frame_data
+            sensor_specific = raw_frame_data.sensor_specific or {}
+        elif isinstance(raw_frame_data, dict):
+            v2_dict = raw_frame_data
+            sensor_specific = raw_frame_data.get("sensor_specific", {})
+        else:
+            raise TypeError(f"raw_frame_data 类型不支持: {type(raw_frame_data)}")
+
+        # 基础字段：复用 from_tlabel_v1 通用映射
+        v1_dict = dict(v2_dict)
+        v1_dict["confidence"] = v2_dict.get("confidence", 1.0)
+        schema = TLabelSchemaV2.from_tlabel_v1(v1_dict)
+
+        # --- Daimon特有增强 ---
+
+        # 1. contact_centroid: v1只有centroid_x，补充 [cx, 0]
+        centroid_x = v2_dict.get("centroid_x")
+        if centroid_x is not None and schema.contact:
+            schema.contact_centroid = [float(centroid_x), 0.0]
+
+        # 2. force_magnitude: 优先使用视频deformation估算
+        #    _extract_tlabel_v2_from_state中已计算，直接复用
+        force_mag = v2_dict.get("force_magnitude")
+        if force_mag is not None and force_mag > 0:
+            schema.force_magnitude = float(force_mag)
+        else:
+            # fallback: 从deformation_magnitude估算
+            deform_mag = v2_dict.get("deformation_magnitude", 0.0)
+            schema.force_magnitude = float(deform_mag) * 100.0 if deform_mag > 0 else None
+
+        # 3. force_vector: 从force_magnitude + shear方向合成
+        #    Daimon有3路视频(deformation/shear/depth)，shear视频提供剪切力方向
+        shear_mag = v2_dict.get("shear_field_magnitude", 0.0)
+        shear_dir_deg = v2_dict.get("shear_field_direction", 0.0)
+        has_shear = shear_mag > 1e-6 and sensor_specific.get("video_type", "").startswith("deformation")
+
+        if schema.force_magnitude is not None and has_shear:
+            # 从法向力 + 剪切力方向合成3D力矢量
+            # Fz ≈ force_magnitude (法向), Fx/Fy从shear方向分解
+            shear_dir_rad = math.radians(shear_dir_deg)
+            # 剪切力大小从shear_field_magnitude估算（缩放到N）
+            shear_force = float(shear_mag) * 10.0  # 缩放因子
+            fx = shear_force * math.cos(shear_dir_rad)
+            fy = shear_force * math.sin(shear_dir_rad)
+            fz = float(schema.force_magnitude)
+            schema.force_vector = [round(fx, 4), round(fy, 4), round(fz, 4)]
+            schema.compliance_level = "L3"
+        else:
+            schema.force_vector = None
+            schema.compliance_level = self.default_compliance_level
+
+        # 4. object_deformation: 从deformation_magnitude直接提取
+        deform = v2_dict.get("deformation_magnitude")
+        if deform is not None and deform > 0:
+            schema.object_deformation = float(deform)
+
+        # 5. slip_velocity: 如果有slip_event，从optical_flow提取
+        if schema.slip_event:
+            of_mag = v2_dict.get("optical_flow_magnitude", 0.0)
+            of_dir = v2_dict.get("optical_flow_direction", 0.0)
+            if of_mag > 1e-6:
+                of_rad = math.radians(of_dir)
+                schema.slip_velocity = [round(of_mag * math.cos(of_rad), 4),
+                                        round(of_mag * math.sin(of_rad), 4)]
+
+        return schema
 
     def load(self, file_path: str,
              episode_index: Optional[int] = None,
@@ -1135,7 +1227,7 @@ class DaimonAdapter(BaseAdapter):
             frame = TLabelFrame(
                 frame_idx=int(frame_indices[i]),
                 timestamp_s=round(float(timestamps[i]) if timestamps is not None else i / fps, 4),
-                tlabel_v2=tlabel_v2,
+                schema_v2=TLabelSchemaV2.from_tlabel_v1(tlabel_v2),
                 manipulation_phase="idle",
                 confidence=confidence,
                 sensor_specific=sensor_specific,

@@ -1,5 +1,5 @@
 """
-适配器抽象基类 — v0.16.0 架构分离
+适配器抽象基类 — v0.17.0 Schema V2 迁移
 
 两个基类：
 - DataAdapterBase: 数据集适配器，解析离线数据文件
@@ -7,12 +7,14 @@
 
 v0.15及之前版本使用统一的BaseAdapter，v0.16起拆分为两个专用基类，
 为第三方贡献机制提供更清晰的接口契约。
+v0.17起新增 extract_schema() 方法，支持14维Schema V2输出。
 """
 
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, Any, Iterator, List
 
 from tlabel.core.types import TLabelData, TLabelFrame
+from tlabel.core.schema import TLabelSchemaV2, SCHEMA_V2_FIELD_NAMES
 
 
 # =============================================================================
@@ -28,9 +30,13 @@ class DataAdapterBase(ABC):
     实现步骤：
     1. 继承DataAdapterBase
     2. 实现name、supported_extensions、load()、get_capabilities()、get_sensor_info()
-    3. 在load()中将原始数据转换为TLabelData（22维tlabel_v2格式）
-    4. 使用@register_adapter注册到适配器表
+    3. 实现 extract_schema() 将原始数据转换为14维Schema V2格式
+    4. 在load()中将原始数据转换为TLabelData（14维Schema V2格式）
+    5. 使用@register_adapter注册到适配器表
     """
+
+    # 子类覆盖此属性声明其 Compliance Level（默认 L1）
+    default_compliance_level: str = "L1"
 
     @property
     @abstractmethod
@@ -45,11 +51,30 @@ class DataAdapterBase(ABC):
         pass
 
     @abstractmethod
+    def extract_schema(self, raw_frame_data) -> TLabelSchemaV2:
+        """将原始数据帧转换为 TLabel Schema V2（14维结构化触觉语义标注）
+
+        子类必须实现此方法，将传感器/数据集的原始数据映射到14维Schema V2。
+        不能填的字段填 None，compliance_level 使用 self.default_compliance_level。
+
+        参数:
+            raw_frame_data: 原始数据帧（格式由子类定义，通常为dict或SDK对象）
+
+        返回:
+            TLabelSchemaV2 — 14维结构化触觉语义标注
+        """
+        pass
+
+    @abstractmethod
     def load(self, file_path: str,
              trajectory_id: Optional[int] = None,
              **kwargs) -> TLabelData:
         """
         加载数据文件，转换为TLabelData
+
+        .. deprecated::
+            load() 内部产出仍使用22维tlabel_v2 dict，将在后续版本迁移为
+            Schema V2。新增 extract_schema() 为推荐接口。
 
         参数:
             file_path: 数据文件路径
@@ -57,19 +82,19 @@ class DataAdapterBase(ABC):
             **kwargs: 适配器特有参数
 
         返回:
-            TLabelData — 统一标注容器，包含22维tlabel_v2特征
+            TLabelData — 统一标注容器，包含14维Schema V2特征
         """
         pass
 
     @abstractmethod
     def get_capabilities(self) -> Dict[str, bool]:
-        """返回该数据源的22维能力声明
+        """返回该数据源的14维能力声明
 
         返回格式示例:
             {
                 "contact": True,
-                "deformation_magnitude": True,
-                "force_magnitude": False,
+                "force_magnitude": True,
+                "force_vector": False,
                 ...
             }
         """
@@ -104,12 +129,16 @@ class SensorAdapterBase(ABC):
     实现步骤：
     1. 继承SensorAdapterBase
     2. 实现name、supported_extensions、load()、get_capabilities()、get_sensor_info()
-    3. 实现connect()、stream_frames()、disconnect()实时数据流接口
-    4. 使用@register_adapter注册到适配器表
+    3. 实现 extract_schema() 将原始数据转换为14维Schema V2格式
+    4. 实现connect()、stream_frames()、disconnect()实时数据流接口
+    5. 使用@register_adapter注册到适配器表
 
     注意：传感器适配器需要额外的依赖（厂商SDK），建议在pyproject.toml中
     使用optional dependencies声明，如：tlabel[sensor-paxini]
     """
+
+    # 子类覆盖此属性声明其 Compliance Level（默认 L1）
+    default_compliance_level: str = "L1"
 
     @property
     @abstractmethod
@@ -127,6 +156,21 @@ class SensorAdapterBase(ABC):
         return []
 
     @abstractmethod
+    def extract_schema(self, raw_frame_data) -> TLabelSchemaV2:
+        """将原始数据帧转换为 TLabel Schema V2（14维结构化触觉语义标注）
+
+        子类必须实现此方法，将传感器的原始数据映射到14维Schema V2。
+        不能填的字段填 None，compliance_level 使用 self.default_compliance_level。
+
+        参数:
+            raw_frame_data: 原始数据帧（格式由子类定义，通常为SDK TactileFrame对象或dict）
+
+        返回:
+            TLabelSchemaV2 — 14维结构化触觉语义标注
+        """
+        pass
+
+    @abstractmethod
     def load(self, file_path: str,
              trajectory_id: Optional[int] = None,
              **kwargs) -> TLabelData:
@@ -135,6 +179,10 @@ class SensorAdapterBase(ABC):
 
         对于传感器适配器，这个方法用于处理录制好的数据文件。
         实时采集请使用stream_frames()接口。
+
+        .. deprecated::
+            load() 内部产出仍使用22维tlabel_v2 dict，将在后续版本迁移为
+            Schema V2。新增 extract_schema() 为推荐接口。
 
         参数:
             file_path: 数据文件路径
@@ -148,7 +196,7 @@ class SensorAdapterBase(ABC):
 
     @abstractmethod
     def get_capabilities(self) -> Dict[str, bool]:
-        """返回该传感器的22维能力声明"""
+        """返回该传感器的14维能力声明"""
         pass
 
     @abstractmethod
@@ -251,9 +299,10 @@ class SensorAdapterBase(ABC):
         # 组装为TLabelData
         from tlabel.core.types import TLabelData
         return TLabelData(
-            sensor_name=self.name,
             frames=frames,
-            metadata=self.get_sensor_info(),
+            sensor_info=self.get_sensor_info(),
+            episode_info={},
+            capabilities=self.get_capabilities(),
         )
 
 

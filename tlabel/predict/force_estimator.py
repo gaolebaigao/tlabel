@@ -1,12 +1,18 @@
 """
-Force Estimator — v0.14.0 新增
+Force Estimator — v0.14.0 新增, v0.17 Breaking Change Schema V2 Only
 
 从视触觉传感器数据（形变、图像）推断力的大小。
 让只有 GelSight / DIGIT / PaXini 等视触觉传感器（无F/T传感器）的用户也能进行 primitive 标注。
 
 核心物理模型:
   - F = k × δ  (弹性体刚度 × 形变量)
-  - 形变来源: deformation_magnitude 字段 / 图像帧差异
+  - 形变来源: object_deformation 字段 (Schema V2) / 图像帧差异
+
+v0.17 Breaking Change:
+  - 移除 _compat 兼容层，直接访问 frame.schema_v2
+  - deformation_magnitude → object_deformation
+  - has_real_force_data() 只检查 schema_v2
+  - integrate() 写入 schema_v2 而非 tlabel_v2
 
 不引入外部ML依赖（无PyTorch/TensorFlow），纯物理模型+简单图像处理。
 """
@@ -14,7 +20,7 @@ Force Estimator — v0.14.0 新增
 import math
 from typing import List, Dict, Optional, Any
 
-from tlabel.core.types import TLabelData, TLabelFrame
+from tlabel.core.types import TLabelData, TLabelFrame, _sv2_scalar
 
 
 # ============================================================
@@ -22,13 +28,13 @@ from tlabel.core.types import TLabelData, TLabelFrame
 # ============================================================
 
 DEFAULT_ELASTOMER_STIFFNESS = {
-    "gelsight_mini": 800.0,      # GelSight Mini: 中等刚度弹性体
-    "gelsight": 600.0,           # GelSight (标准版)
-    "digit": 1200.0,             # DIGIT: 较硬弹性体
-    "paxini": 500.0,             # PaXini: 软弹性体
-    "daimon": 700.0,             # Daimon
-    "touchd": 450.0,             # ToucHD
-    "contactile": 350.0,         # Contactile
+    "gelsight_mini": 800.0,
+    "gelsight": 600.0,
+    "digit": 1200.0,
+    "paxini": 500.0,
+    "daimon": 700.0,
+    "touchd": 450.0,
+    "contactile": 350.0,
 }
 
 
@@ -38,7 +44,6 @@ def get_default_stiffness(sensor_type: str) -> float:
     for key, val in DEFAULT_ELASTOMER_STIFFNESS.items():
         if key in sensor_type_lower:
             return val
-    # 未知传感器使用保守的中等刚度
     return 500.0
 
 
@@ -81,15 +86,13 @@ class ForceEstimator:
     """力推断器基类"""
 
     def can_estimate(self, data: TLabelData) -> bool:
-        """判断是否能从当前数据推断力"""
         raise NotImplementedError
 
     def estimate(self, data: TLabelData) -> List[ForceEstimate]:
-        """逐帧推断力，返回ForceEstimate列表"""
         raise NotImplementedError
 
     def integrate(self, data: TLabelData) -> TLabelData:
-        """将推断结果写入TLabelData的frames中，并标记source"""
+        """将推断结果写入TLabelData的frames中（schema_v2）"""
         estimates = self.estimate(data)
         est_by_frame = {e.frame_idx: e for e in estimates}
 
@@ -97,15 +100,15 @@ class ForceEstimator:
             est = est_by_frame.get(frame.frame_idx)
             if est is None:
                 continue
-            # 写入力估计值到tlabel_v2
-            frame.tlabel_v2["force_magnitude"] = est.estimated_force_n
-            # 在sensor_specific中记录推断信息
+            # 写入 schema_v2
+            frame.schema_v2.force_magnitude = est.estimated_force_n
+            # 在 sensor_specific 中记录推断信息
             frame.sensor_specific["force_source"] = "estimated_force"
             frame.sensor_specific["force_estimate_method"] = est.method
             frame.sensor_specific["force_estimate_confidence"] = est.confidence
             frame.sensor_specific["force_estimate_stiffness"] = est.stiffness_used
 
-        # 在TLabelData级别标记
+        # 在 TLabelData 级别标记
         data._force_estimates = estimates
         data._force_estimate_summary = {
             "method": self.__class__.__name__,
@@ -124,21 +127,16 @@ class ForceEstimator:
 
 class DeformationForceEstimator(ForceEstimator):
     """
-    利用已有 deformation_magnitude 字段 + sensor_profile中的弹性体刚度参数
+    利用 object_deformation 字段 + sensor_profile 中的弹性体刚度参数
     通过物理模型 F = k × δ 推断力
-
-    置信度规则:
-    - 有标定刚度参数 → confidence=0.75
-    - 仅有默认刚度 → confidence=0.55
-    - 无deformation_magnitude数据 → confidence=0.0 (can_estimate=False)
     """
 
     def can_estimate(self, data: TLabelData) -> bool:
         if not data.frames:
             return False
-        # 检查是否有非零的deformation_magnitude
         for f in data.frames:
-            if f.tlabel_v2.get("deformation_magnitude", 0.0) > 0.01:
+            deform = _sv2_scalar(f, "object_deformation")
+            if deform > 0.01:
                 return True
         return False
 
@@ -149,23 +147,18 @@ class DeformationForceEstimator(ForceEstimator):
         stiffness = elastomer.get("stiffness_n_m")
         if stiffness is not None and stiffness > 0:
             return float(stiffness), False
-        # 回退到传感器类型默认刚度
         sensor_type = data.sensor_info.get("type", "")
         default_k = get_default_stiffness(sensor_type)
         return default_k, True
 
     def estimate(self, data: TLabelData) -> List[ForceEstimate]:
         stiffness, is_default = self._get_stiffness(data)
-        # 形变→力的映射：将 deformation_magnitude (0-1 arbitrary units) 映射到
-        # 归一化力值范围 (0-1)，使推断结果兼容现有的规则引擎阈值。
-        # 物理含义：F_normalized = deform * (k / k_reference)
-        # 其中 k_reference = 1000 N/m 是归一化参考刚度
         k_reference = 1000.0
         scale = stiffness / k_reference
 
         results = []
         for frame in data.frames:
-            deform = frame.tlabel_v2.get("deformation_magnitude", 0.0)
+            deform = _sv2_scalar(frame, "object_deformation")
             if deform < 0.001:
                 results.append(ForceEstimate(
                     frame_idx=frame.frame_idx,
@@ -177,11 +170,7 @@ class DeformationForceEstimator(ForceEstimator):
                 ))
                 continue
 
-            # 归一化力估计：deformation * scale_factor
-            # 保证输出值在合理范围 (0-1+)，兼容现有predict_primitives阈值
             force_n = deform * scale
-
-            # 置信度
             conf = 0.75 if not is_default else 0.55
 
             results.append(ForceEstimate(
@@ -202,19 +191,11 @@ class DeformationForceEstimator(ForceEstimator):
 class ImageForceEstimator(ForceEstimator):
     """
     利用图像帧差异（pixel intensity change）推断变形量→映射为力估计
-
-    流程:
-    1. 计算相邻帧的像素差异均值（作为变形代理）
-    2. 归一化为0-1范围的"pseudo_deformation"
-    3. 应用 F = k × δ 物理模型
-
-    置信度: 0.35-0.45 (图像推断不如形变字段直接)
     """
 
     def can_estimate(self, data: TLabelData) -> bool:
         if not data.frames:
             return False
-        # 检查是否有图像数据
         images = data.get_images(max_frames=5)
         return any(img is not None for img in images)
 
@@ -222,7 +203,6 @@ class ImageForceEstimator(ForceEstimator):
         stiffness = get_default_stiffness(data.sensor_info.get("type", ""))
         images = data.get_images()
 
-        # 计算帧间差异
         intensity_diffs = []
         for i in range(len(images)):
             if i == 0 or images[i] is None or images[i - 1] is None:
@@ -236,7 +216,6 @@ class ImageForceEstimator(ForceEstimator):
                 except Exception:
                     intensity_diffs.append(0.0)
 
-        # 归一化到0-1
         max_diff = max(intensity_diffs) if intensity_diffs else 1.0
         if max_diff < 0.01:
             max_diff = 1.0
@@ -244,14 +223,8 @@ class ImageForceEstimator(ForceEstimator):
         results = []
         for i, frame in enumerate(data.frames):
             pseudo_deform = intensity_diffs[i] / max_diff if max_diff > 0 else 0.0
-
-            # F = k × δ，但图像推断的形变-力关系较弱
-            # 使用归一化系数：pseudo_deform 已经是 0-1 范围
-            # 乘以刚度比作为缩放，但图像推断本身置信度低
             k_reference = 1000.0
-            force_n = pseudo_deform * (stiffness / k_reference) * 0.5  # 0.5衰减因子（图像推断不可靠）
-
-            # 置信度较低
+            force_n = pseudo_deform * (stiffness / k_reference) * 0.5
             conf = 0.45 if pseudo_deform > 0.1 else 0.35
 
             results.append(ForceEstimate(
@@ -270,13 +243,7 @@ class ImageForceEstimator(ForceEstimator):
 # ============================================================
 
 class CompositeForceEstimator(ForceEstimator):
-    """
-    组合推断器 — 自动选择最佳推断策略
-
-    优先级:
-    1. DeformationForceEstimator (有deformation_magnitude字段时)
-    2. ImageForceEstimator (有图像数据时)
-    """
+    """组合推断器 — 自动选择最佳推断策略"""
 
     def __init__(self):
         self._deformation_estimator = DeformationForceEstimator()
@@ -314,22 +281,7 @@ class CompositeForceEstimator(ForceEstimator):
 
 
 def auto_force_estimate(data: TLabelData) -> TLabelData:
-    """
-    自动力推断入口函数
-
-    检测可用数据，选择最佳推断策略，将推断结果写入TLabelData。
-
-    Args:
-        data: TLabelData实例
-
-    Returns:
-        修改后的TLabelData（原地修改，推断结果写入frames）
-
-    用法:
-        data = auto_force_estimate(data)
-        # data._force_estimate_summary 包含推断摘要
-        # data.frames[i].sensor_specific["force_source"] == "estimated_force"
-    """
+    """自动力推断入口函数"""
     estimator = CompositeForceEstimator()
     return estimator.integrate(data)
 
@@ -338,29 +290,28 @@ def has_real_force_data(data: TLabelData) -> bool:
     """
     判断TLabelData是否包含真实的力/力矩数据（而非形变别名）
 
-    用于判断是否需要force estimation。
-    当force_magnitude全为0或等于deformation_magnitude时，视为无力数据。
+    v0.17: 只检查 schema_v2，不检查旧 tlabel_v2。
     """
     if not data.frames:
         return False
 
     has_nonzero_force = False
     for f in data.frames:
-        tv2 = f.tlabel_v2
-        force = tv2.get("force_magnitude", 0.0)
-        deform = tv2.get("deformation_magnitude", 0.0)
-        # 如果有传感器明确提供了力数据（如delta_force, normal_field_magnitude > 0）
-        # 或者force_magnitude与deformation_magnitude不同
-        normal_field = tv2.get("normal_field_magnitude", 0.0)
-        delta_force = tv2.get("delta_force_normal", 0.0)
-
-        if normal_field > 0.01 or delta_force > 0.01:
-            return True
-        if force > 0.01 and abs(force - deform) > 0.001:
-            return True
-        if force > 0.01:
+        sv2 = f.schema_v2
+        if sv2 is None:
+            continue
+        # force_vector 存在且非零 → L3数据，明确有力
+        if sv2.force_vector is not None:
+            fv = sv2.force_vector
+            if any(abs(v) > 0.01 for v in fv):
+                return True
+        # force_magnitude 与 object_deformation 不同 → 独立力数据
+        force = sv2.force_magnitude
+        deform = sv2.object_deformation
+        if force is not None and force > 0.01 and deform is not None:
+            if abs(force - deform) > 0.001:
+                return True
+        if force is not None and force > 0.01:
             has_nonzero_force = True
 
-    # force_magnitude 等于 deformation_magnitude（未标定别名）→ 视为无力数据
-    # force_magnitude 全0 → 无力数据
     return False

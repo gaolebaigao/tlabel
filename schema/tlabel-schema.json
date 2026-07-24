@@ -1,52 +1,43 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "TLabel Annotation Format",
-  "version": "0.8.0",
-  "description": "Schema for TLabel cross-sensor tactile annotation files — v0.8 aligns with code: tlabel_v2 dict, sensor_profile, feature_metadata, episode labels",
+  "title": "TLabel Schema V2.1",
+  "version": "2.1.0",
+  "description": "TLabel Schema V2.1 — 14维结构化触觉语义标注规范，支持 Compliance Level (L1-L4) 分层",
   "type": "object",
   "required": ["schema_version", "format", "sensor", "capabilities", "frames"],
   "properties": {
     "schema_version": {
       "type": "string",
-      "pattern": "^0\\.[0-9]+\\.[0-9]+$",
-      "description": "TLabel schema version (semver)"
+      "description": "TLabel schema version (semver)",
+      "examples": ["2.1.0"]
     },
     "format": {
       "type": "string",
-      "const": "tlabel_v2",
-      "description": "Format identifier, always 'tlabel_v2'"
+      "const": "tlabel_schema_v2",
+      "description": "Format identifier for Schema V2.1"
+    },
+    "schema_version_v2": {
+      "type": "string",
+      "const": "2.1",
+      "description": "Schema V2 major.minor version"
     },
     "tlabel_dimensions": {
       "type": "integer",
-      "const": 22,
-      "description": "Number of annotation dimensions"
+      "const": 14,
+      "description": "Number of Schema V2.1 semantic dimensions"
     },
-    "feature_names": {
+    "feature_names_v2": {
       "type": "array",
       "items": { "type": "string" },
-      "description": "Ordered list of the 22 dimension keys in tlabel_v2"
-    },
-    "feature_metadata": {
-      "type": "object",
-      "description": "Per-feature semantic metadata (computation, semantics, units, calibration deps)",
-      "additionalProperties": {
-        "type": "object",
-        "properties": {
-          "feature_id": { "type": "integer" },
-          "category": { "type": "string", "enum": ["deformation", "gradient", "force_semantic", "temporal"] },
-          "computation": { "type": "string" },
-          "physical_semantics": { "type": "string" },
-          "si_unit": { "type": ["string", "null"] },
-          "raw_unit": { "type": "string" },
-          "force_correlation": { "type": "string", "enum": ["direct", "high", "moderate", "low", "indirect"] },
-          "requires_calibration": { "type": "boolean" },
-          "calibration_depends_on": { "type": "array", "items": { "type": "string" } },
-          "deprecated": { "type": "boolean" },
-          "deprecated_since": { "type": "string" },
-          "replacement": { "type": "string" }
-        },
-        "required": ["feature_id", "category", "computation", "physical_semantics", "raw_unit", "force_correlation", "requires_calibration"]
-      }
+      "description": "Ordered list of the 14 Schema V2.1 dimension keys",
+      "enum": [
+        "contact", "contact_centroid", "contact_region",
+        "force_magnitude", "force_vector", "torque_vector",
+        "slip_event", "slip_velocity",
+        "manipulation_phase", "texture_class",
+        "object_deformation", "temperature",
+        "confidence", "compliance_level"
+      ]
     },
     "sensor": {
       "type": "object",
@@ -59,7 +50,12 @@
         "resolution": { "type": "string" },
         "frame_rate": { "type": "number", "minimum": 1 },
         "adapter_name": { "type": "string", "description": "TLabel adapter identifier" },
-        "adapter_version": { "type": "string", "description": "Adapter version (semver)" }
+        "adapter_version": { "type": "string", "description": "Adapter version (semver)" },
+        "compliance_level": {
+          "type": "string",
+          "enum": ["L1", "L2", "L3", "L4"],
+          "description": "Default compliance level for this sensor adapter"
+        }
       }
     },
     "sensor_id": {
@@ -68,7 +64,7 @@
     },
     "sensor_profile": {
       "type": ["object", "null"],
-      "description": "v0.7+: Sensor physical properties — elastomer, optical, calibration. All fields optional.",
+      "description": "Sensor physical properties — elastomer, optical, calibration",
       "properties": {
         "sensor_type": { "type": ["string", "null"] },
         "manufacturer": { "type": ["string", "null"] },
@@ -93,10 +89,10 @@
         "calibration": {
           "type": ["object", "null"],
           "properties": {
-            "method": { "type": ["string", "null"], "enum": ["literature", "self_calibrated", "manufacturer_spec", "none", null] },
+            "method": { "type": ["string", "null"] },
             "reference_doi": { "type": ["string", "null"] },
             "pixel_to_force_coefficient": { "type": ["number", "null"], "minimum": 0 },
-            "pixel_to_force_unit": { "type": ["string", "null"], "default": "N/pixel" }
+            "pixel_to_force_unit": { "type": ["string", "null"] }
           }
         },
         "notes": { "type": ["string", "null"] }
@@ -140,19 +136,22 @@
     },
     "capabilities": {
       "type": "object",
-      "required": ["contact"],
+      "description": "Schema V2.1 per-field capability flags",
       "properties": {
         "contact": { "type": "boolean" },
+        "contact_centroid": { "type": "boolean" },
         "contact_region": { "type": "boolean" },
         "force_magnitude": { "type": "boolean" },
-        "deformation_magnitude_peak": { "type": "boolean" },
-        "force_direction": { "type": "boolean" },
+        "force_vector": { "type": "boolean" },
+        "torque_vector": { "type": "boolean" },
         "slip_event": { "type": "boolean" },
-        "slip_direction": { "type": "boolean" },
+        "slip_velocity": { "type": "boolean" },
         "manipulation_phase": { "type": "boolean" },
-        "texture": { "type": "boolean" },
-        "whole_hand_coordination": { "type": "boolean" },
-        "object_deformation": { "type": "boolean" }
+        "texture_class": { "type": "boolean" },
+        "object_deformation": { "type": "boolean" },
+        "temperature": { "type": "boolean" },
+        "confidence": { "type": "boolean" },
+        "compliance_level": { "type": "boolean" }
       },
       "additionalProperties": false
     },
@@ -160,46 +159,122 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["frame_idx", "timestamp_s", "tlabel_v2", "manipulation_phase"],
+        "required": ["frame_idx", "timestamp_s", "schema_v2", "confidence"],
         "properties": {
           "frame_idx": { "type": "integer" },
           "timestamp_s": { "type": "number" },
           "is_first": { "type": "boolean" },
           "is_last": { "type": "boolean" },
-          "tlabel_v2": {
+          "schema_v2": {
             "type": "object",
-            "description": "The 22-dimension annotation values for this frame",
+            "description": "TLabel Schema V2.1 — 14维结构化语义标注",
+            "required": ["contact", "slip_event", "confidence", "compliance_level"],
             "properties": {
-              "contact": { "type": "number", "minimum": 0, "maximum": 1 },
-              "deformation_magnitude": { "type": "number", "minimum": 0 },
-              "force_magnitude": { "type": "number", "minimum": 0, "description": "DEPRECATED: alias of deformation_magnitude" },
-              "force_peak": { "type": "number", "minimum": 0 },
-              "force_direction": { "type": "number" },
-              "slip_entropy": { "type": "number", "minimum": 0 },
-              "slip_event": { "type": "number", "minimum": 0, "maximum": 1 },
-              "texture_energy": { "type": "number", "minimum": 0 },
-              "edge_density": { "type": "number", "minimum": 0 },
-              "contact_area": { "type": "number", "minimum": 0 },
-              "centroid_x": { "type": "number" },
-              "normal_field_magnitude": { "type": "number", "minimum": 0 },
-              "normal_field_variance": { "type": "number", "minimum": 0 },
-              "shear_field_magnitude": { "type": "number", "minimum": 0 },
-              "shear_field_direction": { "type": "number" },
-              "delta_force_normal": { "type": "number" },
-              "delta_force_shear": { "type": "number" },
-              "friction_cone_ratio": { "type": "number", "minimum": 0 },
-              "optical_flow_magnitude": { "type": "number", "minimum": 0 },
-              "optical_flow_direction": { "type": "number" },
-              "temporal_deformation_rate": { "type": "number" },
-              "contact_transition": { "type": "number", "minimum": 0, "maximum": 1 }
+              "contact": {
+                "type": "boolean",
+                "description": "接触状态",
+                "required": true
+              },
+              "contact_centroid": {
+                "type": ["array", "null"],
+                "items": { "type": "number" },
+                "minItems": 2,
+                "maxItems": 2,
+                "description": "接触中心坐标 [x, y]，单位：传感器像素坐标或mm。contact=true 时必填",
+                "required_when": "contact=true"
+              },
+              "contact_region": {
+                "type": ["string", "null"],
+                "enum": ["palmar", "digital", "lateral", "proximal", "distal", "dorsal", "other", null],
+                "description": "粗粒度接触区域枚举"
+              },
+              "force_magnitude": {
+                "type": ["number", "null"],
+                "minimum": 0,
+                "unit": "N",
+                "description": "法向接触力标量。compliance_level >= L2 时约定必填",
+                "required_when": "compliance_level >= L2"
+              },
+              "force_vector": {
+                "type": ["array", "null"],
+                "items": { "type": "number" },
+                "minItems": 3,
+                "maxItems": 3,
+                "unit": "N",
+                "description": "三维接触力 [Fx, Fy, Fz]。compliance_level >= L3 时必填",
+                "required_when": "compliance_level >= L3"
+              },
+              "torque_vector": {
+                "type": ["array", "null"],
+                "items": { "type": "number" },
+                "minItems": 3,
+                "maxItems": 3,
+                "unit": "N·m",
+                "description": "三维力矩 [Mx, My, Mz]"
+              },
+              "slip_event": {
+                "type": "boolean",
+                "description": "滑动检测",
+                "required": true
+              },
+              "slip_velocity": {
+                "type": ["array", "null"],
+                "items": { "type": "number" },
+                "minItems": 2,
+                "maxItems": 2,
+                "unit": "mm/s",
+                "description": "滑动速度向量 [vx, vy]。slip_event=true 时建议填写"
+              },
+              "manipulation_phase": {
+                "type": ["string", "null"],
+                "enum": ["pre_contact", "approach", "grasp", "lift", "hold", "place", null],
+                "description": "操作阶段枚举"
+              },
+              "texture_class": {
+                "type": ["string", "null"],
+                "enum": ["smooth", "rough", "granular", "fibrous", "sticky", "slippery", null],
+                "description": "纹理类别枚举"
+              },
+              "object_deformation": {
+                "type": ["number", "null"],
+                "unit": "mm or ratio",
+                "description": "物体形变量"
+              },
+              "temperature": {
+                "type": ["number", "null"],
+                "unit": "°C",
+                "description": "接触面温度"
+              },
+              "confidence": {
+                "type": "number",
+                "minimum": 0.0,
+                "maximum": 1.0,
+                "description": "标注置信度",
+                "required": true
+              },
+              "compliance_level": {
+                "type": "string",
+                "enum": ["L1", "L2", "L3", "L4"],
+                "description": "合规等级。L1=基础触觉, L2=力感知, L3=完整力向量, L4=完整语义",
+                "required": true
+              }
             },
             "additionalProperties": false
           },
+          "tlabel_v2": {
+            "type": ["object", "null"],
+            "description": "DEPRECATED since v2.1: 旧版22维 flat dict，保留向后兼容"
+          },
           "manipulation_phase": {
             "type": "string",
-            "enum": ["idle", "initial_contact", "stable_contact", "slip", "release", "re_contact", "approach", "retract", "grasp", "transport", "hold"]
+            "description": "DEPRECATED: use schema_v2.manipulation_phase"
           },
-          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Frame-level confidence (also in schema_v2)"
+          },
           "sensor_specific": { "type": "object" },
           "patches": {
             "type": "array",

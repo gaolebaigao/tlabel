@@ -1,8 +1,8 @@
 """
 TLabel v0.7 Feature Metadata Registry
 
-每个22维特征的静态元数据：类别、计算公式、物理语义、单位、力相关度、标定依赖。
-用于 to_dict() 输出和文档自动生成。
+v0.17: 新增 Schema V2.1 (14维结构化) 元数据定义。
+保留原22维 FEATURE_REGISTRY 向后兼容，新增 SCHEMA_V2_METADATA。
 """
 
 from typing import Dict, Any, Optional, List
@@ -13,6 +13,15 @@ FEATURE_CATEGORIES = ["deformation", "gradient", "force_semantic", "temporal"]
 
 # 力相关度级别
 FORCE_CORRELATION_LEVELS = ["direct", "high", "moderate", "low", "indirect"]
+
+# Schema V2.1 语义类别（设计文档 §3.2）
+SCHEMA_V2_CATEGORIES = {
+    "spatial": ["contact", "contact_centroid", "contact_region", "object_deformation"],
+    "mechanical": ["force_magnitude", "force_vector", "torque_vector"],
+    "surface": ["texture_class", "temperature"],
+    "kinetic": ["slip_event", "slip_velocity"],
+    "meta": ["manipulation_phase", "confidence", "compliance_level"],
+}
 
 
 FEATURE_REGISTRY: Dict[str, Dict[str, Any]] = {
@@ -330,5 +339,193 @@ def get_deprecated_features() -> List[str]:
 
 
 def get_feature_metadata_summary() -> Dict[str, Dict[str, Any]]:
-    """获取全部特征元数据（用于to_dict输出）"""
-    return FEATURE_REGISTRY
+    """获取全部特征元数据（用于to_dict输出）— v0.17: Schema V2 优先"""
+    return SCHEMA_V2_METADATA
+
+
+# ================================================================
+# Schema V2.1 — 14维结构化元数据（v0.17 新增）
+# ================================================================
+
+SCHEMA_V2_METADATA: Dict[str, Dict[str, Any]] = {
+    "contact": {
+        "dimension_id": 1,
+        "type": "bool",
+        "required": True,
+        "required_when": "always",
+        "category": "spatial",
+        "physical_semantics": "Binary contact indicator — whether the sensor is in physical contact with an object.",
+        "si_unit": None,
+        "description": "接触状态",
+    },
+    "contact_centroid": {
+        "dimension_id": 2,
+        "type": "[float, float]",
+        "required": True,
+        "required_when": "contact=true",
+        "category": "spatial",
+        "physical_semantics": "Center of mass of the contact region, in sensor pixel coordinates or mm.",
+        "si_unit": "pixel or mm",
+        "description": "接触中心坐标 [x, y]",
+    },
+    "contact_region": {
+        "dimension_id": 3,
+        "type": "enum",
+        "required": False,
+        "required_when": None,
+        "category": "spatial",
+        "physical_semantics": "Coarse-grained contact region on the hand/body surface.",
+        "si_unit": None,
+        "enum_values": ["palmar", "digital", "lateral", "proximal", "distal", "dorsal", "other"],
+        "description": "粗粒度接触区域",
+    },
+    "force_magnitude": {
+        "dimension_id": 4,
+        "type": "float",
+        "required": True,
+        "required_when": "compliance_level >= L2",
+        "category": "mechanical",
+        "physical_semantics": "Scalar normal contact force magnitude. Most force-sensing sensors can provide this.",
+        "si_unit": "N",
+        "description": "法向接触力标量",
+    },
+    "force_vector": {
+        "dimension_id": 5,
+        "type": "[float×3]",
+        "required": False,
+        "required_when": "compliance_level >= L3",
+        "category": "mechanical",
+        "physical_semantics": "3D contact force vector [Fx, Fy, Fz] in sensor frame. Requires multi-axis force sensing capability.",
+        "si_unit": "N",
+        "description": "三维接触力 [Fx, Fy, Fz]",
+    },
+    "torque_vector": {
+        "dimension_id": 6,
+        "type": "[float×3]",
+        "required": False,
+        "required_when": None,
+        "category": "mechanical",
+        "physical_semantics": "3D torque/moment vector [Mx, My, Mz] at the contact point.",
+        "si_unit": "N·m",
+        "description": "三维力矩 [Mx, My, Mz]",
+    },
+    "slip_event": {
+        "dimension_id": 7,
+        "type": "bool",
+        "required": True,
+        "required_when": "always",
+        "category": "kinetic",
+        "physical_semantics": "Binary slip detection — whether the object is sliding relative to the sensor.",
+        "si_unit": None,
+        "description": "滑动检测",
+    },
+    "slip_velocity": {
+        "dimension_id": 8,
+        "type": "[float×2]",
+        "required": False,
+        "required_when": "slip_event=true (recommended)",
+        "category": "kinetic",
+        "physical_semantics": "2D slip velocity vector [vx, vy] in the sensor tangent plane. Contains both direction and magnitude of slip.",
+        "si_unit": "mm/s",
+        "description": "滑动速度向量 [vx, vy]",
+    },
+    "manipulation_phase": {
+        "dimension_id": 9,
+        "type": "enum",
+        "required": False,
+        "required_when": None,
+        "category": "meta",
+        "physical_semantics": "Current manipulation phase — the same tactile signal has different meaning at different phases.",
+        "si_unit": None,
+        "enum_values": ["pre_contact", "approach", "grasp", "lift", "hold", "place"],
+        "description": "操作阶段",
+    },
+    "texture_class": {
+        "dimension_id": 10,
+        "type": "enum",
+        "required": False,
+        "required_when": None,
+        "category": "surface",
+        "physical_semantics": "Categorical surface texture classification based on tactile exploration.",
+        "si_unit": None,
+        "enum_values": ["smooth", "rough", "granular", "fibrous", "sticky", "slippery"],
+        "description": "纹理类别",
+    },
+    "object_deformation": {
+        "dimension_id": 11,
+        "type": "float",
+        "required": False,
+        "required_when": None,
+        "category": "spatial",
+        "physical_semantics": "Object deformation magnitude in mm or as a ratio. Measures how much the object (or elastomer) deforms under contact.",
+        "si_unit": "mm or ratio",
+        "description": "物体形变量",
+    },
+    "temperature": {
+        "dimension_id": 12,
+        "type": "float",
+        "required": False,
+        "required_when": None,
+        "category": "surface",
+        "physical_semantics": "Contact surface temperature. Useful for material identification and thermal property estimation.",
+        "si_unit": "°C",
+        "description": "接触面温度",
+    },
+    "confidence": {
+        "dimension_id": 13,
+        "type": "float",
+        "required": True,
+        "required_when": "always",
+        "category": "meta",
+        "physical_semantics": "Annotation confidence/provenance tracking. Essential for data quality assessment.",
+        "si_unit": None,
+        "range": [0.0, 1.0],
+        "description": "标注置信度",
+    },
+    "compliance_level": {
+        "dimension_id": 14,
+        "type": "enum",
+        "required": True,
+        "required_when": "always",
+        "category": "meta",
+        "physical_semantics": "Compliance level indicating data information density. L1=Basic, L2=Force-Aware, L3=Full-Vector, L4=Rich-Semantic. Cumulative: L3 implies L2 and L1 compliance.",
+        "si_unit": None,
+        "enum_values": ["L1", "L2", "L3", "L4"],
+        "description": "合规等级 (L1-L4)",
+    },
+}
+
+
+def get_schema_v2_metadata(field_name: str) -> Optional[Dict[str, Any]]:
+    """获取 Schema V2.1 单个字段的元数据"""
+    return SCHEMA_V2_METADATA.get(field_name)
+
+
+def get_schema_v2_metadata_summary() -> Dict[str, Dict[str, Any]]:
+    """获取 Schema V2.1 全部14维元数据"""
+    return SCHEMA_V2_METADATA
+
+
+def get_schema_v2_required_fields(compliance_level: str = "L1") -> List[str]:
+    """
+    根据 compliance_level 获取必填字段列表。
+    
+    Args:
+        compliance_level: L1/L2/L3/L4
+    
+    Returns:
+        该等级下必填的字段名列表
+    """
+    # 无条件 Required
+    required = ["contact", "slip_event", "confidence", "compliance_level"]
+    
+    # 条件 Required
+    level_order = {"L1": 1, "L2": 2, "L3": 3, "L4": 4}
+    level_num = level_order.get(compliance_level, 1)
+    
+    if level_num >= 2:
+        required.append("force_magnitude")
+    if level_num >= 3:
+        required.append("force_vector")
+    
+    return required
