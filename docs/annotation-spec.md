@@ -1,214 +1,211 @@
 # TLabel Annotation Specification
 
-**Version:** 0.8.0  
+**Version:** 2.1.0  
+**Schema:** V2 (14 dimensions)  
 **Status:** Active  
-**Last Updated:** 2026-06-28
+**Last Updated:** 2026-07-24
 
 ---
 
 ## Overview
 
-This document describes the annotation methodology used by TLabel adapters. It covers the general approach for each semantic dimension, cascade rules, and the patch mechanism.
+This document describes the TLabel Schema V2 annotation standard. It covers the 14 semantic dimensions, Compliance Levels (L1–L4), cascade rules, and the patch mechanism.
 
-## General Annotation Flow
+> Schema V2 replaces the legacy 22-dimension `tlabel_v2` format (removed in v0.17.0).
+
+## Schema V2 Structure
 
 ```
-Raw Sensor Data → Preprocessing → Dimension-wise Annotation → Cascade Rules → TLabelData Output
+┌──────────────────────────────────────────────┐
+│  Required Fields                             │
+│  contact · contact_centroid · slip_event     │
+│  confidence · compliance_level               │
+├──────────────────────────────────────────────┤
+│  Force Fields (L2+)                          │
+│  force_magnitude · force_vector · torque     │
+├──────────────────────────────────────────────┤
+│  Optional Fields                             │
+│  contact_region · slip_velocity              │
+│  manipulation_phase · texture_class          │
+│  object_deformation · temperature            │
+└──────────────────────────────────────────────┘
 ```
-
-1. **Preprocessing**: Each adapter applies sensor-specific normalization (e.g., baseline subtraction for vision-based sensors, calibration for force arrays)
-2. **Dimension-wise Annotation**: Each supported dimension is annotated independently using the methods described below
-3. **Cascade Rules**: Physical consistency constraints are enforced across dimensions
-4. **Capability Filtering**: Only dimensions declared in `capabilities` are included in the output
 
 ---
 
-## Annotation Methods by Dimension
+## Dimension Definitions
 
-### 1. Contact Detection
+### 1. `contact` — bool · Required
 
-**Vision-based sensors (GelSight, Daimon, PaXini):**
+Whether the sensor is in physical contact with an object.
+
+**Vision-based sensors (GelSight, Daimon, VTouch):**
 - Method: Pixel deviation from baseline (no-contact reference frame)
-- Computation: `contact = 1.0 if mean(|diff_image|) > threshold else 0.0`
-- Output: Binary per frame (0.0 or 1.0)
+- Threshold: `mean(|diff_image|) > threshold`
+- Output: `true` / `false`
 
-**Array-based sensors (ToucHD, VTouch):**
-- Method: Threshold on taxel activation count
-- Computation: `contact = 1.0 if sum(active_taxels) > min_taxels else 0.0`
-- Output: Binary per frame
+**Force-array sensors (PaXini):**
+- Method: Taxel activation count exceeds minimum
+- Threshold: `sum(active_taxels) > min_taxels`
+- Output: `true` / `false`
 
-### 2. Deformation Magnitude
+### 2. `contact_centroid` — [float × 2] · Required (if contact=true)
+
+Center of mass of the contact region in normalized sensor coordinates [0, 1].
+
+- X: `weighted_avg(col_index, weights=|diff|) / image_width`
+- Y: `weighted_avg(row_index, weights=|diff|) / image_height`
+
+### 3. `contact_region` — enum · Optional
+
+Semantic label for which part of the sensor is in contact.
+
+Values: `center` | `tip` | `side` | `edge` | `palm` | `finger` | `full_surface`
+
+### 4. `force_magnitude` — float · Required (L2+)
+
+Scalar measure of contact intensity.
 
 **Vision-based sensors:**
 - Computation: `sqrt(mean(R² + G² + B²))` of background-subtracted differential image
 - Physical meaning: RMS of RGB pixel-level deformation intensity
-- Unit: arbitrary_unit (pixel intensity, not force)
-- Note: Despite its name, `force_magnitude` (deprecated) is identical to this value
+- Unit: arbitrary_unit (pixel intensity, not calibrated Newtons)
 
-### 3. Force Magnitude (DEPRECATED)
+**Force-array sensors:**
+- Computation: `sum(active_taxel_values)`
+- Unit: sensor-native (depends on calibration)
 
-- Since v0.7.0: Deprecated. Use `deformation_magnitude_peak` instead.
-- Reason: The name "force_magnitude" implies a calibrated force measurement in Newtons, but the value has NOT undergone force-deformation calibration.
-- Migration: The value is identical to `deformation_magnitude` — just rename.
+> ⚠️ For vision-based sensors, this is NOT calibrated force in Newtons. Use `sensor_profile.elastomer.modulus_pa` for calibration.
 
-### 4. Force Peak
+### 5. `force_vector` — [float × 3] · Optional (L3+)
+
+3D contact force estimate [fx, fy, fz] in sensor frame.
 
 **Vision-based sensors:**
-- Computation: `max(|gray|)` where `gray = mean(R, G, B)` of differential image
-- Physical meaning: Peak single-pixel deformation intensity
+- fx, fy: derived from shear field (channel-separated spatial gradients)
+- fz: derived from normal deformation magnitude
+- Requires elastomer calibration for physical units
+
+### 6. `torque_vector` — [float × 3] · Optional
+
+3D torque estimate [τx, τy, τz] in sensor frame.
+
+- Computed from force_vector × contact_centroid offset
+- Requires known sensor geometry
+
+### 7. `slip_event` — bool · Required
+
+Whether the contact is currently slipping.
+
+**Vision-based sensors:**
+- Computation: gradient angle variance of differential image
+- `slip_event = true` if `var(gradient_angle) > threshold`
+- High angular variance → multi-directional displacement → slip
+
+**Force-array sensors:**
+- Computation: temporal variance of taxel activation pattern
+
+### 8. `slip_velocity` — [float × 2] · Optional (if slip_event=true)
+
+Estimated slip direction and speed [vx, vy] in sensor coordinates.
+
+- Vision-based: derived from Farneback optical flow between consecutive frames
+- Unit: pixel/frame (or mm/s with calibration)
+
+### 9. `manipulation_phase` — enum · Optional
+
+Current manipulation state.
+
+Values: `idle` | `approaching` | `initial_contact` | `stable_grasp` | `manipulating` | `slip` | `release`
+
+### 10. `texture_class` — enum · Optional
+
+Perceived surface texture category.
+
+Values: `smooth` | `rough` | `ridged` | `granular` | `compliant` | `slippery` | `unknown`
+
+### 11. `object_deformation` — float · Optional
+
+Estimated deformation of the contacted object.
+
+- Vision-based: peak deformation intensity `max(|gray|)` of differential image
 - Unit: arbitrary_unit
 
-### 5. Force Direction
+### 12. `temperature` — float · Optional
 
-**Vision-based sensors:**
-- Computation: `arctan2(weighted_mean_gy, weighted_mean_gx)` where weights = `|gray|`, gx/gy = spatial gradient of grayscale differential
-- Physical meaning: Intensity-weighted dominant direction of surface displacement in image coordinates
-- Unit: degree (0-360)
-- Note: NOT in world coordinates without extrinsic calibration
+Surface temperature at contact point (requires thermal sensor).
 
-### 6. Slip Entropy
+- Unit: °C
+- Only available for sensors with thermal capability
 
-**Vision-based sensors:**
-- Computation: `-sum(p * log(p))` where `p = histogram(grayscale_diff, bins=32, density=True) + 1e-10`
-- Physical meaning: Shannon entropy of the grayscale deformation distribution
-- Higher entropy → more complex/distributed contact patterns
-- Unit: dimensionless (nats)
+### 13. `confidence` — float · Required
 
-### 7. Slip Event
+Annotation confidence score [0.0, 1.0].
 
-**Vision-based sensors:**
-- Computation: `min(var(gradient_angle) / 100, 1.0)` where `gradient_angle = arctan2(gy, gx)` of grayscale differential
-- Physical meaning: Variance of gradient angles — high angular variance suggests multi-directional displacement consistent with slip
-- Unit: dimensionless [0, 1]
-- Note: This is a pixel-space heuristic, not a calibrated slip detector
+- 1.0: high confidence (strong signal, clear contact)
+- 0.5: moderate (weak signal, ambiguous)
+- 0.0: no confidence / not annotated
 
-### 8. Texture Energy
+### 14. `compliance_level` — enum · Required
 
-**Vision-based sensors:**
-- Computation: `mean(gray²)` where `gray = mean(R, G, B)` of differential image
-- Physical meaning: Mean squared intensity — related to deformation magnitude (squared), not surface texture per se
-- Unit: arbitrary_unit
+Schema compliance level of this frame.
 
-### 9. Edge Density
-
-**Vision-based sensors:**
-- Computation: `mean(|gradient(gray)| > percentile_90)`
-- Physical meaning: Fraction of pixels with sharp deformation edges
-- Unit: dimensionless [0, 1]
-
-### 10. Contact Area
-
-**Vision-based sensors:**
-- Computation: `mean(|gray| > 2 * std(gray))`
-- Physical meaning: Fraction of pixels exceeding 2σ — approximates contact region in pixel space
-- Unit: dimensionless [0, 1]
-- Note: Proportional to physical contact area when sensor geometry is known
-
-### 11. Centroid X
-
-**Vision-based sensors:**
-- Computation: `weighted_avg(col_index, weights=col_sums(|gray|)) / image_width`
-- Physical meaning: Lateral position of the contact centroid
-- Unit: dimensionless [0, 1]
-
-### 12. Normal Field Magnitude
-
-**Vision-based sensors:**
-- Computation: `sqrt(mean(R² + G² + B²))` of contact differential image
-- Physical meaning: Despite the name, this is RMS of the RGB differential — not an actual normal force measurement
-- Unit: arbitrary_unit
-
-### 13. Normal Field Variance
-
-**Vision-based sensors:**
-- Computation: `var(sqrt(gx² + gy²))` where gx, gy = gradient of mean(R,G,B) differential
-- Physical meaning: Non-uniformity of the deformation field
-- Unit: arbitrary_unit
-
-### 14. Shear Field Magnitude
-
-**Vision-based sensors:**
-- Computation: `sqrt(mean(|R_gx|)² + mean(|G_gy|)²)` where R_gx = spatial gradient of R channel (x-direction), G_gy = spatial gradient of G channel (y-direction)
-- Physical meaning: Shear deformation estimated from channel-separated spatial gradients
-- Unit: arbitrary_unit
-
-### 15. Shear Field Direction
-
-**Vision-based sensors:**
-- Computation: `arctan2(mean(|G_gy|), mean(|R_gx|))` in degrees
-- Physical meaning: Direction of shear deformation in image coordinates
-- Unit: degree (0-360)
-
-### 16. Delta Force Normal
-
-**Vision-based sensors:**
-- Computation: `|normal_field_t - normal_field_{t-1}|` — frame-to-frame change in normal deformation
-- Physical meaning: Rate of change of normal deformation
-- Unit: arbitrary_unit
-
-### 17. Delta Force Shear
-
-**Vision-based sensors:**
-- Computation: `|shear_field_t - shear_field_{t-1}|` — frame-to-frame change in shear deformation
-- Physical meaning: Rate of change of shear deformation
-- Unit: arbitrary_unit
-
-### 18. Friction Cone Ratio
-
-**Vision-based sensors:**
-- Computation: `shear_field_magnitude / normal_field_magnitude` (clamped to max 10.0)
-- Physical meaning: Analogous to friction cone concept (τ/σ < μ for no-slip), but computed from uncalibrated pixel values
-- Unit: dimensionless
-
-### 19. Optical Flow Magnitude
-
-**Vision-based sensors (requires OpenCV):**
-- Computation: `mean(magnitude)` of Farneback dense optical flow between consecutive frames
-- Physical meaning: Average pixel displacement between frames
-- Unit: pixel/frame
-
-### 20. Optical Flow Direction
-
-**Vision-based sensors (requires OpenCV):**
-- Computation: `mean(angle)` of Farneback dense optical flow
-- Physical meaning: Dominant motion direction in image coordinates
-- Unit: degree (0-360)
-
-### 21. Temporal Deformation Rate
-
-- Computation: `|deformation_magnitude_t - deformation_magnitude_{t-1}| / dt`
-- Physical meaning: How quickly contact intensity is changing
-- Unit: arbitrary_unit/s
-
-### 22. Contact Transition
-
-- Computation: `min(1.0, |contact_t - contact_{t-1}| + |Δcontact_area| * 5.0)`
-- Physical meaning: Contact state transition intensity — values near 1.0 indicate contact onset or release
-- Unit: dimensionless [0, 1]
+| Level | Meaning | Required Fields |
+|-------|---------|-----------------|
+| **L1** | Minimal | contact + slip_event + confidence |
+| **L2** | Force-aware | L1 + force_magnitude |
+| **L3** | Full wrench | L2 + force_vector |
+| **L4** | Complete | L3 + all optional fields populated |
 
 ---
 
-## Cascade Rules (v0.3+)
+## Compliance Level Assignment
+
+Each adapter declares a `default_compliance_level` based on its sensor capabilities:
+
+| Sensor | Default Level | Reason |
+|--------|:---:|--------|
+| GelSight / DIGIT | L3 | Vision → full 3D force estimation |
+| Daimon DM-TacClaw | L3 | Multimodal → force_vector available |
+| PaXini PXCap | L2 | Force array → magnitude only, no 3D vector |
+| VTouch | L3 | Vision-based |
+| UniVTAC | L3 | Vision-based |
+| TacQuad | L3 | Multi-sensor vision |
+| YCB-Slide | L3 | Vision-based |
+| PaXini GEN3 (real-time) | L2 | Force array, real-time |
+| Daimon DM-Tac (real-time) | L3 | Vision-based |
+
+---
+
+## Cascade Rules
 
 When a user modifies a field via the `patch()` method, the system enforces physical consistency:
 
 ### Rule 1: Contact Release → Zero Everything
 
-When `contact` is set to 0:
-- Zero out: `force_magnitude`, `force_peak`, `slip_event`, `delta_force_normal`, `delta_force_shear`, `contact_area`, `contact_transition`
-- Exception: `contact_transition` is only zeroed if its value > 0.5
-- Set `manipulation_phase` → `idle` (if it was in a contact-related phase)
+When `contact` is set to `false`:
+- Reset: `force_magnitude` → 0, `force_vector` → [0,0,0], `slip_event` → false
+- Set `manipulation_phase` → `release` (if was contact-related)
+- Set `compliance_level` → `L1` (force fields no longer valid)
 
 ### Rule 2: Slip Requires Contact
 
-When `slip_event` is set > 0.5 but `contact` < 0.5:
-- Set `contact` → 1.0 (slip implies contact)
+When `slip_event` is set to `true` but `contact` is `false`:
+- Set `contact` → `true` (slip implies contact)
 - If `manipulation_phase` was `idle`, upgrade to `slip`
 
 ### Rule 3: Force Requires Contact
 
-When `force_magnitude` is set > 0 but `contact` < 0.5:
-- Set `contact` → 1.0 (force implies contact)
+When `force_magnitude` is set > 0 but `contact` is `false`:
+- Set `contact` → `true` (force implies contact)
+
+### Rule 4: Compliance Level Auto-Update
+
+When fields are modified, `compliance_level` is recalculated:
+- Only `contact` + `slip_event` + `confidence` → L1
+- + `force_magnitude` > 0 → L2
+- + `force_vector` not all-zero → L3
+- + any optional field populated → L4
 
 ---
 
@@ -217,14 +214,15 @@ When `force_magnitude` is set > 0 but `contact` < 0.5:
 Each frame tracks its modification history in a `patches` list:
 
 ```python
-frame.patch("contact", 1.0, cascade=True)
+frame.patch("contact", True, cascade=True)
 # Returns:
 # {
 #     "field": "contact",
-#     "old_value": 0.0,
-#     "new_value": 1.0,
+#     "old_value": False,
+#     "new_value": True,
 #     "cascade": [
-#         {"field": "manipulation_phase", "old_value": "idle", "new_value": "initial_contact"}
+#         {"field": "manipulation_phase", "old_value": "idle", "new_value": "initial_contact"},
+#         {"field": "compliance_level", "old_value": "L1", "new_value": "L1"}
 #     ]
 # }
 ```
@@ -233,40 +231,13 @@ Patches are serialized to JSON for full audit trail — every correction is trac
 
 ---
 
-## Adapter-Specific Notes
-
-### Vision-Based Adapters (GelSight, Daimon, PaXini)
-
-All vision-based adapters follow the same pipeline:
-1. Load raw image frames (pkl, h5, or directory of images)
-2. Compute background-subtracted differential image against first frame (or provided baseline)
-3. Extract 22 dimensions from differential image
-4. Declare capabilities based on sensor type
-
-### Array-Based Adapters (ToucHD)
-
-- Input: Taxel activation matrix
-- Different computation path: direct from taxel values rather than image processing
-- Capabilities may differ (e.g., no `optical_flow_*` dimensions)
-
-### Event-Based Adapters (VTouch)
-
-- Input: Event stream (timestamp, taxel, polarity)
-- Requires binning into fixed time windows before annotation
-- May produce sparse annotations (many frames with zero values)
-
----
-
 ## Calibration Dependencies
 
-13 of the 22 dimensions require calibration to produce physically meaningful values. Without calibration:
-- Values are in **pixel space** (arbitrary_unit), not SI units
-- Cross-sensor comparisons are unreliable
-- Force-related names (e.g., "normal_field_magnitude") are misleading
+Most force-related values from vision-based sensors are in **pixel space** (arbitrary_unit), not SI units. Cross-sensor comparisons require calibration.
 
-The `sensor_profile.elastomer` field provides the physical parameters needed for calibration:
+The `sensor_profile.elastomer` field provides physical parameters:
 - `modulus_pa`: Young's modulus → enables deformation→force conversion
 - `thickness_mm`: Elastomer thickness → affects force-deformation relationship
 - `friction_coefficient`: Enables friction cone interpretation
 
-See the [Format Specification](tlabel-format.md) for the full `sensor_profile` schema.
+See the [Schema JSON](../schema/tlabel-schema.json) for the complete field definitions.
