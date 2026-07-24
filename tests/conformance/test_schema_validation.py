@@ -10,6 +10,7 @@ import pytest
 from pathlib import Path
 
 from tlabel.core.types import TLabelData, TLabelFrame
+from tlabel.core.schema import TLabelSchemaV2, SCHEMA_V2_FIELD_NAMES
 
 
 SCHEMA_PATH = Path(__file__).parent.parent.parent / "schema" / "tlabel-schema.json"
@@ -28,30 +29,16 @@ def sample_data():
         TLabelFrame(
             frame_idx=0,
             timestamp_s=0.0,
-            tlabel_v2={
-                "contact": 1.0,
-                "deformation_magnitude": 0.234,
-                "force_magnitude": 0.234,
-                "force_peak": 0.456,
-                "force_direction": 127.3,
-                "slip_entropy": 3.14,
-                "slip_event": 0.0,
-                "texture_energy": 0.054,
-                "edge_density": 0.12,
-                "contact_area": 0.35,
-                "centroid_x": 0.52,
-                "normal_field_magnitude": 0.230,
-                "normal_field_variance": 0.012,
-                "shear_field_magnitude": 0.089,
-                "shear_field_direction": 45.6,
-                "delta_force_normal": 0.015,
-                "delta_force_shear": 0.008,
-                "friction_cone_ratio": 0.387,
-                "optical_flow_magnitude": 1.23,
-                "optical_flow_direction": 89.4,
-                "temporal_deformation_rate": 0.05,
-                "contact_transition": 0.85,
-            },
+            schema_v2=TLabelSchemaV2(
+                contact=True,
+                force_magnitude=0.234,
+                slip_event=False,
+                contact_centroid=[0.52, 0.48],
+                contact_region="palmar",
+                object_deformation=0.234,
+                confidence=0.95,
+                compliance_level="L2",
+            ),
             manipulation_phase="stable_contact",
             confidence=0.95,
         )
@@ -66,7 +53,7 @@ def sample_data():
         },
         episode_info={"episode_id": "test_ep", "task": "test_task"},
         capabilities={"contact": True},
-        schema_version="0.8.0",
+        schema_version="0.17.0",
         sensor_id="test_sensor_01",
     )
 
@@ -81,25 +68,55 @@ def test_schema_is_valid_json():
     with open(SCHEMA_PATH) as f:
         schema = json.load(f)
     assert "$schema" in schema
-    assert schema["title"] == "TLabel Annotation Format"
+    assert schema["title"] == "TLabel Schema V2.1"
 
 
 def test_tlabel_data_conforms_to_schema(sample_data, schema):
-    """TLabelData.to_dict() output must validate against the JSON schema."""
+    """TLabelData.to_dict() output must validate against the JSON schema.
+
+    Note: The schema file contains OpenAPI-style extensions (required, unit,
+    required_when inside property definitions) which are not strictly valid
+    JSON Schema. We use a lenient validator that ignores unknown keywords.
+    """
     try:
         import jsonschema
     except ImportError:
         pytest.skip("jsonschema not installed")
 
     data_dict = sample_data.to_dict()
-    jsonschema.validate(instance=data_dict, schema=schema)
+
+    # Strip non-standard keywords from schema for strict JSON Schema validation
+    # The schema uses OpenAPI-style extensions; strip them for jsonschema compat
+    def _strip_extensions(obj):
+        if isinstance(obj, dict):
+            cleaned = {}
+            for k, v in obj.items():
+                if k in ("required", "required_when", "unit"):
+                    # Skip OpenAPI-style extensions inside property definitions
+                    # (but keep 'required' at the schema/object level where it's valid)
+                    if k == "required" and isinstance(v, list):
+                        cleaned[k] = _strip_extensions(v)
+                    continue
+                cleaned[k] = _strip_extensions(v)
+            return cleaned
+        elif isinstance(obj, list):
+            return [_strip_extensions(item) for item in obj]
+        return obj
+
+    clean_schema = _strip_extensions(schema)
+    jsonschema.validate(instance=data_dict, schema=clean_schema)
 
 
-def test_all_22_dimensions_present(sample_data):
-    """Every frame must have exactly 22 dimensions in tlabel_v2."""
+def test_all_14_dimensions_present(sample_data):
+    """Every frame must have all 14 Schema V2 dimensions."""
     for frame in sample_data.frames:
-        assert len(frame.tlabel_v2) == 22, (
-            f"Expected 22 dimensions, got {len(frame.tlabel_v2)}"
+        sv2_dict = frame.schema_v2.to_dict()
+        for field_name in SCHEMA_V2_FIELD_NAMES:
+            assert field_name in sv2_dict, (
+                f"Missing Schema V2 field: {field_name}"
+            )
+        assert len(sv2_dict) == 14, (
+            f"Expected 14 dimensions, got {len(sv2_dict)}"
         )
 
 
@@ -122,7 +139,7 @@ def test_frame_structure(sample_data):
     for frame in d["frames"]:
         assert "frame_idx" in frame
         assert "timestamp_s" in frame
-        assert "tlabel_v2" in frame
+        assert "schema_v2" in frame
         assert "manipulation_phase" in frame
         assert frame["manipulation_phase"] in valid_phases
 
@@ -131,23 +148,22 @@ def test_cascade_contact_zero():
     """Setting contact=0 should cascade zero other force fields."""
     frame = TLabelFrame(
         frame_idx=0, timestamp_s=0.0,
-        tlabel_v2={
-            "contact": 1.0, "deformation_magnitude": 0.5,
-            "force_magnitude": 0.5, "force_peak": 0.3,
-            "slip_event": 0.8, "delta_force_normal": 0.1,
-            "delta_force_shear": 0.05, "contact_area": 0.4,
-            "contact_transition": 0.9,
-        },
+        schema_v2=TLabelSchemaV2(
+            contact=True,
+            force_magnitude=0.5,
+            slip_event=True,
+            object_deformation=0.5,
+            contact_centroid=[0.5, 0.5],
+            confidence=0.9,
+            compliance_level="L2",
+        ),
         manipulation_phase="stable_contact",
     )
     frame.patch("contact", 0.0, cascade=True)
 
-    assert frame.tlabel_v2["force_magnitude"] == 0.0
-    assert frame.tlabel_v2["force_peak"] == 0.0
-    assert frame.tlabel_v2["slip_event"] == 0.0
-    assert frame.tlabel_v2["delta_force_normal"] == 0.0
-    assert frame.tlabel_v2["delta_force_shear"] == 0.0
-    assert frame.tlabel_v2["contact_area"] == 0.0
+    assert frame.schema_v2.force_magnitude == 0.0
+    assert frame.schema_v2.slip_event is False
+    assert frame.schema_v2.object_deformation == 0.0
     assert frame.manipulation_phase == "idle"
     assert len(frame.patches) == 1
     assert len(frame.patches[0]["cascade"]) > 0
@@ -157,12 +173,14 @@ def test_cascade_slip_without_contact():
     """Setting slip_event > 0.5 without contact should auto-set contact=1."""
     frame = TLabelFrame(
         frame_idx=0, timestamp_s=0.0,
-        tlabel_v2={"contact": 0.0, "slip_event": 0.0},
+        schema_v2=TLabelSchemaV2(
+            contact=False, slip_event=False, confidence=0.9,
+        ),
         manipulation_phase="idle",
     )
     frame.patch("slip_event", 0.8, cascade=True)
 
-    assert frame.tlabel_v2["contact"] == 1.0
+    assert frame.schema_v2.contact is True
     assert frame.manipulation_phase == "slip"
 
 
@@ -170,16 +188,18 @@ def test_cascade_force_without_contact():
     """Setting force > 0 without contact should auto-set contact=1."""
     frame = TLabelFrame(
         frame_idx=0, timestamp_s=0.0,
-        tlabel_v2={"contact": 0.0, "force_magnitude": 0.0},
+        schema_v2=TLabelSchemaV2(
+            contact=False, force_magnitude=None, slip_event=False, confidence=0.9,
+        ),
         manipulation_phase="idle",
     )
     frame.patch("force_magnitude", 0.5, cascade=True)
 
-    assert frame.tlabel_v2["contact"] == 1.0
+    assert frame.schema_v2.contact is True
 
 
 def test_feature_metadata_completeness():
-    """Feature metadata must cover all 22 dimensions."""
+    """Feature metadata must cover all 22 dimensions (v1 compat)."""
     from tlabel.features_meta import FEATURE_REGISTRY
 
     expected_dims = [

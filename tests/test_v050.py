@@ -4,6 +4,8 @@ import pytest
 import sys
 import os
 
+from tlabel.core.schema import TLabelSchemaV2
+
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
@@ -191,6 +193,21 @@ class TestPostProcess:
         assert processed[0].predictions["force_magnitude"] == 0.5  # Force preserved
 
 
+def _v050_schema(contact, force, slip, deformation=None, confidence=1.0):
+    """Helper: create TLabelSchemaV2 for v0.5.0 test data."""
+    is_contact = contact > 0.5 if isinstance(contact, float) else contact
+    is_slip = slip > 0.5 if isinstance(slip, float) else slip
+    return TLabelSchemaV2(
+        contact=is_contact,
+        force_magnitude=force if force > 0 else None,
+        slip_event=is_slip,
+        contact_centroid=[0.3, 0.3] if is_contact else None,
+        object_deformation=deformation if deformation and deformation > 0 else None,
+        confidence=confidence,
+        compliance_level="L2" if is_contact else "L1",
+    )
+
+
 class TestPredictEngineV050:
     """测试PredictEngine的v0.5.0改进"""
 
@@ -204,31 +221,17 @@ class TestPredictEngineV050:
             frames.append(TLabelFrame(
                 frame_idx=i,
                 timestamp_s=i * 0.033,
-                tlabel_v2={
-                    "contact": contact,
-                    "deformation_magnitude": 0.4 if contact > 0.5 else 0.0,
-                    "force_magnitude": force,
-                    "force_peak": force * 1.2,
-                    "slip_entropy": 0.3 if slip > 0.5 else 0.0,
-                    "slip_event": slip,
-                    "texture_energy": 0.2,
-                    "edge_density": 0.15,
-                    "contact_area": 0.5 if contact > 0.5 else 0.0,
-                    "centroid_x": 0.3,
-                    "normal_field_magnitude": 0.4,
-                    "normal_field_variance": 0.1,
-                    "shear_field_magnitude": 0.2 if slip > 0.5 else 0.0,
-                    "delta_force_normal": 0.05,
-                    "delta_force_shear": 0.1 if slip > 0.5 else 0.0,
-                    "friction_cone_ratio": 0.3,
-                },
+                schema_v2=_v050_schema(
+                    contact, force, slip,
+                    deformation=0.4 if contact > 0.5 else 0.0,
+                ),
                 manipulation_phase="idle" if contact < 0.5 else ("slip" if slip > 0.5 else "stable_contact"),
             ))
         return TLabelData(
             frames=frames,
             sensor_info={"type": "gelsight", "name": "GelSight Mini"},
             episode_info={"task": "grasp"},
-            capabilities={"dimensions": 22},
+            capabilities={"dimensions": 14},
         )
 
     def test_predict_with_postprocess(self):
@@ -264,31 +267,22 @@ class TestPredictEngineV050:
             contact = 0.0  # All unknown
             frames.append(TLabelFrame(
                 frame_idx=i, timestamp_s=i * 0.033,
-                tlabel_v2={
-                    "contact": 0.0,
-                    "deformation_magnitude": 0.5 if 10 <= i <= 40 else 0.0,
-                    "force_magnitude": 0.6 if 10 <= i <= 40 else 0.0,
-                    "slip_event": 0.0,
-                    "force_peak": 0.7 if 10 <= i <= 40 else 0.0,
-                    "slip_entropy": 0.0,
-                    "texture_energy": 0.2,
-                    "edge_density": 0.15,
-                    "contact_area": 0.5 if 10 <= i <= 40 else 0.0,
-                    "centroid_x": 0.3,
-                    "normal_field_magnitude": 0.4,
-                    "normal_field_variance": 0.1,
-                    "shear_field_magnitude": 0.2,
-                    "delta_force_normal": 0.05,
-                    "delta_force_shear": 0.1,
-                    "friction_cone_ratio": 0.3,
-                },
+                schema_v2=TLabelSchemaV2(
+                    contact=False,
+                    force_magnitude=0.6 if 10 <= i <= 40 else None,
+                    slip_event=False,
+                    contact_centroid=None,
+                    object_deformation=0.5 if 10 <= i <= 40 else None,
+                    confidence=1.0,
+                    compliance_level="L2" if 10 <= i <= 40 else "L1",
+                ),
                 manipulation_phase="idle",
             ))
         data = TLabelData(
             frames=frames,
             sensor_info={"type": "gelsight", "name": "GelSight Mini"},
             episode_info={"task": "grasp"},
-            capabilities={"dimensions": 22},
+            capabilities={"dimensions": 14},
         )
 
         summary = data.auto_label(min_confidence=0.5, enable_postprocess=True, enable_hmm_phase=True)
@@ -308,23 +302,18 @@ class TestMLEngineV050:
 
         frames = []
         for i in range(50):
+            is_contact = i > 10
             frames.append(TLabelFrame(
                 frame_idx=i, timestamp_s=i * 0.033,
-                tlabel_v2={
-                    "contact": 1.0 if i > 10 else 0.0,
-                    "deformation_magnitude": 0.5 if i > 10 else 0.0,
-                    "force_magnitude": 0.6 if i > 10 else 0.0,
-                    "slip_event": 0.0,
-                    "force_peak": 0.7, "slip_entropy": 0.0,
-                    "texture_energy": 0.2, "edge_density": 0.15,
-                    "contact_area": 0.5, "centroid_x": 0.3,
-                    "normal_field_magnitude": 0.4,
-                    "normal_field_variance": 0.1,
-                    "shear_field_magnitude": 0.2,
-                    "delta_force_normal": 0.05,
-                    "delta_force_shear": 0.1,
-                    "friction_cone_ratio": 0.3,
-                },
+                schema_v2=TLabelSchemaV2(
+                    contact=is_contact,
+                    force_magnitude=0.6 if is_contact else None,
+                    slip_event=False,
+                    contact_centroid=[0.3, 0.3] if is_contact else None,
+                    object_deformation=0.5 if is_contact else None,
+                    confidence=1.0,
+                    compliance_level="L2" if is_contact else "L1",
+                ),
                 manipulation_phase="idle" if i <= 10 else "stable_contact",
             ))
 
@@ -332,7 +321,7 @@ class TestMLEngineV050:
             frames=frames,
             sensor_info={"type": "gelsight"},
             episode_info={},
-            capabilities={"dimensions": 22},
+            capabilities={"dimensions": 14},
         )
 
         engine = MLEngine()
@@ -349,23 +338,19 @@ class TestMLEngineV050:
 
         frames = []
         for i in range(50):
+            is_contact = 10 <= i <= 40
+            is_slip = 20 <= i <= 25
             frames.append(TLabelFrame(
                 frame_idx=i, timestamp_s=i * 0.033,
-                tlabel_v2={
-                    "contact": 1.0 if 10 <= i <= 40 else 0.0,
-                    "deformation_magnitude": 0.5 if 10 <= i <= 40 else 0.0,
-                    "force_magnitude": 0.6 if 10 <= i <= 40 else 0.0,
-                    "slip_event": 0.8 if 20 <= i <= 25 else 0.0,
-                    "force_peak": 0.7, "slip_entropy": 0.3,
-                    "texture_energy": 0.2, "edge_density": 0.15,
-                    "contact_area": 0.5, "centroid_x": 0.3,
-                    "normal_field_magnitude": 0.4,
-                    "normal_field_variance": 0.1,
-                    "shear_field_magnitude": 0.2,
-                    "delta_force_normal": 0.05,
-                    "delta_force_shear": 0.1,
-                    "friction_cone_ratio": 0.3,
-                },
+                schema_v2=TLabelSchemaV2(
+                    contact=is_contact,
+                    force_magnitude=0.6 if is_contact else None,
+                    slip_event=is_slip,
+                    contact_centroid=[0.3, 0.3] if is_contact else None,
+                    object_deformation=0.5 if is_contact else None,
+                    confidence=1.0,
+                    compliance_level="L2" if is_contact else "L1",
+                ),
                 manipulation_phase="idle" if i < 10 else ("slip" if 20 <= i <= 25 else "stable_contact"),
             ))
 
@@ -373,7 +358,7 @@ class TestMLEngineV050:
             frames=frames,
             sensor_info={"type": "gelsight"},
             episode_info={},
-            capabilities={"dimensions": 22},
+            capabilities={"dimensions": 14},
         )
 
         engine = MLEngine(MLEngineConfig(enable_postprocess=True, enable_hmm_phase=True))
@@ -395,7 +380,7 @@ class TestPanelV050:
 
         frames = [TLabelFrame(
             frame_idx=i, timestamp_s=i * 0.033,
-            tlabel_v2={"contact": 0.0, "force_magnitude": 0.0, "slip_event": 0.0},
+            schema_v2=TLabelSchemaV2(contact=False, force_magnitude=None, slip_event=False),
             manipulation_phase="idle",
         ) for i in range(10)]
 
@@ -403,7 +388,7 @@ class TestPanelV050:
             frames=frames,
             sensor_info={"type": "gelsight"},
             episode_info={},
-            capabilities={"dimensions": 22},
+            capabilities={"dimensions": 14},
         )
 
         panel = TLabelPanel(data, auto_label=True)
@@ -416,11 +401,12 @@ class TestPanelV050:
 
         frames = [TLabelFrame(
             frame_idx=i, timestamp_s=i * 0.033,
-            tlabel_v2={
-                "contact": 1.0 if i > 3 else 0.0,
-                "force_magnitude": 0.5 if i > 3 else 0.0,
-                "slip_event": 0.0,
-            },
+            schema_v2=TLabelSchemaV2(
+                contact=i > 3,
+                force_magnitude=0.5 if i > 3 else None,
+                slip_event=False,
+                contact_centroid=[0.5, 0.5] if i > 3 else None,
+            ),
             manipulation_phase="idle",
         ) for i in range(10)]
 
@@ -428,7 +414,7 @@ class TestPanelV050:
             frames=frames,
             sensor_info={"type": "gelsight"},
             episode_info={},
-            capabilities={"dimensions": 22},
+            capabilities={"dimensions": 14},
         )
 
         # Pre-run auto_label

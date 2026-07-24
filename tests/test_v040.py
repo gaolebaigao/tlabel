@@ -5,6 +5,8 @@ import os
 import pytest
 from pathlib import Path
 
+from tlabel.core.schema import TLabelSchemaV2
+
 
 class TestEpisodeLabel:
     """Episode级标注测试"""
@@ -13,23 +15,17 @@ class TestEpisodeLabel:
         from tlabel.core.types import TLabelData, TLabelFrame
         frames = []
         for i in range(n_frames):
+            is_contact = i % 3 == 0
             f = TLabelFrame(
                 frame_idx=i,
                 timestamp_s=i / 30.0,
-                tlabel_v2={
-                    "contact": 1.0 if i % 3 == 0 else 0.0,
-                    "force_magnitude": 0.5 if i % 3 == 0 else 0.0,
-                    "slip_event": 0.0, "force_peak": 0.0,
-                    "deformation_magnitude": 0.0, "force_direction": 0.0,
-                    "slip_entropy": 0.0, "texture_energy": 0.0,
-                    "edge_density": 0.0, "contact_area": 0.0,
-                    "centroid_x": 0.5, "normal_field_magnitude": 0.0,
-                    "normal_field_variance": 0.0,
-                    "shear_field_magnitude": 0.0,
-                    "shear_field_direction": 0.0,
-                    "delta_force_normal": 0.0, "delta_force_shear": 0.0,
-                    "friction_cone_ratio": 0.0,
-                },
+                schema_v2=TLabelSchemaV2(
+                    contact=is_contact,
+                    force_magnitude=0.5 if is_contact else None,
+                    slip_event=False,
+                    contact_centroid=[0.5, 0.5] if is_contact else None,
+                    confidence=0.9,
+                ),
                 manipulation_phase="idle",
                 confidence=0.9,
             )
@@ -105,21 +101,15 @@ class TestQualityScore:
             f = TLabelFrame(
                 frame_idx=i,
                 timestamp_s=i / 30.0,
-                tlabel_v2={
-                    "contact": 1.0 if is_contact else 0.0,
-                    "force_magnitude": 0.5 if is_contact else 0.0,
-                    "slip_event": 0.0, "force_peak": 0.0,
-                    "deformation_magnitude": 0.3 if is_contact else 0.0,
-                    "force_direction": 0.2, "slip_entropy": 0.1,
-                    "texture_energy": 0.15, "edge_density": 0.2,
-                    "contact_area": 0.4 if is_contact else 0.0,
-                    "centroid_x": 0.5, "normal_field_magnitude": 0.3 if is_contact else 0.0,
-                    "normal_field_variance": 0.1, "shear_field_magnitude": 0.0,
-                    "shear_field_direction": 0.0, "delta_force_normal": 0.05,
-                    "delta_force_shear": 0.03, "friction_cone_ratio": 0.7,
-                    "optical_flow_magnitude": 0.0, "optical_flow_direction": 0.0,
-                    "temporal_deformation_rate": 0.0, "contact_transition": 0.0,
-                },
+                schema_v2=TLabelSchemaV2(
+                    contact=is_contact,
+                    force_magnitude=0.5 if is_contact else None,
+                    slip_event=False,
+                    contact_centroid=[0.5, 0.5] if is_contact else None,
+                    object_deformation=0.3 if is_contact else None,
+                    confidence=0.95,
+                    compliance_level="L2" if is_contact else "L1",
+                ),
                 manipulation_phase="stable_contact" if is_contact else "idle",
                 confidence=0.95,
             )
@@ -186,23 +176,17 @@ class TestDescribe:
         from tlabel.core.types import TLabelData, TLabelFrame
         frames = []
         for i in range(n_frames):
+            is_contact = i % 3 == 0
             f = TLabelFrame(
                 frame_idx=i,
                 timestamp_s=i / 30.0,
-                tlabel_v2={
-                    "contact": 1.0 if i % 3 == 0 else 0.0,
-                    "force_magnitude": round(0.5 * (i + 1) / n_frames, 4),
-                    "slip_event": 0.0, "force_peak": 0.0,
-                    "deformation_magnitude": 0.0, "force_direction": 0.0,
-                    "slip_entropy": 0.0, "texture_energy": 0.0,
-                    "edge_density": 0.0, "contact_area": 0.0,
-                    "centroid_x": 0.5, "normal_field_magnitude": 0.0,
-                    "normal_field_variance": 0.0,
-                    "shear_field_magnitude": 0.0,
-                    "shear_field_direction": 0.0,
-                    "delta_force_normal": 0.0, "delta_force_shear": 0.0,
-                    "friction_cone_ratio": 0.0,
-                },
+                schema_v2=TLabelSchemaV2(
+                    contact=is_contact,
+                    force_magnitude=round(0.5 * (i + 1) / n_frames, 4),
+                    slip_event=False,
+                    contact_centroid=[0.5, 0.5] if is_contact else None,
+                    confidence=0.9,
+                ),
                 manipulation_phase="idle",
                 confidence=0.9,
             )
