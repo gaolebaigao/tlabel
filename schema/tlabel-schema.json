@@ -1,17 +1,17 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "TLabel Annotation Format",
+  "title": "TLabel Schema V2.1",
   "version": "2.1.0",
   "description": "Schema for TLabel cross-sensor tactile annotation files. Defines a 14-dimensional semantic space with Compliance Level (L1-L4) stratification.",
   "type": "object",
-  "required": ["schema_version", "sensor_info", "capabilities", "episodes"],
+  "required": ["schema_version", "sensor", "capabilities", "episodes"],
   "properties": {
     "schema_version": {
       "type": "string",
       "pattern": "^2\\.1\\.0$",
       "description": "TLabel schema version. Must be exactly 2.1.0."
     },
-    "sensor_info": {
+    "sensor": {
       "type": "object",
       "required": ["sensor_name", "sensor_type", "adapter_name", "adapter_version"],
       "description": "Hardware and adapter software description.",
