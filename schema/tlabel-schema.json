@@ -8,13 +8,12 @@
     "schema_version",
     "sensor",
     "capabilities",
-    "episode"
+    "frames"
   ],
   "properties": {
     "schema_version": {
       "type": "string",
-      "pattern": "^2\\.1\\.0$",
-      "description": "TLabel schema version. Must be exactly 2.1.0."
+      "description": "TLabel package version (e.g., 0.17.0). The Schema V2 spec version is 2.1."
     },
     "sensor": {
       "type": "object",
@@ -192,6 +191,92 @@
           }
         }
       }
+    },
+    "frames": {
+      "type": "array",
+      "description": "Per-frame annotation sequence.",
+      "items": {
+        "type": "object",
+        "required": [
+          "frame_idx",
+          "timestamp_s",
+          "schema_v2",
+          "confidence"
+        ],
+        "properties": {
+          "frame_idx": {
+            "type": "integer"
+          },
+          "timestamp_s": {
+            "type": "number"
+          },
+          "schema_v2": {
+            "type": "object"
+          },
+          "manipulation_phase": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "is_first": {
+            "type": "boolean"
+          },
+          "is_last": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "format": {
+      "type": "string"
+    },
+    "schema_version_v2": {
+      "type": "string"
+    },
+    "sensor_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "sensor_profile": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "calibration": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "feature_names_v2": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "tlabel_dimensions_v2": {
+      "type": "integer"
+    },
+    "feature_metadata": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "primitive_annotations": {
+      "type": "array"
+    },
+    "tactile_events": {
+      "type": "array"
     }
   }
 }
