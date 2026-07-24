@@ -36,3 +36,4 @@ docs/DESIGN-INTERNAL.md
 tmp/
 *.tmp
 *.bak
+internal-docs/PRODUCT_DEFINITION.md
