@@ -68,18 +68,7 @@
     "capabilities": {
       "type": "object",
       "required": [
-        "contact",
-        "contact_centroid",
-        "force_magnitude",
-        "force_vector",
-        "torque_vector",
-        "slip_event",
-        "slip_velocity",
-        "manipulation_phase",
-        "texture_class",
-        "object_deformation",
-        "temperature",
-        "confidence"
+        "contact"
       ],
       "description": "Boolean declarations for each semantic dimension. Indicates whether the adapter can populate the corresponding field.",
       "properties": {
