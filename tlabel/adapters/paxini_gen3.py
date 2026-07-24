@@ -41,6 +41,7 @@ from typing import Optional, Dict, Any, List, Iterator
 
 from tlabel.adapters.base import SensorAdapterBase
 from tlabel.core.types import TLabelData, TLabelFrame
+from tlabel.core.schema import TLabelSchemaV2
 
 try:
     import paxini
@@ -91,6 +92,8 @@ class PaxiniGen3Adapter(SensorAdapterBase):
       1. 实时流采集: 使用connect() + stream_frames() + disconnect()
       2. 文件加载: 使用load()加载.paxini录制文件（向后兼容）
 
+    Compliance Level: L2（只有 total_force_n 法向力标量，无剪切力）
+
     依赖: pip install paxini-sdk
 
     用法示例:
@@ -105,6 +108,8 @@ class PaxiniGen3Adapter(SensorAdapterBase):
         data = adapter.load("recording.paxini")
     """
 
+    default_compliance_level: str = "L2"
+
     def __init__(self):
         self._sensor = None
         self._connected = False
@@ -118,6 +123,65 @@ class PaxiniGen3Adapter(SensorAdapterBase):
     @property
     def supported_extensions(self) -> List[str]:
         return [".paxini"]
+
+    # ─── Schema V2 提取 ───────────────────────────────────────
+
+    def extract_schema(self, raw_frame_data) -> TLabelSchemaV2:
+        """将原始数据帧转换为 TLabel Schema V2（14维）
+
+        参数:
+            raw_frame_data: dict，包含以下键：
+                - pressure_map_norm: ndarray (H,W) 归一化压力图
+                - contact_mask: ndarray (H,W) bool 接触掩码
+                - total_force_n: float 法向力（N）
+                - centroid: tuple (row, col) 接触质心
+                - in_contact: bool 是否接触
+                - contact_area_mm2: float 接触面积 mm²
+                - timestamp_s: float 时间戳
+                - prev_state: dict 或 None 上一帧状态
+                - dt: float 帧间隔
+                - slip_threshold: float 滑移质心偏移阈值
+                - force_slip_threshold: float 滑移力变化率阈值
+
+        返回:
+            TLabelSchemaV2 — L2级别，force_magnitude 从 total_force_n 映射，
+            force_vector 为 None（无法测3D力）
+        """
+        # 复用现有 _compute_tlabel_v2 计算逻辑获取22维dict
+        tlabel_v2, _ = self._compute_tlabel_v2(
+            pressure_map_norm=raw_frame_data["pressure_map_norm"],
+            contact_mask=raw_frame_data["contact_mask"],
+            total_force_n=raw_frame_data["total_force_n"],
+            centroid=raw_frame_data["centroid"],
+            in_contact=raw_frame_data["in_contact"],
+            contact_area_mm2=raw_frame_data["contact_area_mm2"],
+            timestamp_s=raw_frame_data["timestamp_s"],
+            dt=raw_frame_data.get("dt", 1.0 / 100),
+            prev_state=raw_frame_data.get("prev_state"),
+            slip_threshold=raw_frame_data.get("slip_threshold", SLIP_CENTROID_SHIFT_THRESHOLD),
+            force_slip_threshold=raw_frame_data.get("force_slip_threshold", SLIP_FORCE_RATE_THRESHOLD),
+        )
+
+        # 从22维dict映射到14维Schema V2
+        contact = float(tlabel_v2["contact"]) > 0.5
+        centroid_x = tlabel_v2.get("centroid_x", 0.5)
+
+        return TLabelSchemaV2(
+            contact=contact,
+            contact_centroid=[float(centroid_x), 0.0] if contact else None,
+            contact_region=None,
+            force_magnitude=float(tlabel_v2["force_magnitude"]),
+            force_vector=None,  # L2: 无法测3D力
+            torque_vector=None,
+            slip_event=float(tlabel_v2["slip_event"]) > 0.5,
+            slip_velocity=None,
+            manipulation_phase=None,
+            texture_class=None,
+            object_deformation=float(tlabel_v2["deformation_magnitude"]),
+            temperature=None,
+            confidence=self._compute_confidence(tlabel_v2),
+            compliance_level=self.default_compliance_level,
+        )
 
     # ─── 能力声明 ─────────────────────────────────────────────
 
@@ -322,7 +386,7 @@ class PaxiniGen3Adapter(SensorAdapterBase):
             frame = TLabelFrame(
                 frame_idx=frame_idx,
                 timestamp_s=round(timestamp_s, 6),
-                tlabel_v2=tlabel_v2,
+                schema_v2=TLabelSchemaV2.from_tlabel_v1(tlabel_v2),
                 manipulation_phase=phase,
                 confidence=confidence,
                 sensor_specific=sensor_specific,
@@ -485,7 +549,7 @@ class PaxiniGen3Adapter(SensorAdapterBase):
             frame = TLabelFrame(
                 frame_idx=seq,
                 timestamp_s=round(timestamp_s, 6),
-                tlabel_v2=tlabel_v2,
+                schema_v2=TLabelSchemaV2.from_tlabel_v1(tlabel_v2),
                 manipulation_phase=phase,
                 confidence=confidence,
                 sensor_specific=sensor_specific,

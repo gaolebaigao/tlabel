@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Optional, List
 
 from tlabel.core.types import TLabelData, TLabelFrame
+from tlabel.core.schema import TLabelSchemaV2
 
 # 内置Demo数据目录
 _DEMO_DIR = Path(__file__).parent / "demo_data"
@@ -145,7 +146,7 @@ def demo(sensor: Optional[str] = None, **kwargs) -> TLabelData:
         frame = TLabelFrame(
             frame_idx=fd["frame_idx"],
             timestamp_s=fd["timestamp_s"],
-            tlabel_v2=fd["tlabel_v2"],
+            schema_v2=TLabelSchemaV2.from_tlabel_v1(fd["tlabel_v2"]),
             manipulation_phase=fd.get("manipulation_phase", "idle"),
             confidence=fd.get("confidence", 1.0),
             sensor_specific=fd.get("sensor_specific"),
@@ -220,14 +221,12 @@ def _build_gelsight_force_demo(data: TLabelData) -> TLabelData:
     from tlabel.predict.force_estimator import auto_force_estimate
     from tlabel.predict.engine import PredictEngine
 
-    # 步骤1: 清零force_magnitude（模拟无力传感器）
+    # 步骤1: 清零force_magnitude（模拟无力传感器）— Schema V2
     for frame in data.frames:
-        frame.tlabel_v2["force_magnitude"] = 0.0
-        frame.tlabel_v2["delta_force_normal"] = 0.0
-        frame.tlabel_v2["delta_force_shear"] = 0.0
-        frame.tlabel_v2["normal_field_magnitude"] = 0.0
-        frame.tlabel_v2["normal_field_variance"] = 0.0
-        frame.tlabel_v2["shear_field_magnitude"] = 0.0
+        frame.schema_v2.force_magnitude = None
+        frame.schema_v2.force_vector = None
+        frame.sensor_specific["normal_field_magnitude"] = 0.0
+        frame.sensor_specific["normal_field_variance"] = 0.0
 
     # 步骤2: 设置传感器类型信息
     data.sensor_info = {
@@ -307,9 +306,10 @@ def _build_tactile_events_demo(data: TLabelData) -> TLabelData:
 
 def _build_realtime_sensor_demo(sensor: str) -> TLabelData:
     """
-    构建实时传感器Demo（paxini_gen3 / daimon_dm_tac）
+    构建实时传感器Demo（paxini_gen3 / daimon_dm_tac）— Schema V2
 
     由于这些传感器没有预设JSON文件，生成随机帧数据用于演示。
+    v0.17: 直接构建 TLabelSchemaV2，不再使用旧 22 维 tlabel_v2 dict。
     """
     import random
 
@@ -317,7 +317,7 @@ def _build_realtime_sensor_demo(sensor: str) -> TLabelData:
     is_paxini = sensor == "paxini_gen3"
 
     frames = []
-    prev_tlabel_v2 = None
+    prev_schema = None
     sample_rate = 100 if is_paxini else 120
     dt = 1.0 / sample_rate
 
@@ -325,83 +325,64 @@ def _build_realtime_sensor_demo(sensor: str) -> TLabelData:
     for fi in range(num_frames):
         phase_frac = fi / num_frames
         if phase_frac < 0.2:
-            contact = 0.0
+            contact = False
             force_mag = 0.0
-            slip = 0.0
+            slip = False
             phase = "idle"
         elif phase_frac < 0.4:
-            contact = 1.0
+            contact = True
             force_mag = random.uniform(0.3, 0.7)
-            slip = 0.0
-            phase = "initial_contact"
+            slip = False
+            phase = "approach"
         elif phase_frac < 0.6:
-            contact = 1.0
+            contact = True
             force_mag = random.uniform(0.5, 0.9)
-            slip = random.uniform(0.5, 1.0) if random.random() > 0.5 else 0.0
-            phase = "slip" if slip > 0.5 else "stable_contact"
+            slip = random.random() > 0.5
+            phase = "grasp" if not slip else "grasp"
         elif phase_frac < 0.8:
-            contact = 1.0
+            contact = True
             force_mag = random.uniform(0.4, 0.7)
-            slip = 0.0
-            phase = "stable_contact"
+            slip = False
+            phase = "hold"
         else:
-            contact = 0.0
+            contact = False
             force_mag = 0.0
-            slip = 0.0
-            phase = "release"
+            slip = False
+            phase = "place"
 
         deformation_mag = force_mag * 0.8
-        contact_area = contact * random.uniform(0.3, 0.7)
-        nf_mag = force_mag
-        nf_var = force_mag * 0.1
+        contact_area = 1.0 * random.uniform(0.3, 0.7) if contact else 0.0
 
-        temporal_deform_rate = 0.0
-        if prev_tlabel_v2 is not None and dt > 0:
-            prev_deform = prev_tlabel_v2.get("deformation_magnitude", 0.0)
-            temporal_deform_rate = abs(deformation_mag - prev_deform) / dt
+        # Schema V2 compliance level
+        compliance_level = "L2" if force_mag > 0 else "L1"
 
-        contact_trans = 0.0
-        if prev_tlabel_v2 is not None:
-            prev_contact = prev_tlabel_v2.get("contact", 0.0)
-            prev_area = prev_tlabel_v2.get("contact_area", 0.0)
-            contact_trans = min(1.0, abs(contact - prev_contact) +
-                                abs(contact_area - prev_area) * 5.0)
-
-        tlabel_v2 = {
-            "contact": contact,
-            "deformation_magnitude": round(deformation_mag, 4),
-            "force_magnitude": round(force_mag, 4),
-            "force_peak": round(force_mag * 1.3, 4),
-            "force_direction": 0.0,
-            "slip_entropy": round(slip * 0.5, 4),
-            "slip_event": slip,
-            "texture_energy": 0.0 if is_paxini else round(random.uniform(0, 0.1), 4),
-            "edge_density": 0.0 if is_paxini else round(random.uniform(0, 0.1), 4),
-            "contact_area": round(min(contact_area, 1.0), 4),
-            "centroid_x": 0.5,
-            "normal_field_magnitude": round(nf_mag, 4),
-            "normal_field_variance": round(nf_var, 4),
-            "shear_field_magnitude": 0.0 if is_paxini else round(slip * 0.3, 4),
-            "shear_field_direction": 0.0 if is_paxini else round(random.uniform(0, 360), 2),
-            "delta_force_normal": round(abs(force_mag - (prev_tlabel_v2.get("force_magnitude", 0.0) if prev_tlabel_v2 else 0.0)), 4),
-            "delta_force_shear": 0.0 if is_paxini else round(slip * 0.1, 4),
-            "friction_cone_ratio": 0.0 if is_paxini else round(random.uniform(0, 0.5), 4),
-            "optical_flow_magnitude": 0.0,
-            "optical_flow_direction": 0.0,
-            "temporal_deformation_rate": round(temporal_deform_rate, 4),
-            "contact_transition": round(contact_trans, 4),
-        }
+        # Build TLabelSchemaV2 directly
+        schema = TLabelSchemaV2(
+            contact=contact,
+            contact_centroid=[0.5, 0.5] if contact else None,
+            force_magnitude=round(force_mag, 4) if force_mag > 0 else None,
+            force_vector=None,
+            slip_event=slip,
+            slip_velocity=None,
+            manipulation_phase=phase if phase in ("pre_contact", "approach", "grasp", "lift", "hold", "place") else None,
+            object_deformation=round(deformation_mag, 4) if deformation_mag > 0 else None,
+            confidence=0.8 if contact else 0.95,
+            compliance_level=compliance_level,
+        )
 
         frame = TLabelFrame(
             frame_idx=fi,
             timestamp_s=round(fi / sample_rate, 4),
-            tlabel_v2=tlabel_v2,
+            schema_v2=schema,
             manipulation_phase=phase,
-            confidence=0.8 if contact > 0.5 else 0.95,
-            sensor_specific={"demo": True, "source": sensor},
+            confidence=0.8 if contact else 0.95,
+            sensor_specific={
+                "demo": True, "source": sensor,
+                "contact_area": round(min(contact_area, 1.0), 4),
+            },
         )
         frames.append(frame)
-        prev_tlabel_v2 = tlabel_v2
+        prev_schema = schema
 
     if is_paxini:
         sensor_info = {
@@ -411,19 +392,6 @@ def _build_realtime_sensor_demo(sensor: str) -> TLabelData:
             "modality": "pressure_array",
         }
         sensor_id = "paxini_gen3"
-        caps = {
-            "contact": True, "deformation_magnitude": True,
-            "force_magnitude": True, "force_peak": True,
-            "force_direction": False, "slip_entropy": True,
-            "slip_event": True, "texture_energy": False,
-            "edge_density": False, "contact_area": True,
-            "centroid_x": True, "normal_field_magnitude": True,
-            "normal_field_variance": True, "shear_field_magnitude": False,
-            "shear_field_direction": False, "delta_force_normal": True,
-            "delta_force_shear": False, "friction_cone_ratio": False,
-            "optical_flow_magnitude": False, "optical_flow_direction": False,
-            "temporal_deformation_rate": True, "contact_transition": True,
-        }
     else:
         sensor_info = {
             "type": "vision-based_tactile",
@@ -432,19 +400,17 @@ def _build_realtime_sensor_demo(sensor: str) -> TLabelData:
             "modality": "vtla_multimodal",
         }
         sensor_id = "daimon_dm_tac"
-        caps = {
-            "contact": True, "deformation_magnitude": True,
-            "force_magnitude": True, "force_peak": True,
-            "force_direction": True, "slip_entropy": True,
-            "slip_event": True, "texture_energy": True,
-            "edge_density": True, "contact_area": True,
-            "centroid_x": True, "normal_field_magnitude": True,
-            "normal_field_variance": True, "shear_field_magnitude": True,
-            "shear_field_direction": True, "delta_force_normal": True,
-            "delta_force_shear": True, "friction_cone_ratio": True,
-            "optical_flow_magnitude": True, "optical_flow_direction": True,
-            "temporal_deformation_rate": True, "contact_transition": True,
-        }
+
+    # Schema V2 capabilities (14维)
+    caps = {
+        "contact": True, "contact_centroid": True,
+        "contact_region": False, "force_magnitude": True,
+        "force_vector": False, "torque_vector": False,
+        "slip_event": True, "slip_velocity": False,
+        "manipulation_phase": True, "texture_class": False,
+        "object_deformation": True, "temperature": False,
+        "confidence": True, "compliance_level": True,
+    }
 
     return TLabelData(
         frames=frames,

@@ -12,6 +12,7 @@ from typing import Optional, Dict, Any, List
 
 from tlabel.adapters.base import BaseAdapter
 from tlabel.core.types import TLabelData, TLabelFrame
+from tlabel.core.schema import TLabelSchemaV2
 
 try:
     import cv2
@@ -229,7 +230,12 @@ def _infer_phases(frames_info):
 
 
 class GelSightAdapter(BaseAdapter):
-    """GelSight/DIGIT force pkl → TLabelData"""
+    """GelSight/DIGIT force pkl → TLabelData
+
+    Compliance Level: L2（默认，无标定数据时）/ L3（有标定数据可提取 force_vector）
+    """
+
+    default_compliance_level: str = "L2"
 
     @property
     def name(self) -> str:
@@ -238,6 +244,71 @@ class GelSightAdapter(BaseAdapter):
     @property
     def supported_extensions(self):
         return [".pkl", ".pickle"]
+
+    def extract_schema(self, raw_frame_data) -> TLabelSchemaV2:
+        """将原始数据帧转换为 TLabel Schema V2（14维）
+
+        参数:
+            raw_frame_data: dict，包含以下键：
+                - diff_img: ndarray 或 None 背景减除后的图像
+                - is_contact: bool 是否接触
+                - force_vector_N: list[float] 或 None [Fx,Fy,Fz] 标定力向量
+                - delta_mag_shear: float 或 None
+                - delta_mag_normal: float 或 None
+                - coef_friction: float 或 None
+                - prev_diff_img: ndarray 或 None 上一帧背景减除图像
+                - optical_flow_magnitude: float（默认0.0）
+                - optical_flow_direction: float（默认0.0）
+                - temporal_deformation_rate: float（默认0.0）
+                - contact_transition: float（默认0.0）
+
+        返回:
+            TLabelSchemaV2 — L2（默认）或 L3（有标定力向量时），
+            force_magnitude 从变形区域估算，force_vector 有标定数据则填，
+            object_deformation 从图像提取
+        """
+        # 复用现有模块级 _extract_tlabel_v2 函数获取22维dict
+        tlabel_v2 = _extract_tlabel_v2(
+            diff_img=raw_frame_data["diff_img"],
+            is_contact=raw_frame_data["is_contact"],
+            delta_mag_shear=raw_frame_data.get("delta_mag_shear"),
+            delta_mag_normal=raw_frame_data.get("delta_mag_normal"),
+            coef_friction=raw_frame_data.get("coef_friction"),
+            prev_diff_img=raw_frame_data.get("prev_diff_img"),
+            optical_flow_magnitude=raw_frame_data.get("optical_flow_magnitude", 0.0),
+            optical_flow_direction=raw_frame_data.get("optical_flow_direction", 0.0),
+            temporal_deformation_rate=raw_frame_data.get("temporal_deformation_rate", 0.0),
+            contact_transition=raw_frame_data.get("contact_transition", 0.0),
+        )
+
+        contact = float(tlabel_v2["contact"]) > 0.5
+        centroid_x = tlabel_v2.get("centroid_x", 0.5)
+
+        # 判断是否有标定力向量 → 动态升级 compliance_level
+        force_vector_N = raw_frame_data.get("force_vector_N")
+        if force_vector_N is not None and len(force_vector_N) == 3:
+            compliance_level = "L3"
+            force_vector = [float(v) for v in force_vector_N]
+        else:
+            compliance_level = self.default_compliance_level  # L2
+            force_vector = None
+
+        return TLabelSchemaV2(
+            contact=contact,
+            contact_centroid=[float(centroid_x), 0.5] if contact else None,
+            contact_region=None,
+            force_magnitude=float(tlabel_v2["deformation_magnitude"]),
+            force_vector=force_vector,
+            torque_vector=None,
+            slip_event=float(tlabel_v2["slip_event"]) > 0.5,
+            slip_velocity=None,
+            manipulation_phase=None,
+            texture_class=None,
+            object_deformation=float(tlabel_v2["deformation_magnitude"]),
+            temperature=None,
+            confidence=0.8 if contact else 0.95,
+            compliance_level=compliance_level,
+        )
 
     def get_capabilities(self) -> Dict[str, bool]:
         return {
@@ -417,7 +488,7 @@ class GelSightAdapter(BaseAdapter):
             frame = TLabelFrame(
                 frame_idx=gidx,
                 timestamp_s=round(gidx / 30.0, 4),
-                tlabel_v2=tlabel_v2,
+                schema_v2=TLabelSchemaV2.from_tlabel_v1(tlabel_v2),
                 manipulation_phase=phases[i],
                 confidence=confidence,
                 sensor_specific=sensor_specific,

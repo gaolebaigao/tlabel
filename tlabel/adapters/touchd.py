@@ -49,12 +49,14 @@ JSON结构:
 """
 
 import json
+import math
 import numpy as np
 from pathlib import Path
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Union
 
 from tlabel.adapters.base import BaseAdapter
 from tlabel.core.types import TLabelData, TLabelFrame
+from tlabel.core.schema import TLabelSchemaV2
 
 try:
     import cv2
@@ -353,6 +355,9 @@ class ToucHDAdapter(BaseAdapter):
         data = load("ToucHD-Force/", format="touchd", sensor="all")
     """
 
+    # v0.17: Compliance Level L3 — ToucHD是唯一拥有完整3D力标签(Fx,Fy,Fz)的数据集
+    default_compliance_level: str = "L3"
+
     @property
     def name(self) -> str:
         return "touchd"
@@ -390,6 +395,92 @@ class ToucHDAdapter(BaseAdapter):
                 "Custom (BioTip)",
             ],
         }
+
+    def extract_schema(self, raw_frame_data: Union[TLabelFrame, Dict]) -> TLabelSchemaV2:
+        """将原始数据帧转换为 TLabel Schema V2 (14维结构化)
+
+        ToucHD适配器策略（L3 — 唯一拥有完整3D力标签的数据集）:
+          - contact: 从tlabel_v2.contact推断
+          - contact_centroid: 从centroid_x估算 [cx, cy]
+          - force_magnitude: norm(force_vector)，从3D力标签直接计算
+          - force_vector: [Fx, Fy, Fz] 直接从传感器ground truth取
+          - compliance_level: L3（始终有完整3D力矢量）
+
+        Args:
+            raw_frame_data: TLabelFrame实例或tlabel_v2字典
+
+        Returns:
+            TLabelSchemaV2 — 14维结构化标注
+        """
+        # 统一获取 tlabel_v2 字典和 sensor_specific
+        if isinstance(raw_frame_data, TLabelFrame):
+            v2_dict = raw_frame_data.schema_v2.to_dict() if hasattr(raw_frame_data, 'schema_v2') and raw_frame_data.schema_v2 is not None else raw_frame_data
+            sensor_specific = raw_frame_data.sensor_specific or {}
+        elif isinstance(raw_frame_data, dict):
+            v2_dict = raw_frame_data
+            sensor_specific = raw_frame_data.get("sensor_specific", {})
+        else:
+            raise TypeError(f"raw_frame_data 类型不支持: {type(raw_frame_data)}")
+
+        # 基础字段：复用 from_tlabel_v1 通用映射
+        v1_dict = dict(v2_dict)
+        v1_dict["confidence"] = v2_dict.get("confidence", 1.0)
+        schema = TLabelSchemaV2.from_tlabel_v1(v1_dict)
+
+        # --- ToucHD特有增强: 直接使用3D力标签 ---
+
+        # 1. force_vector: 直接从sensor_specific中取3D力标注
+        #    ToucHD数据中有 force_xyz_normalized 和 force_xyz_raw_N
+        force_xyz = None
+        if "force_xyz_normalized" in sensor_specific:
+            force_xyz = sensor_specific["force_xyz_normalized"]
+        elif "force_xyz_raw_N" in sensor_specific:
+            force_xyz = sensor_specific["force_xyz_raw_N"]
+
+        if force_xyz is not None and len(force_xyz) == 3:
+            # force_xyz: [Fx, Fy, Fz]（Fz已取绝对值，正值=下压）
+            fx, fy, fz = float(force_xyz[0]), float(force_xyz[1]), float(force_xyz[2])
+            schema.force_vector = [round(fx, 4), round(fy, 4), round(fz, 4)]
+
+            # 2. force_magnitude: 从3D力矢量直接计算（比图像估算更准确）
+            schema.force_magnitude = round(math.sqrt(fx**2 + fy**2 + fz**2), 4)
+        else:
+            # fallback: 使用tlabel_v2中的force_magnitude（从图像估算）
+            fm = v2_dict.get("force_magnitude")
+            if fm is not None and fm > 0:
+                schema.force_magnitude = float(fm)
+            schema.force_vector = None
+
+        # 3. contact_centroid: 从centroid_x估算
+        centroid_x = v2_dict.get("centroid_x")
+        if centroid_x is not None and schema.contact:
+            schema.contact_centroid = [float(centroid_x), 0.0]
+
+        # 4. object_deformation: 从deformation_magnitude提取
+        deform = v2_dict.get("deformation_magnitude")
+        if deform is not None and deform > 0:
+            schema.object_deformation = float(deform)
+
+        # 5. slip_velocity: 从optical_flow提取
+        if schema.slip_event:
+            of_mag = v2_dict.get("optical_flow_magnitude", 0.0)
+            of_dir = v2_dict.get("optical_flow_direction", 0.0)
+            if of_mag > 1e-6:
+                of_rad = math.radians(of_dir)
+                schema.slip_velocity = [round(of_mag * math.cos(of_rad), 4),
+                                        round(of_mag * math.sin(of_rad), 4)]
+
+        # 6. compliance_level: 有force_vector时L3，否则降级到L2
+        #    正常load()路径中sensor_specific始终包含force_xyz，此时为L3
+        #    但如果从dict输入且缺少sensor_specific，则降级
+        if schema.force_vector is not None:
+            schema.compliance_level = "L3"
+        elif schema.force_magnitude is not None:
+            schema.compliance_level = "L2"
+        else:
+            schema.compliance_level = "L1"
+
+        return schema
 
     def load(self, file_path: str,
              trajectory_id: Optional[int] = None,
@@ -645,7 +736,7 @@ class ToucHDAdapter(BaseAdapter):
                     frame = TLabelFrame(
                         frame_idx=total_force_samples,
                         timestamp_s=round(total_force_samples / 30.0, 4),
-                        tlabel_v2=tlabel_v2,
+                        schema_v2=TLabelSchemaV2.from_tlabel_v1(tlabel_v2),
                         manipulation_phase=phase,
                         confidence=confidence,
                         sensor_specific=sensor_specific,
@@ -668,8 +759,8 @@ class ToucHDAdapter(BaseAdapter):
         frames_info = []
         for f in all_tlabel_frames:
             frames_info.append({
-                "is_contact": f.tlabel_v2.get("contact", 0) > 0.5,
-                "is_slip": f.tlabel_v2.get("slip_event", 0) > 0.5,
+                "is_contact": f.contact > 0.5,
+                "is_slip": f.slip_event > 0.5,
             })
         phases = _infer_phases(frames_info)
         for f, phase in zip(all_tlabel_frames, phases):
@@ -678,11 +769,11 @@ class ToucHDAdapter(BaseAdapter):
         # 统计
         contact_count = sum(
             1 for f in all_tlabel_frames
-            if f.tlabel_v2.get("contact", 0) > 0.5
+            if f.contact > 0.5
         )
         slip_count = sum(
             1 for f in all_tlabel_frames
-            if f.tlabel_v2.get("slip_event", 0) > 0.5
+            if f.slip_event > 0.5
         )
 
         sensor_info = {

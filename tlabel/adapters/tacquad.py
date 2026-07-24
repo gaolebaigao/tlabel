@@ -34,6 +34,7 @@ from typing import Optional, Dict, Any, List
 
 from tlabel.adapters.base import BaseAdapter
 from tlabel.core.types import TLabelData, TLabelFrame
+from tlabel.core.schema import TLabelSchemaV2
 
 try:
     import cv2
@@ -329,11 +330,15 @@ class TacQuadAdapter(BaseAdapter):
     - DuraGel (code 4)
     - Tac3D force field (optional, loaded when tac3d/ directory detected)
 
+    Compliance Level: L1（主要只有图像，部分子集有力信息但不确定）
+
     Usage:
         data = tlabel.load("tactile_datasets/tacquad/", format='tacquad')
         data = tlabel.load("tactile_datasets/tacquad/", sensor='digit')
         data = tlabel.load("tactile_datasets/tacquad/", subset='indoor')
     """
+
+    default_compliance_level: str = "L1"
 
     @property
     def name(self):
@@ -342,6 +347,57 @@ class TacQuadAdapter(BaseAdapter):
     @property
     def supported_extensions(self):
         return [".csv"]
+
+    def extract_schema(self, raw_frame_data) -> TLabelSchemaV2:
+        """将原始数据帧转换为 TLabel Schema V2（14维）
+
+        参数:
+            raw_frame_data: dict，包含以下键：
+                - diff_img: ndarray 或 None 背景减除后的图像
+                - is_contact: bool 是否接触
+                - prev_diff_img: ndarray 或 None 上一帧背景减除图像（可选）
+                - optical_flow_mag: float（默认0.0）
+                - optical_flow_dir_val: float（默认0.0）
+                - temporal_deform_rate: float（默认0.0）
+                - contact_transition: float（默认0.0）
+                - tac3d_force: ndarray 或 None Tac3D力场数据（可选）
+
+        返回:
+            TLabelSchemaV2 — L1级别，主要填 contact, contact_centroid,
+            slip_event, confidence；force_magnitude/force_vector 填 None
+        """
+        # 复用现有模块级 _extract_tlabel_v2 函数获取22维dict
+        tlabel_v2 = _extract_tlabel_v2(
+            diff_img=raw_frame_data["diff_img"],
+            is_contact=raw_frame_data["is_contact"],
+            prev_diff_img=raw_frame_data.get("prev_diff_img"),
+            optical_flow_mag=raw_frame_data.get("optical_flow_mag", 0.0),
+            optical_flow_dir_val=raw_frame_data.get("optical_flow_dir_val", 0.0),
+            temporal_deform_rate=raw_frame_data.get("temporal_deform_rate", 0.0),
+            contact_transition=raw_frame_data.get("contact_transition", 0.0),
+            tac3d_force=raw_frame_data.get("tac3d_force"),
+        )
+
+        contact = float(tlabel_v2["contact"]) > 0.5
+        centroid_x = tlabel_v2.get("centroid_x", 0.5)
+        is_slip = float(tlabel_v2["slip_event"]) > 0.5
+
+        return TLabelSchemaV2(
+            contact=contact,
+            contact_centroid=[float(centroid_x), 0.5] if contact else None,
+            contact_region=None,
+            force_magnitude=None,  # L1: 无可靠力测量
+            force_vector=None,     # L1: 无3D力
+            torque_vector=None,
+            slip_event=is_slip,
+            slip_velocity=None,
+            manipulation_phase=None,
+            texture_class=None,
+            object_deformation=None,
+            temperature=None,
+            confidence=self._compute_confidence(contact, is_slip),
+            compliance_level=self.default_compliance_level,
+        )
 
     def get_capabilities(self):
         return {
@@ -441,8 +497,8 @@ class TacQuadAdapter(BaseAdapter):
 
         # Infer manipulation phases
         frames_info = [
-            {"is_contact": f.tlabel_v2.get("contact", 0) > 0.5,
-             "is_slip": f.tlabel_v2.get("slip_event", 0) > 0.5}
+            {"is_contact": f.contact > 0.5,
+             "is_slip": f.slip_event > 0.5}
             for f in all_frames
         ]
         phases = _infer_phases(frames_info)
@@ -671,7 +727,7 @@ class TacQuadAdapter(BaseAdapter):
                 frame = TLabelFrame(
                     frame_idx=len(frames),
                     timestamp_s=round((t - start_frame) / 30.0, 4),
-                    tlabel_v2=tlabel_v2,
+                    schema_v2=TLabelSchemaV2.from_tlabel_v1(tlabel_v2),
                     manipulation_phase="idle",
                     confidence=confidence,
                     sensor_specific=sensor_specific,

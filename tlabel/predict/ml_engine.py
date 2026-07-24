@@ -1,16 +1,11 @@
 """
 MLEngine — 基于梯度提升的预标注引擎
 
-解决 rc2 的 4 个阻塞 Bug：
-  Bug1: 小数据训练崩溃 → 类别检查 + 优雅降级
-  Bug2: 校准空操作 → 实际应用校准映射
-  Bug3: Cascade反向约束 → types.py 已修复
-  Bug4: Contact二值化 → contact用回归模型保留连续值
-
-v0.5.0 改进：
-  - Phase使用HMM建模替代hash编码
-  - 集成时序后处理管线（平滑+HMM+联动修正）
-  - 置信度校准改进
+v0.17 Breaking Change:
+  - 移除 _compat 兼容层，所有字段通过 frame.schema_v2 直接访问
+  - FEATURE_FIELDS 只使用 Schema V2 字段名
+  - 移除旧字段名回退映射 (_FEATURE_FIELD_FALLBACK)
+  - fit() 只检查 schema_v2 字段可用性
 
 依赖: scikit-learn>=1.0, joblib>=1.0 (pip install tlabel[ml])
 """
@@ -28,23 +23,21 @@ from sklearn.pipeline import Pipeline
 import joblib
 import io
 
-from tlabel.core.types import TLabelData, TLabelFrame
+from tlabel.core.types import TLabelData, TLabelFrame, _sv2_scalar
 from tlabel.predict.engine import PredictEngine, PredictResult, PredictConfig
 
 
-REGRESSION_FIELDS = {"contact", "force_magnitude", "deformation_magnitude"}
+REGRESSION_FIELDS = {"contact", "force_magnitude", "object_deformation"}
 CLASSIFICATION_FIELDS = {"slip_event"}
 
 MIN_CLASSES = 2
 MIN_SAMPLES_PER_CLASS = 5
 MIN_TOTAL_SAMPLES = 30
 
+# Schema V2 特征字段列表（只使用 V2 字段名）
 FEATURE_FIELDS = [
-    "contact", "deformation_magnitude", "force_magnitude", "force_peak",
-    "slip_entropy", "slip_event", "texture_energy", "edge_density",
-    "contact_area", "centroid_x", "normal_field_magnitude",
-    "normal_field_variance", "shear_field_magnitude",
-    "delta_force_normal", "delta_force_shear", "friction_cone_ratio",
+    "contact", "object_deformation", "force_magnitude",
+    "slip_event", "confidence",
 ]
 
 
@@ -156,7 +149,6 @@ class FieldModel:
         if self.is_regression:
             values = self.model.predict(X_scaled)
             values = np.clip(values, 0.0, 1.0)
-            # v0.5.0: 基于预测区间估算置信度
             confidences = np.full(len(values), 0.7)
             return values, confidences
         else:
@@ -179,16 +171,7 @@ class MLEngine:
     """
     ML 预标注引擎
 
-    v0.5.0:
-      - Phase由HMM处理，ML不再训练phase模型
-      - 集成时序后处理管线
-      - 预测后自动做平滑+联动修正
-
-    用法:
-        engine = MLEngine()
-        engine.fit(data)
-        results = engine.predict(data)
-        engine.apply(data, results, min_confidence=0.75)
+    v0.17: 只使用 Schema V2 字段，不回退旧格式。
     """
 
     def __init__(self, config: Optional[MLEngineConfig] = None):
@@ -199,31 +182,41 @@ class MLEngine:
         self._is_fitted = False
         self._fit_report: Dict = {}
 
+    def _get_feature_value(self, frame: TLabelFrame, field_name: str) -> float:
+        """从 schema_v2 获取特征值"""
+        return _sv2_scalar(frame, field_name)
+
     def fit(self, data: TLabelData) -> "MLEngine":
         if not data.frames or len(data.frames) < MIN_TOTAL_SAMPLES:
             self._is_fitted = False
             self._fit_report["error"] = f"Insufficient data: {len(data.frames)} frames < {MIN_TOTAL_SAMPLES}"
             return self
 
-        sample_frame = data.frames[0].tlabel_v2
-        self._feature_names = [f for f in FEATURE_FIELDS if f in sample_frame]
+        sample_frame = data.frames[0]
+        # 只检查 schema_v2 中哪些特征可用
+        available_fields = []
+        for f in FEATURE_FIELDS:
+            val = getattr(sample_frame.schema_v2, f, None)
+            if val is not None:
+                available_fields.append(f)
+        self._feature_names = available_fields
 
-        if len(self._feature_names) < 5:
+        if len(self._feature_names) < 3:
             self._is_fitted = False
-            self._fit_report["error"] = f"Insufficient features: {len(self._feature_names)} < 5"
+            self._fit_report["error"] = f"Insufficient features: {len(self._feature_names)} < 3"
             return self
 
         self._rule_engine.fit(data)
 
+        # 构建特征矩阵
         X = np.array([
-            [f.tlabel_v2.get(k, 0.0) for k in self._feature_names]
+            [self._get_feature_value(f, k) for k in self._feature_names]
             for f in data.frames
         ])
 
-        # v0.5.0: 不再训练phase模型，由HMM处理
+        # Phase 由 HMM 处理，ML 不再训练 phase 模型
         enabled = self.config.enabled_fields
         target_fields = enabled if enabled else ["contact", "slip_event"]
-        # 移除manipulation_phase，交给HMM
         target_fields = [f for f in target_fields if f != "manipulation_phase"]
 
         self._fit_report = {"fields": {}, "total_frames": len(data.frames)}
@@ -235,13 +228,13 @@ class MLEngine:
             feature_indices = [i for i, k in enumerate(self._feature_names) if k != field_name]
             X_field = X[:, feature_indices]
 
+            # 从 schema_v2 获取目标值
+            y = np.array([_sv2_scalar(f, field_name) for f in data.frames])
+
             if field_name == "slip_event":
-                y = np.array([f.tlabel_v2.get("slip_event", 0.0) for f in data.frames])
                 y = (y > 0.5).astype(float)
             elif field_name == "contact":
-                y = np.array([f.tlabel_v2.get("contact", 0.0) for f in data.frames])
-            else:
-                y = np.array([f.tlabel_v2.get(field_name, 0.0) for f in data.frames])
+                y = (y > 0.5).astype(float)
 
             success = fm.fit(
                 X_field, y,
@@ -257,7 +250,6 @@ class MLEngine:
                 "is_calibrated": fm.is_calibrated,
             }
 
-        # v0.5.0: 记录phase由HMM处理
         self._fit_report["fields"]["manipulation_phase"] = {
             "status": "hmm",
             "reason": "Phase modeled by HMM+Viterbi (v0.5.0)"
@@ -273,7 +265,7 @@ class MLEngine:
         rule_results = self._rule_engine.predict(data) if self.config.fallback_to_rules else None
 
         X = np.array([
-            [f.tlabel_v2.get(k, 0.0) for k in self._feature_names]
+            [self._get_feature_value(f, k) for k in self._feature_names]
             for f in data.frames
         ]) if self._feature_names else None
 
@@ -320,7 +312,7 @@ class MLEngine:
                 method=method,
             ))
 
-        # v0.5.0: 时序后处理（平滑+HMM phase+联动修正）
+        # v0.5.0: 时序后处理
         if self.config.enable_postprocess and results:
             from tlabel.predict.postprocess import PostProcessor, PostProcessConfig
             pp_config = PostProcessConfig(
@@ -333,10 +325,10 @@ class MLEngine:
             frames_data = []
             for frame in data.frames:
                 frames_data.append({
-                    "contact": frame.tlabel_v2.get("contact", 0.0),
-                    "force_magnitude": frame.tlabel_v2.get("force_magnitude", 0.0),
-                    "slip_event": frame.tlabel_v2.get("slip_event", 0.0),
-                    "deformation_magnitude": frame.tlabel_v2.get("deformation_magnitude", 0.0),
+                    "contact": _sv2_scalar(frame, "contact"),
+                    "force_magnitude": _sv2_scalar(frame, "force_magnitude"),
+                    "slip_event": _sv2_scalar(frame, "slip_event"),
+                    "object_deformation": _sv2_scalar(frame, "object_deformation"),
                 })
 
             existing_phases = [f.manipulation_phase for f in data.frames]
@@ -354,19 +346,20 @@ class MLEngine:
             for field, value in result.predictions.items():
                 conf = result.confidence.get(field, 0.0)
                 if conf >= min_confidence:
-                    old = frame.tlabel_v2.get(field)
                     if field == "manipulation_phase":
                         if frame.manipulation_phase != str(value):
                             frame.manipulation_phase = str(value)
                             applied += 1
-                    elif field == "contact" and isinstance(old, (int, float)):
-                        if abs(old - value) < 0.05:
-                            continue
-                        frame.patch(field, value, cascade=cascade)
-                        applied += 1
-                    elif old != value:
-                        frame.patch(field, value, cascade=cascade)
-                        applied += 1
+                    else:
+                        old = _sv2_scalar(frame, field)
+                        if field == "contact" and isinstance(old, (int, float)):
+                            if abs(old - value) < 0.05:
+                                continue
+                            frame.patch(field, value, cascade=cascade)
+                            applied += 1
+                        elif old != value:
+                            frame.patch(field, value, cascade=cascade)
+                            applied += 1
         return applied
 
     def summary(self, results: List[PredictResult]) -> Dict:

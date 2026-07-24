@@ -140,7 +140,7 @@ def generate_panel_html(
 <div style="display:flex;gap:16px;padding:16px 20px;">
   <!-- Radar Chart -->
   <div style="flex:1;background:#fff;border-radius:10px;padding:12px;border:1px solid #e9ecef;">
-    <div style="font-size:12px;color:#868e96;margin-bottom:4px;" data-i18n="chart.radar">22维特征</div>
+    <div style="font-size:12px;color:#868e96;margin-bottom:4px;" data-i18n="chart.radar">14维Schema</div>
     <canvas id="{tid}-radar" width="360" height="340" style="width:100%;"></canvas>
   </div>
   <!-- Tactile Image (v0.12) -->
@@ -173,6 +173,7 @@ def generate_panel_html(
       <option value="contact" data-i18n="batch.optContact">接触 (0/1)</option>
       <option value="slip_event" data-i18n="batch.optSlip">滑移事件 (0/1)</option>
       <option value="force_magnitude" data-i18n="batch.optForce">力度</option>
+      <option value="object_deformation" data-i18n="batch.optDeformation">形变</option>
       <option value="manipulation_phase" data-i18n="batch.optPhase">操作阶段</option>
       <option value="primitive_label" data-i18n="batch.optPrimitive">Primitive 标注</option>
     </select>
@@ -555,7 +556,7 @@ def generate_panel_html(
       'stats.frames': '帧数', 'stats.duration': '时长', 'stats.contact': '接触率',
       'stats.slip': '滑移率', 'stats.modified': '已修正',
       'timeline.title': '时间轴',
-      'chart.radar': '22维特征',
+      'chart.radar': '14维Schema',
       'detail.title': '帧详情',
       'batch.title': '区间批量修正',
       'batch.frameRange': '帧范围：',
@@ -588,7 +589,7 @@ def generate_panel_html(
       'stats.title': '统计摘要 (describe)', 'stats.desc': '类 pandas.DataFrame.describe() 统计，由 Python 引擎预计算。',
       'stats.noData': '暂无统计数据',
       'batch.optContact': '接触 (0/1)', 'batch.optSlip': '滑移事件 (0/1)',
-      'batch.optForce': '力度', 'batch.optPhase': '操作阶段',
+      'batch.optForce': '力度', 'batch.optDeformation': '形变', 'batch.optPhase': '操作阶段',
       'episode.outSuccess': '✅ 成功 (success)', 'episode.outFailure': '❌ 失败 (failure)',
       'episode.outAborted': '⏹️ 中止 (aborted)', 'episode.outPartial': '⚠️ 部分 (partial)',
       'episode.mGrasp': '🤏 抓取 (grasp)', 'episode.mPush': '👆 推 (push)',
@@ -613,22 +614,21 @@ def generate_panel_html(
       'stats.count': '计数', 'stats.mean': '均值', 'stats.std': '标准差',
       'stats.min': '最小值', 'stats.max': '最大值',
       'stats.p25': '25%分位', 'stats.p50': '中位数', 'stats.p75': '75%分位',
-      // Radar chart i18n labels (dimension names)
-      'dim.contact': '接触', 'dim.deformation': '形变', 'dim.force': '力度',
-      'dim.force_peak': '峰值', 'dim.force_dir': '力向', 'dim.slip_entropy': '滑熵',
-      'dim.slip_event': '滑移', 'dim.texture': '纹理', 'dim.edge': '边缘',
-      'dim.contact_area': '面积', 'dim.centroid_x': '质心', 'dim.normal_mag': '法向',
-      'dim.normal_var': '法向变化', 'dim.shear_mag': '剪切', 'dim.shear_dir': '剪切向',
-      'dim.delta_fn': 'Δ法向', 'dim.delta_fs': 'Δ剪切', 'dim.friction': '摩擦',
-      'dim.flow_mag': '流速', 'dim.flow_dir': '流向', 'dim.deform_rate': '形变速',
-      'dim.transition': '相变',
+      // Radar chart i18n labels (dimension names — Schema V2 14维)
+      'dim.contact': '接触', 'dim.contact_centroid': '质心', 'dim.contact_region': '区域',
+      'dim.force_magnitude': '力度', 'dim.force_vector': '力向',
+      'dim.torque_vector': '扭矩', 'dim.slip_event': '滑移',
+      'dim.slip_velocity': '滑速', 'dim.manipulation_phase': '阶段',
+      'dim.texture_class': '纹理', 'dim.object_deformation': '形变',
+      'dim.temperature': '温度', 'dim.confidence': '置信',
+      'dim.compliance_level': '合规',
     }},
     'en': {{
       'app.title': 'TLabel Tactile Annotation',
       'stats.frames': 'Frames', 'stats.duration': 'Duration', 'stats.contact': 'Contact',
       'stats.slip': 'Slip', 'stats.modified': 'Modified',
       'timeline.title': 'Timeline',
-      'chart.radar': '22-Dim Features',
+      'chart.radar': '14-Dim Schema',
       'detail.title': 'Frame Detail',
       'batch.title': 'Batch Patch',
       'batch.frameRange': 'Range:',
@@ -661,7 +661,7 @@ def generate_panel_html(
       'stats.title': 'Statistics (describe)', 'stats.desc': 'pandas-like describe() stats, pre-computed by Python engine.',
       'stats.noData': 'No stats available',
       'batch.optContact': 'Contact (0/1)', 'batch.optSlip': 'Slip event (0/1)',
-      'batch.optForce': 'Force', 'batch.optPhase': 'Phase',
+      'batch.optForce': 'Force', 'batch.optDeformation': 'Deformation', 'batch.optPhase': 'Phase',
       'episode.outSuccess': '✅ Success', 'episode.outFailure': '❌ Failure',
       'episode.outAborted': '⏹️ Aborted', 'episode.outPartial': '⚠️ Partial',
       'episode.mGrasp': '🤏 Grasp', 'episode.mPush': '👆 Push',
@@ -686,15 +686,14 @@ def generate_panel_html(
       'stats.count': 'count', 'stats.mean': 'mean', 'stats.std': 'std',
       'stats.min': 'min', 'stats.max': 'max',
       'stats.p25': '25%', 'stats.p50': '50%', 'stats.p75': '75%',
-      // Radar chart i18n labels (dimension names)
-      'dim.contact': 'Contact', 'dim.deformation': 'Deform', 'dim.force': 'Force',
-      'dim.force_peak': 'Peak', 'dim.force_dir': 'Force Dir', 'dim.slip_entropy': 'Slip Ent',
-      'dim.slip_event': 'Slip', 'dim.texture': 'Texture', 'dim.edge': 'Edge',
-      'dim.contact_area': 'Area', 'dim.centroid_x': 'Centroid', 'dim.normal_mag': 'Normal',
-      'dim.normal_var': 'Norm Var', 'dim.shear_mag': 'Shear', 'dim.shear_dir': 'Shear Dir',
-      'dim.delta_fn': 'ΔNormal', 'dim.delta_fs': 'ΔShear', 'dim.friction': 'Friction',
-      'dim.flow_mag': 'Flow', 'dim.flow_dir': 'Flow Dir', 'dim.deform_rate': 'Def Rate',
-      'dim.transition': 'Transition',
+      // Radar chart i18n labels (dimension names — Schema V2 14维)
+      'dim.contact': 'Contact', 'dim.contact_centroid': 'Centroid', 'dim.contact_region': 'Region',
+      'dim.force_magnitude': 'Force', 'dim.force_vector': 'Force Vec',
+      'dim.torque_vector': 'Torque', 'dim.slip_event': 'Slip',
+      'dim.slip_velocity': 'Slip Vel', 'dim.manipulation_phase': 'Phase',
+      'dim.texture_class': 'Texture', 'dim.object_deformation': 'Deform',
+      'dim.temperature': 'Temp', 'dim.confidence': 'Conf',
+      'dim.compliance_level': 'Compliance',
     }}
   }};
 
@@ -744,8 +743,8 @@ def generate_panel_html(
     const frames = data.frames || [];
     document.getElementById(tid + '-stat-frames').textContent = frames.length;
     document.getElementById(tid + '-stat-duration').textContent = data.duration_s ? data.duration_s.toFixed(1) + 's' : '0s';
-    const contactCount = frames.filter(f => (f.tlabel_v2 || {{}}).contact > 0.5).length;
-    const slipCount = frames.filter(f => (f.tlabel_v2 || {{}}).slip_event > 0.5).length;
+    const contactCount = frames.filter(f => (f.schema_v2 || {{}}).contact > 0.5).length;
+    const slipCount = frames.filter(f => (f.schema_v2 || {{}}).slip_event > 0.5).length;
     document.getElementById(tid + '-stat-contact').textContent = frames.length ? (contactCount / frames.length * 100).toFixed(1) + '%' : '0%';
     document.getElementById(tid + '-stat-slip').textContent = frames.length ? (slipCount / frames.length * 100).toFixed(1) + '%' : '0%';
     document.getElementById(tid + '-stat-modified').textContent = modifiedCount;
@@ -758,7 +757,7 @@ def generate_panel_html(
     if (idx < 0 || idx >= frames.length) return;
     currentFrameIdx = idx;
     const f = frames[idx];
-    const tv2 = f.tlabel_v2 || {{}};
+    const tv2 = f.schema_v2 || {{}};
 
     // Frame label
     document.getElementById(tid + '-frame-label').textContent = `Frame ${{f.frame_idx}} / ${{frames.length - 1}}`;
@@ -801,12 +800,10 @@ def generate_panel_html(
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;">
         <span>🟢 ${{t('detail.contact')}}: <b>${{tv2.contact !== undefined ? tv2.contact.toFixed(2) : '-'}}</b></span>
         <span>🔴 ${{t('detail.slip')}}: <b>${{tv2.slip_event !== undefined ? tv2.slip_event.toFixed(2) : '-'}}</b></span>
-        <span>💪 ${{t('detail.force')}}: <b>${{tv2.force_magnitude !== undefined ? tv2.force_magnitude.toFixed(3) : '-'}}</b></span>
-        <span>📐 ${{t('detail.deformation')}}: <b>${{tv2.deformation_magnitude !== undefined ? tv2.deformation_magnitude.toFixed(3) : '-'}}</b></span>
-        <span>🧲 ${{t('detail.area')}}: <b>${{tv2.contact_area !== undefined ? tv2.contact_area.toFixed(3) : '-'}}</b></span>
-        <span>🌀 ${{t('detail.entropy')}}: <b>${{tv2.slip_entropy !== undefined ? tv2.slip_entropy.toFixed(3) : '-'}}</b></span>
-        <span>📊 ${{t('detail.normal')}}: <b>${{tv2.normal_field_magnitude !== undefined ? tv2.normal_field_magnitude.toFixed(3) : '-'}}</b></span>
-        <span>↗️ ${{t('detail.shear')}}: <b>${{tv2.shear_field_magnitude !== undefined ? tv2.shear_field_magnitude.toFixed(3) : '-'}}</b></span>
+        <span>💪 ${{t('dim.force_magnitude')}}: <b>${{tv2.force_magnitude !== undefined ? tv2.force_magnitude.toFixed(3) : '-'}}</b></span>
+        <span>📐 ${{t('dim.object_deformation')}}: <b>${{tv2.object_deformation !== undefined ? tv2.object_deformation.toFixed(3) : '-'}}</b></span>
+        <span>🌡️ ${{t('dim.temperature')}}: <b>${{tv2.temperature !== undefined ? tv2.temperature.toFixed(1) : '-'}}</b></span>
+        <span>✅ ${{t('dim.confidence')}}: <b>${{tv2.confidence !== undefined ? tv2.confidence.toFixed(2) : '-'}}</b></span>
       </div>
     `;
 
@@ -832,17 +829,12 @@ def generate_panel_html(
   }}
 
   // ===== Radar Chart =====
-  // i18n keys for radar labels (mapped to dim.* keys in I18N)
-  const radarLabelKeys = ['dim.contact','dim.deformation','dim.force','dim.force_peak','dim.force_dir',
-    'dim.slip_entropy','dim.slip_event','dim.texture','dim.edge','dim.contact_area','dim.centroid_x',
-    'dim.normal_mag','dim.normal_var','dim.shear_mag','dim.shear_dir',
-    'dim.delta_fn','dim.delta_fs','dim.friction','dim.flow_mag','dim.flow_dir','dim.deform_rate','dim.transition'];
-  // Original keys for data access
-  const radarDataKeys = ['contact','deformation_magnitude','force_magnitude','force_peak','force_direction',
-    'slip_entropy','slip_event','texture_energy','edge_density','contact_area','centroid_x',
-    'normal_field_magnitude','normal_field_variance','shear_field_magnitude','shear_field_direction',
-    'delta_force_normal','delta_force_shear','friction_cone_ratio','optical_flow_magnitude',
-    'optical_flow_direction','temporal_deformation_rate','contact_transition'];
+  // i18n keys for radar labels (mapped to dim.* keys in I18N — Schema V2 14维)
+  const radarLabelKeys = ['dim.contact','dim.contact_centroid','dim.contact_region',
+    'dim.force_magnitude','dim.force_vector','dim.torque_vector',
+    'dim.slip_event','dim.slip_velocity','dim.manipulation_phase',
+    'dim.texture_class','dim.object_deformation','dim.temperature',
+    'dim.confidence','dim.compliance_level'];
 
   function drawRadar(tv2) {{
     const canvas = document.getElementById(tid + '-radar');
@@ -853,9 +845,25 @@ def generate_panel_html(
 
     const cx = W / 2, cy = H / 2, R = 130;
     const n = radarLabelKeys.length;
-    const values = radarDataKeys.map(k => {{
-      const v = tv2[k] || 0;
-      return Math.min(Math.max(v, 0), 1);
+    // v0.17: Schema V2 (14维) only — 直接从 schema_v2 提取
+    const sv2 = tv2.schema_v2 || tv2;
+    const values = radarLabelKeys.map((lblKey, i) => {{
+      const v2Key = lblKey.replace('dim.', '');
+      const val = sv2[v2Key];
+      if (val === null || val === undefined) return 0;
+      if (typeof val === 'boolean') return val ? 1 : 0;
+      if (Array.isArray(val)) {{
+        const mag = Math.sqrt(val.reduce((s, v) => s + v*v, 0));
+        return Math.min(mag, 1);
+      }}
+      if (typeof val === 'string') {{
+        if (v2Key === 'compliance_level') {{
+          const lvlMap = {{'L1': 0.25, 'L2': 0.5, 'L3': 0.75, 'L4': 1.0}};
+          return lvlMap[val] || 0.25;
+        }}
+        return val ? 0.5 : 0;
+      }}
+      return Math.min(Math.max(parseFloat(val) || 0, 0), 1);
     }});
 
     // Grid
@@ -931,7 +939,7 @@ def generate_panel_html(
     const barW = W / frames.length;
 
     for (let i = 0; i < frames.length; i++) {{
-      const tv2 = frames[i].tlabel_v2 || {{}};
+      const tv2 = frames[i].schema_v2 || {{}};
       const contact = tv2.contact || 0;
       const slip = tv2.slip_event || 0;
       if (slip > 0.5) ctx.fillStyle = '#ff6b6b';
@@ -1083,19 +1091,19 @@ def generate_panel_html(
           }}
           count++;
         }} else {{
-          const old = (frames[i].tlabel_v2 || {{}})[field];
+          const old = (frames[i].schema_v2 || {{}})[field];
           if (old !== val) {{
             undoBatch.push({{idx: i, field: field, old: old}});
-            if (!frames[i].tlabel_v2) frames[i].tlabel_v2 = {{}};
-            frames[i].tlabel_v2[field] = val;
+            if (!frames[i].schema_v2) frames[i].schema_v2 = {{}};
+            frames[i].schema_v2[field] = val;
             if (field === 'contact' && val === 0) {{
-              if (frames[i].tlabel_v2.slip_event > 0) {{
-                undoBatch.push({{idx: i, field: 'slip_event', old: frames[i].tlabel_v2.slip_event}});
-                frames[i].tlabel_v2.slip_event = 0;
+              if (frames[i].schema_v2.slip_event > 0) {{
+                undoBatch.push({{idx: i, field: 'slip_event', old: frames[i].schema_v2.slip_event}});
+                frames[i].schema_v2.slip_event = 0;
               }}
-              if (frames[i].tlabel_v2.force_magnitude > 0) {{
-                undoBatch.push({{idx: i, field: 'force_magnitude', old: frames[i].tlabel_v2.force_magnitude}});
-                frames[i].tlabel_v2.force_magnitude = 0;
+              if (frames[i].schema_v2.force_magnitude > 0) {{
+                undoBatch.push({{idx: i, field: 'force_magnitude', old: frames[i].schema_v2.force_magnitude}});
+                frames[i].schema_v2.force_magnitude = 0;
               }}
               if (frames[i].manipulation_phase !== 'idle') {{
                 undoBatch.push({{idx: i, field: 'manipulation_phase', old: frames[i].manipulation_phase}});
@@ -1123,7 +1131,7 @@ def generate_panel_html(
       if (op.field === 'manipulation_phase') {{
         frames[op.idx].manipulation_phase = op.old;
       }} else {{
-        if (frames[op.idx].tlabel_v2) frames[op.idx].tlabel_v2[op.field] = op.old;
+        if (frames[op.idx].schema_v2) frames[op.idx].schema_v2[op.field] = op.old;
       }}
       undoneFrames.add(op.idx);
     }}
@@ -1157,21 +1165,23 @@ def generate_panel_html(
     var currentPrim = null;
     
     for (var i = 0; i < frames.length; i++) {{
-      var tv2 = frames[i].tlabel_v2 || {{}};
-      var force = tv2.force_magnitude || 0;
-      var contact = tv2.contact || 0;
-      var deform = tv2.deformation_magnitude || 0;
-      var shear = tv2.shear_field_magnitude || 0;
+      var tv2 = frames[i].schema_v2 || {{}};
+      // v0.17: Schema V2 字段优先，回退旧字段名
+      var sv2 = frames[i].schema_v2 || null;
+      var force = sv2 ? (sv2.force_magnitude || 0) : (tv2.force_magnitude || 0);
+      var contact = sv2 ? (sv2.contact || 0) : (tv2.contact || 0);
+      var deform = sv2 ? (sv2.object_deformation || 0) : 0;
+      var shear = sv2 && sv2.force_vector ? Math.sqrt(sv2.force_vector[0]**2 + sv2.force_vector[1]**2) : 0;  // V2: shear from force_vector horizontal components
       
       // Compute force delta
-      var prevForce = i > 0 ? ((frames[i-1].tlabel_v2 || {{}}).force_magnitude || 0) : 0;
+      var prevForce = i > 0 ? ((frames[i-1].schema_v2 || {{}}).force_magnitude || 0) : 0;
       var fd = force - prevForce;
       // Short window average
       var windowSize = Math.min(5, i + 1);
       var avgFd = 0;
       for (var w = Math.max(0, i - windowSize + 1); w <= i; w++) {{
-        var pf = w > 0 ? ((frames[w-1].tlabel_v2 || {{}}).force_magnitude || 0) : 0;
-        var cf = (frames[w].tlabel_v2 || {{}}).force_magnitude || 0;
+        var pf = w > 0 ? ((frames[w-1].schema_v2 || {{}}).force_magnitude || 0) : 0;
+        var cf = (frames[w].schema_v2 || {{}}).force_magnitude || 0;
         avgFd += (cf - pf);
       }}
       avgFd /= windowSize;
@@ -1261,19 +1271,41 @@ def generate_panel_html(
   }}
   function exportCSV() {{
     const frames = data.frames || [];
-    const dims = ['contact','deformation_magnitude','force_magnitude','force_peak',
-      'force_direction','slip_entropy','slip_event','texture_energy',
-      'edge_density','contact_area','centroid_x',
-      'normal_field_magnitude','normal_field_variance',
-      'shear_field_magnitude','shear_field_direction',
-      'delta_force_normal','delta_force_shear','friction_cone_ratio',
-      'optical_flow_magnitude','optical_flow_direction',
-      'temporal_deformation_rate','contact_transition'];
-    // v0.13: add primitive_label column
+    // v0.17: Schema V2 14维字段名（向量展开为多列）
+    // v0.17: Schema V2 only — 14维展开
+    const dims = ['contact','centroid_x','centroid_y','contact_region',
+      'force_magnitude','force_x','force_y','force_z',
+      'torque_x','torque_y','torque_z',
+      'slip_event','slip_vx','slip_vy',
+      'manipulation_phase','texture_class',
+      'object_deformation','temperature',
+      'confidence','compliance_level'];
     let csv = 'frame_idx,timestamp_s,manipulation_phase,confidence,primitive_label,primitive_source,primitive_confidence,' + dims.join(',') + '\\n';
     const primAnns = data.primitive_annotations || [];
     for (const f of frames) {{
-      const tl = f.tlabel_v2 || {{}};
+      // Schema V2: flatten structured fields
+      const sv = f.schema_v2 || {{}};
+      const tl = {{}};
+      tl.contact = sv.contact || 0;
+        tl.centroid_x = (sv.contact_centroid && sv.contact_centroid[0]) || 0;
+        tl.centroid_y = (sv.contact_centroid && sv.contact_centroid[1]) || 0;
+        tl.contact_region = sv.contact_region || '';
+        tl.force_magnitude = sv.force_magnitude || 0;
+        tl.force_x = (sv.force_vector && sv.force_vector[0]) || 0;
+        tl.force_y = (sv.force_vector && sv.force_vector[1]) || 0;
+        tl.force_z = (sv.force_vector && sv.force_vector[2]) || 0;
+        tl.torque_x = (sv.torque_vector && sv.torque_vector[0]) || 0;
+        tl.torque_y = (sv.torque_vector && sv.torque_vector[1]) || 0;
+        tl.torque_z = (sv.torque_vector && sv.torque_vector[2]) || 0;
+        tl.slip_event = sv.slip_event || 0;
+        tl.slip_vx = (sv.slip_velocity && sv.slip_velocity[0]) || 0;
+        tl.slip_vy = (sv.slip_velocity && sv.slip_velocity[1]) || 0;
+        tl.manipulation_phase = sv.manipulation_phase || '';
+        tl.texture_class = sv.texture_class || '';
+        tl.object_deformation = sv.object_deformation || 0;
+        tl.temperature = sv.temperature || 0;
+        tl.confidence = sv.confidence || 1;
+      tl.compliance_level = sv.compliance_level || '';
       // find primitive for this frame
       let prim = '';
       for (const pa of primAnns) {{
@@ -1690,11 +1722,11 @@ def generate_panel_html(
         e.preventDefault();
         const frame = data.frames[currentFrameIdx];
         if (frame) {{
-          const newContact = frame.tlabel_v2.contact > 0.5 ? 0.0 : 1.0;
-          frame.tlabel_v2.contact = newContact;
+          const newContact = frame.schema_v2.contact > 0.5 ? 0.0 : 1.0;
+          frame.schema_v2.contact = newContact;
           if (newContact === 0.0) {{
-            frame.tlabel_v2.slip_event = 0.0;
-            frame.tlabel_v2.force_magnitude = 0.0;
+            frame.schema_v2.slip_event = 0.0;
+            frame.schema_v2.force_magnitude = 0.0;
             frame.manipulation_phase = 'idle';
           }}
           modifiedCount++; updateStats(); showFrame(currentFrameIdx);
@@ -1702,9 +1734,9 @@ def generate_panel_html(
         break;
       case 's': case 'S':
         const f2 = data.frames[currentFrameIdx];
-        if (f2 && f2.tlabel_v2.contact > 0.5) {{
-          f2.tlabel_v2.slip_event = f2.tlabel_v2.slip_event > 0.5 ? 0.0 : 1.0;
-          if (f2.tlabel_v2.slip_event > 0.5) f2.manipulation_phase = 'slip';
+        if (f2 && f2.schema_v2.contact > 0.5) {{
+          f2.schema_v2.slip_event = f2.schema_v2.slip_event > 0.5 ? 0.0 : 1.0;
+          if (f2.schema_v2.slip_event > 0.5) f2.manipulation_phase = 'slip';
           modifiedCount++; updateStats(); showFrame(currentFrameIdx);
         }}
         break;

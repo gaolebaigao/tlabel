@@ -7,7 +7,7 @@ TLabel CLI — 命令行工具
   tlabel info <adapter>     查看适配器详细信息
   tlabel version            显示版本号
 
-v0.16.0 新增: validate 命令支持 22 维 tlabel_v2 特征空间校验
+v0.17.0 更新: validate 命令支持 14 维 Schema V2 校验，向后兼容 22 维旧格式
 """
 
 import sys
@@ -16,9 +16,14 @@ import argparse
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 
+from tlabel.core.schema import SCHEMA_V2_FIELD_NAMES
 
-# 22 维 tlabel_v2 特征空间完整列表
-TLABEL_V2_DIMENSIONS = [
+
+# 14 维 Schema V2 特征空间字段列表
+SCHEMA_V2_DIMENSIONS = list(SCHEMA_V2_FIELD_NAMES)
+
+# 旧 22 维 tlabel_v2 特征空间（向后兼容）
+LEGACY_V2_DIMENSIONS = [
     "contact",
     "deformation_magnitude",
     "force_magnitude",  # deprecated, alias of deformation_magnitude
@@ -42,6 +47,9 @@ TLABEL_V2_DIMENSIONS = [
     "temporal_deformation_rate",
     "contact_transition",
 ]
+
+# 保持旧名兼容
+TLABEL_V2_DIMENSIONS = LEGACY_V2_DIMENSIONS
 
 
 class ValidationResult:
@@ -119,12 +127,16 @@ def _validate_json_file(path: Path) -> List[ValidationResult]:
         if len(frames) == 0:
             results.append(ValidationResult("warning", "frames 为空数组", "frames"))
         else:
-            # 校验第一帧的 tlabel_v2 维度
+            # 校验第一帧的维度数据
             frame0 = frames[0]
-            if "tlabel_v2" not in frame0:
-                results.append(ValidationResult("error", "帧缺少 tlabel_v2 字段", "frames[0].tlabel_v2"))
-            else:
+            if "schema_v2" in frame0:
+                # v0.17+: Schema V2 格式（14维）
+                results.extend(_validate_schema_v2_dict(frame0["schema_v2"], "frames[0]"))
+            elif "tlabel_v2" in frame0:
+                # 旧格式（22维），向后兼容
                 results.extend(_validate_tlabel_v2_dict(frame0["tlabel_v2"], "frames[0]"))
+            else:
+                results.append(ValidationResult("error", "帧缺少 schema_v2 或 tlabel_v2 字段", "frames[0]"))
 
             # 抽样校验（最多检查 10 帧）
             sample_indices = [0]
@@ -135,10 +147,13 @@ def _validate_json_file(path: Path) -> List[ValidationResult]:
             error_count = 0
             for idx in sample_indices[1:]:
                 frame = frames[idx]
-                if "tlabel_v2" not in frame:
+                if "schema_v2" in frame:
+                    errs = _validate_schema_v2_dict(frame["schema_v2"], f"frames[{idx}]")
+                elif "tlabel_v2" in frame:
+                    errs = _validate_tlabel_v2_dict(frame["tlabel_v2"], f"frames[{idx}]")
+                else:
                     error_count += 1
                     continue
-                errs = _validate_tlabel_v2_dict(frame["tlabel_v2"], f"frames[{idx}]")
                 error_count += sum(1 for e in errs if e.level == "error")
             
             if error_count > 0:
@@ -149,9 +164,16 @@ def _validate_json_file(path: Path) -> List[ValidationResult]:
     if "capabilities" in data:
         caps = data["capabilities"]
         if isinstance(caps, dict):
-            found_dims = sum(1 for d in TLABEL_V2_DIMENSIONS if caps.get(d, False))
-            results.append(ValidationResult("info",
-                f"capabilities 声明 {found_dims}/22 维特征"))
+            # v0.17: 检查 Schema V2 字段
+            found_v2 = sum(1 for d in SCHEMA_V2_DIMENSIONS if caps.get(d, False))
+            # 旧 22 维字段兼容检查
+            found_legacy = sum(1 for d in LEGACY_V2_DIMENSIONS if caps.get(d, False))
+            if found_v2 > 0:
+                results.append(ValidationResult("info",
+                    f"capabilities 声明 {found_v2}/14 维 (Schema V2)"))
+            if found_legacy > 0:
+                results.append(ValidationResult("info",
+                    f"capabilities 旧字段声明 {found_legacy}/22 维 (legacy)"))
 
     # 检查 sensor 信息
     if "sensor" not in data:
@@ -161,36 +183,134 @@ def _validate_json_file(path: Path) -> List[ValidationResult]:
 
 
 def _validate_tlabel_v2_dict(tlabel_v2: Dict, prefix: str) -> List[ValidationResult]:
-    """校验单个 tlabel_v2 字典的维度完整性"""
+    """
+    校验单个 tlabel_v2 字典的维度完整性（旧 22 维格式）。
+    
+    自动检测：如果 dict 包含 Schema V2 特征字段（如 contact_centroid, compliance_level），
+    则使用 14 维 Schema V2 校验；否则使用旧 22 维校验。
+    """
     results = []
     
     if not isinstance(tlabel_v2, dict):
-        results.append(ValidationResult("error", f"{prefix}.tlabel_v2 不是字典", f"{prefix}.tlabel_v2"))
+        results.append(ValidationResult("error", f"{prefix} 不是字典", f"{prefix}"))
         return results
 
+    # 自动检测 Schema 版本
+    v2_indicators = ["contact_centroid", "contact_region", "compliance_level",
+                     "force_vector", "torque_vector", "slip_velocity",
+                     "manipulation_phase", "texture_class", "object_deformation", "temperature"]
+    is_schema_v2 = any(k in tlabel_v2 for k in v2_indicators)
+
+    if is_schema_v2:
+        return _validate_schema_v2_dict(tlabel_v2, prefix)
+
+    # --- 旧 22 维校验 ---
     # 检查核心维度是否存在
     core_dims = ["contact", "deformation_magnitude"]
     for dim in core_dims:
         if dim not in tlabel_v2:
             results.append(ValidationResult("error",
-                f"缺少核心维度 '{dim}'", f"{prefix}.tlabel_v2.{dim}"))
+                f"缺少核心维度 '{dim}'", f"{prefix}.{dim}"))
 
     # 检查维度值类型
     for key, value in tlabel_v2.items():
-        if key in TLABEL_V2_DIMENSIONS or key.startswith(tuple(TLABEL_V2_DIMENSIONS)):
+        if key in LEGACY_V2_DIMENSIONS or key.startswith(tuple(LEGACY_V2_DIMENSIONS)):
             if value is not None and not isinstance(value, (int, float)):
                 results.append(ValidationResult("warning",
                     f"维度 '{key}' 值类型异常: {type(value).__name__}（应为 float）",
-                    f"{prefix}.tlabel_v2.{key}"))
+                    f"{prefix}.{key}"))
 
     # 统计覆盖维度数
-    covered = sum(1 for d in TLABEL_V2_DIMENSIONS if d in tlabel_v2)
-    total = len(TLABEL_V2_DIMENSIONS)
+    covered = sum(1 for d in LEGACY_V2_DIMENSIONS if d in tlabel_v2)
+    total = len(LEGACY_V2_DIMENSIONS)
     if covered < total:
-        missing = [d for d in TLABEL_V2_DIMENSIONS if d not in tlabel_v2]
+        missing = [d for d in LEGACY_V2_DIMENSIONS if d not in tlabel_v2]
         results.append(ValidationResult("info",
-            f"覆盖 {covered}/{total} 维，缺少: {', '.join(missing[:5])}{'...' if len(missing) > 5 else ''}",
-            f"{prefix}.tlabel_v2"))
+            f"覆盖 {covered}/{total} 维 (legacy)，缺少: {', '.join(missing[:5])}{'...' if len(missing) > 5 else ''}",
+            f"{prefix}"))
+
+    return results
+
+
+def _validate_schema_v2_dict(schema_v2: Dict, prefix: str) -> List[ValidationResult]:
+    """校验 Schema V2 (14维) 字典的完整性和类型合法性"""
+    results = []
+
+    if not isinstance(schema_v2, dict):
+        results.append(ValidationResult("error", f"{prefix} 不是字典", f"{prefix}"))
+        return results
+
+    # 必填字段检查
+    required_fields = ["contact", "confidence", "compliance_level"]
+    for field in required_fields:
+        if field not in schema_v2:
+            results.append(ValidationResult("error",
+                f"缺少必填字段 '{field}'", f"{prefix}.{field}"))
+
+    # contact 类型检查（Schema V2 中应为 bool 或 0/1）
+    if "contact" in schema_v2:
+        val = schema_v2["contact"]
+        if val is not None and not isinstance(val, (bool, int, float)):
+            results.append(ValidationResult("warning",
+                f"contact 值类型异常: {type(val).__name__}（应为 bool/float）",
+                f"{prefix}.contact"))
+
+    # compliance_level 枚举检查
+    if "compliance_level" in schema_v2:
+        valid_levels = ("L1", "L2", "L3", "L4")
+        if schema_v2["compliance_level"] not in valid_levels:
+            results.append(ValidationResult("error",
+                f"compliance_level 值 '{schema_v2['compliance_level']}' 不合法，应为 {valid_levels}",
+                f"{prefix}.compliance_level"))
+
+    # confidence 范围检查
+    if "confidence" in schema_v2:
+        conf = schema_v2["confidence"]
+        if isinstance(conf, (int, float)) and not (0.0 <= conf <= 1.0):
+            results.append(ValidationResult("warning",
+                f"confidence 超出范围: {conf}（应为 0.0-1.0）",
+                f"{prefix}.confidence"))
+
+    # 向量维度检查
+    vector_specs = {
+        "contact_centroid": 2,
+        "force_vector": 3,
+        "torque_vector": 3,
+        "slip_velocity": 2,
+    }
+    for vec_field, expected_len in vector_specs.items():
+        if vec_field in schema_v2 and schema_v2[vec_field] is not None:
+            vec = schema_v2[vec_field]
+            if isinstance(vec, list) and len(vec) != expected_len:
+                results.append(ValidationResult("warning",
+                    f"{vec_field} 维度异常: {len(vec)}（应为 {expected_len}）",
+                    f"{prefix}.{vec_field}"))
+
+    # 枚举字段检查
+    from tlabel.core.schema import (
+        VALID_CONTACT_REGIONS, VALID_MANIPULATION_PHASES,
+        VALID_TEXTURE_CLASSES, VALID_COMPLIANCE_LEVELS,
+    )
+    enum_specs = {
+        "contact_region": VALID_CONTACT_REGIONS,
+        "manipulation_phase": VALID_MANIPULATION_PHASES,
+        "texture_class": VALID_TEXTURE_CLASSES,
+    }
+    for enum_field, valid_vals in enum_specs.items():
+        if enum_field in schema_v2 and schema_v2[enum_field] is not None:
+            if schema_v2[enum_field] not in valid_vals:
+                results.append(ValidationResult("warning",
+                    f"{enum_field} 值 '{schema_v2[enum_field]}' 不合法",
+                    f"{prefix}.{enum_field}"))
+
+    # 统计覆盖维度数
+    covered = sum(1 for d in SCHEMA_V2_DIMENSIONS if d in schema_v2)
+    total = len(SCHEMA_V2_DIMENSIONS)
+    if covered < total:
+        missing = [d for d in SCHEMA_V2_DIMENSIONS if d not in schema_v2]
+        results.append(ValidationResult("info",
+            f"覆盖 {covered}/{total} 维 (Schema V2)，缺少: {', '.join(missing[:5])}{'...' if len(missing) > 5 else ''}",
+            f"{prefix}"))
 
     return results
 
@@ -264,8 +384,11 @@ def _validate_auto_detect(path: Path) -> List[ValidationResult]:
             results.append(ValidationResult("info", f"成功加载，共 {len(data.frames)} 帧"))
             if data.frames:
                 frame0 = data.frames[0]
-                if hasattr(frame0, "tlabel_v2"):
-                    results.extend(_validate_tlabel_v2_dict(frame0.tlabel_v2, "frame[0]"))
+                # v0.17: Schema V2 only
+                if hasattr(frame0, "schema_v2") and frame0.schema_v2 is not None:
+                    results.extend(_validate_schema_v2_dict(frame0.schema_v2.to_dict(), "frame[0]"))
+                else:
+                    results.append(ValidationResult("error", "frame[0] 缺少 schema_v2 字段", "frame[0]"))
         else:
             results.append(ValidationResult("warning", "加载成功但数据为空"))
     except Exception as e:
@@ -359,8 +482,13 @@ def cmd_info(args):
         
         try:
             caps = adapter.get_capabilities()
-            active_dims = [k for k, v in caps.items() if v and k in TLABEL_V2_DIMENSIONS]
-            info["活跃维度"] = f"{len(active_dims)}/22"
+            # v0.17: 支持 Schema V2 (14维) 和旧 (22维) 两种口径
+            active_v2 = [k for k, v in caps.items() if v and k in SCHEMA_V2_DIMENSIONS]
+            active_legacy = [k for k, v in caps.items() if v and k in LEGACY_V2_DIMENSIONS]
+            if active_v2:
+                info["活跃维度 (Schema V2)"] = f"{len(active_v2)}/14"
+            if active_legacy:
+                info["活跃维度 (legacy)"] = f"{len(active_legacy)}/22"
         except Exception:
             pass
 

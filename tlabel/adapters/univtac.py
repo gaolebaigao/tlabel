@@ -12,14 +12,16 @@ UniVTAC (https://github.com/univtac/UniVTAC) 跨数据集触觉基准：
 import json
 import logging
 import hashlib
+import math
 from pathlib import Path
 from datetime import datetime
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Union
 
 import numpy as np
 
 from tlabel.adapters.base import BaseAdapter
 from tlabel.core.types import TLabelData, TLabelFrame
+from tlabel.core.schema import TLabelSchemaV2
 
 try:
     import h5py
@@ -74,6 +76,10 @@ class UniVTACAdapter(BaseAdapter):
     默认加载左侧 GelSight Mini，可通过 sensor_id 参数选择右侧。
     """
 
+    # v0.17: Compliance Level L2-L3 — UniVTAC有depth估算force_magnitude(L2)，
+    # 有marker位移可推算shear方向，在shear信息足够时可升级L3
+    default_compliance_level: str = "L2"
+
     @property
     def name(self) -> str:
         return "univtac"
@@ -113,6 +119,88 @@ class UniVTACAdapter(BaseAdapter):
                 "sampling_rate_hz": 30.0,
             }
         }
+
+    def extract_schema(self, raw_frame_data: Union[TLabelFrame, Dict]) -> TLabelSchemaV2:
+        """将原始数据帧转换为 TLabel Schema V2 (14维结构化)
+
+        UniVTAC适配器策略:
+          - contact: 从tlabel_v2.contact推断
+          - contact_centroid: 从centroid_x和centroid_y组合 [cx, cy]
+          - force_magnitude: 从depth delta估算（_compute_force_direction已计算）
+          - force_vector: 如果有shear+force信息可合成 [Fx, Fy, Fz]，否则None
+          - object_deformation: 从deformation_magnitude提取
+          - compliance_level: 默认L2，shear信息足够时升级L3
+
+        Args:
+            raw_frame_data: TLabelFrame实例或tlabel_v2字典
+
+        Returns:
+            TLabelSchemaV2 — 14维结构化标注
+        """
+        # 统一获取 tlabel_v2 字典和 sensor_specific
+        if isinstance(raw_frame_data, TLabelFrame):
+            v2_dict = raw_frame_data.schema_v2.to_dict() if hasattr(raw_frame_data, 'schema_v2') and raw_frame_data.schema_v2 is not None else raw_frame_data
+            sensor_specific = raw_frame_data.sensor_specific or {}
+        elif isinstance(raw_frame_data, dict):
+            v2_dict = raw_frame_data
+            sensor_specific = raw_frame_data.get("sensor_specific", {})
+        else:
+            raise TypeError(f"raw_frame_data 类型不支持: {type(raw_frame_data)}")
+
+        # 基础字段：复用 from_tlabel_v1 通用映射
+        v1_dict = dict(v2_dict)
+        v1_dict["confidence"] = v2_dict.get("confidence", 1.0)
+        schema = TLabelSchemaV2.from_tlabel_v1(v1_dict)
+
+        # --- UniVTAC特有增强 ---
+
+        # 1. contact_centroid: UniVTAC有centroid_x和centroid_y（通过_compute_centroid计算）
+        centroid_x = v2_dict.get("centroid_x")
+        centroid_y = sensor_specific.get("centroid_y")
+        if centroid_x is not None and schema.contact:
+            cx = float(centroid_x)
+            cy = float(centroid_y) if centroid_y is not None else 0.0
+            schema.contact_centroid = [cx, cy]
+
+        # 2. force_magnitude: 从depth delta估算（已在_compute_force_direction中计算）
+        fm = v2_dict.get("force_magnitude")
+        if fm is not None and fm > 0:
+            schema.force_magnitude = float(fm)
+
+        # 3. force_vector: 从force_magnitude + shear_field_direction合成
+        #    UniVTAC有marker位移可以计算shear方向
+        shear_mag = v2_dict.get("shear_field_magnitude", 0.0)
+        shear_dir_deg = v2_dict.get("shear_field_direction", 0.0)
+
+        if schema.force_magnitude is not None and shear_mag > 1e-6:
+            # 从法向力 + 剪切力合成3D力矢量
+            shear_dir_rad = math.radians(shear_dir_deg)
+            # 剪切力从shear_field_magnitude估算
+            shear_force = float(shear_mag)
+            fx = shear_force * math.cos(shear_dir_rad)
+            fy = shear_force * math.sin(shear_dir_rad)
+            fz = float(schema.force_magnitude)
+            schema.force_vector = [round(fx, 4), round(fy, 4), round(fz, 4)]
+            schema.compliance_level = "L3"
+        else:
+            schema.force_vector = None
+            schema.compliance_level = self.default_compliance_level
+
+        # 4. object_deformation: 从deformation_magnitude提取
+        deform = v2_dict.get("deformation_magnitude")
+        if deform is not None and deform > 0:
+            schema.object_deformation = float(deform)
+
+        # 5. slip_velocity: 从marker optical_flow提取
+        if schema.slip_event:
+            of_mag = v2_dict.get("optical_flow_magnitude", 0.0)
+            of_dir = v2_dict.get("optical_flow_direction", 0.0)
+            if of_mag > 1e-6:
+                of_rad = math.radians(of_dir)
+                schema.slip_velocity = [round(of_mag * math.cos(of_rad), 4),
+                                        round(of_mag * math.sin(of_rad), 4)]
+
+        return schema
 
     def load(self, file_path: str,
              trajectory_id: Optional[int] = None,
@@ -167,7 +255,7 @@ class UniVTACAdapter(BaseAdapter):
         # 构建 TLabelData
         sensor_cfg = SENSOR_CONFIG[sensor_id]
         contact_count = sum(
-            1 for f in frames if f.tlabel_v2.get('contact', 0) > 0.5
+            1 for f in frames if f.contact > 0.5
         )
 
         sensor_info = {
@@ -253,7 +341,7 @@ class UniVTACAdapter(BaseAdapter):
         return TLabelFrame(
             frame_idx=t,
             timestamp_s=timestamp,
-            tlabel_v2=tlabel_v2,
+            schema_v2=TLabelSchemaV2.from_tlabel_v1(tlabel_v2),
             manipulation_phase=phase,
             confidence=confidence,
             sensor_specific=sensor_specific if sensor_specific else None,

@@ -10,6 +10,9 @@
   - 不修改原始预测值，只做后处理修正
   - 物理约束硬编码：contact归零时所有依赖字段必须归零
   - Phase转移只允许合法路径，禁止跳跃(如 idle→slip)
+
+v0.17 Breaking Change:
+  - 移除 deformation_magnitude 回退，只使用 object_deformation (Schema V2)
 """
 
 import math
@@ -57,7 +60,7 @@ def _build_default_transition():
 
 DEFAULT_TRANSITION = _build_default_transition()
 
-EMISSION_SIGNALS = ["contact", "force_magnitude", "slip_event", "deformation_magnitude"]
+EMISSION_SIGNALS = ["contact", "force_magnitude", "slip_event", "object_deformation"]
 
 PHASE_EMISSIONS = {
     "idle":             (0.05, 0.05, 0.05, 0.05),
@@ -70,6 +73,7 @@ PHASE_EMISSIONS = {
 
 
 def _log_emission_prob(phase, contact, force, slip, deform):
+    """计算 HMM 发射概率 (对数空间)。参数 deform 对应 object_deformation (Schema V2)。"""
     expected = PHASE_EMISSIONS.get(phase, (0.5, 0.5, 0.5, 0.5))
     sigma = 0.25
     log_prob = 0.0
@@ -167,7 +171,7 @@ class TemporalSmoother:
         if not results:
             return results
         if smooth_fields is None:
-            smooth_fields = ["contact", "force_magnitude", "deformation_magnitude",
+            smooth_fields = ["contact", "force_magnitude", "object_deformation",
                              "slip_event", "contact_area"]
 
         field_series = {}
@@ -295,7 +299,8 @@ class PhaseHMM:
         contact = frame_data.get("contact", 0.0)
         force = frame_data.get("force_magnitude", 0.0)
         slip = frame_data.get("slip_event", 0.0)
-        deform = frame_data.get("deformation_magnitude", 0.0)
+        # object_deformation (Schema V2 only)
+        deform = frame_data.get("object_deformation", 0.0)
         return _log_emission_prob(phase, contact, force, slip, deform)
 
     def _remove_short_runs(self, phases):
@@ -390,7 +395,7 @@ class PostProcessor:
                     "contact": r.predictions.get("contact", 0.0),
                     "force_magnitude": r.predictions.get("force_magnitude", 0.0),
                     "slip_event": r.predictions.get("slip_event", 0.0),
-                    "deformation_magnitude": r.predictions.get("deformation_magnitude", 0.0),
+                    "object_deformation": r.predictions.get("object_deformation", 0.0),
                 })
         if existing_phases:
             self._hmm.fit(existing_phases)

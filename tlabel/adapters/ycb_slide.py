@@ -50,6 +50,7 @@ from typing import Optional, Dict, Any, List, Tuple
 
 from tlabel.adapters.base import BaseAdapter
 from tlabel.core.types import TLabelData, TLabelFrame
+from tlabel.core.schema import TLabelSchemaV2
 
 try:
     import cv2
@@ -234,7 +235,12 @@ def _detect_contact_from_image(diff_img: Optional[np.ndarray],
 
 
 class YCBSlideAdapter(BaseAdapter):
-    """YCB-Slide (MidasTouch, CoRL 2022) → TLabelData"""
+    """YCB-Slide (MidasTouch, CoRL 2022) → TLabelData
+
+    Compliance Level: L2（deformation_mag 近似 force_magnitude，force_direction 恒为0.0）
+    """
+
+    default_compliance_level: str = "L2"
 
     @property
     def name(self) -> str:
@@ -243,6 +249,45 @@ class YCBSlideAdapter(BaseAdapter):
     @property
     def supported_extensions(self) -> list:
         return [".npy"]
+
+    def extract_schema(self, raw_frame_data) -> TLabelSchemaV2:
+        """将原始数据帧转换为 TLabel Schema V2（14维）
+
+        参数:
+            raw_frame_data: dict，包含以下键：
+                - diff_img: ndarray 或 None 背景减除后的图像
+                - is_contact: bool 是否接触
+                - prev_diff_img: ndarray 或 None 上一帧背景减除图像（可选）
+
+        返回:
+            TLabelSchemaV2 — L2级别，deformation_mag 近似 force_magnitude，
+            force_vector 为 None（无3D力测量）
+        """
+        # 复用现有模块级 _extract_tlabel_v2 函数获取22维dict
+        tlabel_v2 = _extract_tlabel_v2(
+            diff_img=raw_frame_data["diff_img"],
+            is_contact=raw_frame_data["is_contact"],
+        )
+
+        contact = float(tlabel_v2["contact"]) > 0.5
+        centroid_x = tlabel_v2.get("centroid_x", 0.5)
+
+        return TLabelSchemaV2(
+            contact=contact,
+            contact_centroid=[float(centroid_x), 0.5] if contact else None,
+            contact_region=None,
+            force_magnitude=float(tlabel_v2["deformation_magnitude"]),  # 近似
+            force_vector=None,  # L2: 无3D力
+            torque_vector=None,
+            slip_event=float(tlabel_v2["slip_event"]) > 0.5,
+            slip_velocity=None,
+            manipulation_phase=None,
+            texture_class=None,
+            object_deformation=float(tlabel_v2["deformation_magnitude"]),
+            temperature=None,
+            confidence=0.95 if not contact else 0.8,
+            compliance_level=self.default_compliance_level,
+        )
 
     def get_capabilities(self) -> Dict[str, bool]:
         return {
@@ -491,7 +536,7 @@ class YCBSlideAdapter(BaseAdapter):
                     frame = TLabelFrame(
                         frame_idx=frame_offset + i,
                         timestamp_s=round(ts, 4),
-                        tlabel_v2=tlabel_v2,
+                        schema_v2=TLabelSchemaV2.from_tlabel_v1(tlabel_v2),
                         manipulation_phase=phase,
                         confidence=confidence,
                         sensor_specific=sensor_specific,
@@ -542,7 +587,7 @@ class YCBSlideAdapter(BaseAdapter):
                 "total_frames": len(all_frames),
                 "contact_frames": sum(
                     1 for f in all_frames
-                    if f.tlabel_v2.get("contact", 0) > 0.5
+                    if f.contact > 0.5
                 ),
             }
         }
@@ -673,7 +718,7 @@ class YCBSlideAdapter(BaseAdapter):
                     frame = TLabelFrame(
                         frame_idx=frame_offset + i,
                         timestamp_s=round(ts, 4),
-                        tlabel_v2=tlabel_v2,
+                        schema_v2=TLabelSchemaV2.from_tlabel_v1(tlabel_v2),
                         manipulation_phase=phase,
                         confidence=confidence,
                         sensor_specific=sensor_specific,
@@ -719,7 +764,7 @@ class YCBSlideAdapter(BaseAdapter):
                 "total_frames": len(all_frames),
                 "contact_frames": sum(
                     1 for f in all_frames
-                    if f.tlabel_v2.get("contact", 0) > 0.5
+                    if f.contact > 0.5
                 ),
             }
         }
