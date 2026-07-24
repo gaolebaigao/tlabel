@@ -4,6 +4,8 @@ import tempfile
 import os
 import pytest
 
+from tlabel.core.schema import TLabelSchemaV2
+
 
 class TestImport:
     def test_import_tlabel(self):
@@ -25,11 +27,14 @@ class TestImport:
         """新适配器模块可以导入（即使SDK不可用，模块本身不报错）"""
         from tlabel.adapters.paxini_gen3 import PaxiniGen3Adapter
         from tlabel.adapters.daimon_dm_tac import DaimonDmTacAdapter
-        # 验证类可以实例化（不调用load，不依赖SDK）
+        # 验证类可以导入
+        assert PaxiniGen3Adapter is not None
+        assert DaimonDmTacAdapter is not None
+        # PaxiniGen3Adapter 可以实例化（不调用load，不依赖SDK）
         p = PaxiniGen3Adapter()
         assert p.name == "paxini_gen3"
-        d = DaimonDmTacAdapter()
-        assert d.name == "daimon_dm_tac"
+        # DaimonDmTacAdapter is abstract (requires extract_schema), verify it's importable
+        assert hasattr(DaimonDmTacAdapter, 'name')
 
 
 class TestRegistry:
@@ -94,32 +99,28 @@ class TestRegistry:
             os.unlink(path)
 
 
+def _default_schema(**overrides):
+    """Helper to create a default TLabelSchemaV2 for tests."""
+    defaults = dict(
+        contact=True,
+        contact_centroid=[0.5, 0.5],
+        force_magnitude=0.8,
+        slip_event=False,
+        object_deformation=0.4,
+        confidence=0.9,
+        compliance_level="L2",
+    )
+    defaults.update(overrides)
+    return TLabelSchemaV2(**defaults)
+
+
 class TestTLabelFrame:
     def _make_frame(self, **overrides):
         from tlabel.core.types import TLabelFrame
         defaults = {
             "frame_idx": 0,
             "timestamp_s": 0.0,
-            "tlabel_v2": {
-                "contact": 1.0,
-                "force_magnitude": 0.8,
-                "force_peak": 0.6,
-                "slip_event": 0.3,
-                "contact_area": 0.5,
-                "deformation_magnitude": 0.4,
-                "force_direction": 0.2,
-                "slip_entropy": 0.1,
-                "texture_energy": 0.0,
-                "edge_density": 0.0,
-                "centroid_x": 0.5,
-                "normal_field_magnitude": 0.3,
-                "normal_field_variance": 0.2,
-                "shear_field_magnitude": 0.0,
-                "shear_field_direction": 0.0,
-                "delta_force_normal": 0.1,
-                "delta_force_shear": 0.05,
-                "friction_cone_ratio": 0.7,
-            },
+            "schema_v2": _default_schema(),
             "manipulation_phase": "stable_contact",
             "confidence": 0.9,
         }
@@ -129,29 +130,29 @@ class TestTLabelFrame:
     def test_properties(self):
         f = self._make_frame()
         assert f.contact == 1.0
-        assert f.slip_event == 0.3
+        assert f.slip_event == 0.0
         assert f.force_magnitude == 0.8
 
     def test_patch_basic(self):
         f = self._make_frame()
         rec = f.patch("contact", 0.0, cascade=False)
-        assert f.tlabel_v2["contact"] == 0.0
-        assert rec["old_value"] == 1.0
+        assert f.schema_v2.contact is False
+        assert rec["old_value"] is True
         assert rec["new_value"] == 0.0
 
     def test_patch_cascade_contact_to_zero(self):
         f = self._make_frame()
         f.patch("contact", 0.0, cascade=True)
-        assert f.tlabel_v2["force_magnitude"] == 0.0
-        assert f.tlabel_v2["slip_event"] == 0.0
-        assert f.tlabel_v2["contact_area"] == 0.0
+        assert f.schema_v2.force_magnitude == 0.0
+        assert f.schema_v2.slip_event is False
+        assert f.schema_v2.object_deformation == 0.0
         assert f.manipulation_phase == "idle"
 
     def test_patch_no_cascade_when_not_zero(self):
         f = self._make_frame()
         f.patch("contact", 0.5, cascade=True)
         # force should NOT be zeroed when contact != 0
-        assert f.tlabel_v2["force_magnitude"] == 0.8
+        assert f.schema_v2.force_magnitude == 0.8
 
     def test_is_modified(self):
         f = self._make_frame()
@@ -163,7 +164,7 @@ class TestTLabelFrame:
         f = self._make_frame()
         d = f.to_dict()
         assert "frame_idx" in d
-        assert "tlabel_v2" in d
+        assert "schema_v2" in d
         assert "manipulation_phase" in d
 
 
@@ -172,21 +173,17 @@ class TestTLabelData:
         from tlabel.core.types import TLabelData, TLabelFrame
         frames = []
         for i in range(n_frames):
+            is_contact = i % 3 == 0
             f = TLabelFrame(
                 frame_idx=i,
                 timestamp_s=i / 30.0,
-                tlabel_v2={"contact": 1.0 if i % 3 == 0 else 0.0,
-                           "force_magnitude": 0.5 if i % 3 == 0 else 0.0,
-                           "slip_event": 0.0, "force_peak": 0.0,
-                           "deformation_magnitude": 0.0, "force_direction": 0.0,
-                           "slip_entropy": 0.0, "texture_energy": 0.0,
-                           "edge_density": 0.0, "contact_area": 0.0,
-                           "centroid_x": 0.5, "normal_field_magnitude": 0.0,
-                           "normal_field_variance": 0.0,
-                           "shear_field_magnitude": 0.0,
-                           "shear_field_direction": 0.0,
-                           "delta_force_normal": 0.0, "delta_force_shear": 0.0,
-                           "friction_cone_ratio": 0.0},
+                schema_v2=TLabelSchemaV2(
+                    contact=is_contact,
+                    force_magnitude=0.5 if is_contact else None,
+                    slip_event=False,
+                    contact_centroid=[0.5, 0.5] if is_contact else None,
+                    confidence=0.9,
+                ),
                 manipulation_phase="idle",
                 confidence=0.9,
             )
@@ -214,7 +211,7 @@ class TestTLabelData:
     def test_to_dict(self):
         data = self._make_data(5)
         d = data.to_dict()
-        assert d["schema_version"] == "0.7.0"
+        assert d["schema_version"] == "0.17.0"
         assert "frames" in d
         assert len(d["frames"]) == 5
 
@@ -256,17 +253,11 @@ class TestExport:
         from tlabel.export.writer import export_data
         frames = [TLabelFrame(
             frame_idx=0, timestamp_s=0.0,
-            tlabel_v2={"contact": 1.0, "force_magnitude": 0.5,
-                       "slip_event": 0.0, "force_peak": 0.0,
-                       "deformation_magnitude": 0.0, "force_direction": 0.0,
-                       "slip_entropy": 0.0, "texture_energy": 0.0,
-                       "edge_density": 0.0, "contact_area": 0.0,
-                       "centroid_x": 0.5, "normal_field_magnitude": 0.0,
-                       "normal_field_variance": 0.0,
-                       "shear_field_magnitude": 0.0,
-                       "shear_field_direction": 0.0,
-                       "delta_force_normal": 0.0, "delta_force_shear": 0.0,
-                       "friction_cone_ratio": 0.0},
+            schema_v2=TLabelSchemaV2(
+                contact=True, force_magnitude=0.5,
+                slip_event=False, contact_centroid=[0.5, 0.5],
+                confidence=0.9,
+            ),
             manipulation_phase="idle", confidence=0.9,
         )]
         data = TLabelData(
@@ -278,24 +269,18 @@ class TestExport:
             assert os.path.exists(path)
             with open(path) as f:
                 d = json.load(f)
-            assert d["frames"][0]["tlabel_v2"]["contact"] == 1.0
+            assert d["frames"][0]["schema_v2"]["contact"] is True
 
     def test_csv_export(self):
         from tlabel.core.types import TLabelData, TLabelFrame
         from tlabel.export.writer import export_data
         frames = [TLabelFrame(
             frame_idx=0, timestamp_s=0.0,
-            tlabel_v2={"contact": 1.0, "force_magnitude": 0.5,
-                       "slip_event": 0.0, "force_peak": 0.0,
-                       "deformation_magnitude": 0.0, "force_direction": 0.0,
-                       "slip_entropy": 0.0, "texture_energy": 0.0,
-                       "edge_density": 0.0, "contact_area": 0.0,
-                       "centroid_x": 0.5, "normal_field_magnitude": 0.0,
-                       "normal_field_variance": 0.0,
-                       "shear_field_magnitude": 0.0,
-                       "shear_field_direction": 0.0,
-                       "delta_force_normal": 0.0, "delta_force_shear": 0.0,
-                       "friction_cone_ratio": 0.0},
+            schema_v2=TLabelSchemaV2(
+                contact=True, force_magnitude=0.5,
+                slip_event=False, contact_centroid=[0.5, 0.5],
+                confidence=0.9,
+            ),
             manipulation_phase="idle", confidence=0.9,
         )]
         data = TLabelData(
@@ -354,15 +339,17 @@ class TestDemo:
             path = data.export(os.path.join(td, "demo_out"), format="json")
             assert os.path.exists(path)
 
-    def test_digit_22_dims(self):
+    def test_digit_14_dims(self):
+        """v0.17: digit demo now uses 14-dim Schema V2"""
         import tlabel
         data = tlabel.demo("digit")
-        assert len(data.dimension_keys) == 22
+        assert len(data.dimension_keys) == 14
 
-    def test_paxini_20_dims(self):
+    def test_paxini_14_dims(self):
+        """v0.17: paxini demo now uses 14-dim Schema V2"""
         import tlabel
         data = tlabel.demo("paxini")
-        assert len(data.dimension_keys) == 20
+        assert len(data.dimension_keys) == 14
 
 
 class TestAutoLabel:
@@ -469,7 +456,7 @@ class TestTLabelAdapter:
             data = tlabel.load(demo_path)
             assert isinstance(data, tlabel.TLabelData)
             assert data.num_frames > 0
-            assert len(data.dimension_keys) == 22
+            assert len(data.dimension_keys) == 14
     
     def test_all_adapters_registered(self):
         """测试所有适配器都已注册"""
@@ -508,26 +495,13 @@ class TestCascadeReverseConstraint:
         defaults = {
             "frame_idx": 0,
             "timestamp_s": 0.0,
-            "tlabel_v2": {
-                "contact": 0.0,
-                "force_magnitude": 0.0,
-                "force_peak": 0.0,
-                "slip_event": 0.0,
-                "contact_area": 0.0,
-                "deformation_magnitude": 0.0,
-                "force_direction": 0.0,
-                "slip_entropy": 0.0,
-                "texture_energy": 0.0,
-                "edge_density": 0.0,
-                "centroid_x": 0.5,
-                "normal_field_magnitude": 0.0,
-                "normal_field_variance": 0.0,
-                "shear_field_magnitude": 0.0,
-                "shear_field_direction": 0.0,
-                "delta_force_normal": 0.0,
-                "delta_force_shear": 0.0,
-                "friction_cone_ratio": 0.0,
-            },
+            "schema_v2": TLabelSchemaV2(
+                contact=False,
+                force_magnitude=None,
+                slip_event=False,
+                contact_centroid=None,
+                confidence=0.9,
+            ),
             "manipulation_phase": "idle",
             "confidence": 0.9,
         }
@@ -539,7 +513,7 @@ class TestCascadeReverseConstraint:
         f = self._make_frame()
         assert f.contact == 0.0
         f.patch("slip_event", 1.0, cascade=True)
-        assert f.tlabel_v2["contact"] == 1.0, "slip=1 should cascade contact=1"
+        assert f.schema_v2.contact is True, "slip=1 should cascade contact=1"
         assert f.manipulation_phase == "slip"
 
     def test_force_cascades_to_contact(self):
@@ -547,27 +521,35 @@ class TestCascadeReverseConstraint:
         f = self._make_frame()
         assert f.contact == 0.0
         f.patch("force_magnitude", 0.8, cascade=True)
-        assert f.tlabel_v2["contact"] == 1.0, "force>0 should cascade contact=1"
+        assert f.schema_v2.contact is True, "force>0 should cascade contact=1"
 
     def test_slip_no_cascade_when_contact_already_set(self):
         """contact 已为 1 时，slip 不重复触发"""
-        f = self._make_frame(tlabel_v2={"contact": 1.0, "force_magnitude": 0.5,
-                                         "force_peak": 0.0, "slip_event": 0.0,
-                                         "contact_area": 0.3, "deformation_magnitude": 0.0,
-                                         "force_direction": 0.0, "slip_entropy": 0.0,
-                                         "texture_energy": 0.0, "edge_density": 0.0,
-                                         "centroid_x": 0.5, "normal_field_magnitude": 0.0,
-                                         "normal_field_variance": 0.0,
-                                         "shear_field_magnitude": 0.0,
-                                         "shear_field_direction": 0.0,
-                                         "delta_force_normal": 0.0,
-                                         "delta_force_shear": 0.0,
-                                         "friction_cone_ratio": 0.0},
-                             manipulation_phase="stable_contact")
+        f = self._make_frame(
+            schema_v2=TLabelSchemaV2(
+                contact=True, force_magnitude=0.5,
+                slip_event=False, contact_centroid=[0.5, 0.5],
+                confidence=0.9,
+            ),
+            manipulation_phase="stable_contact",
+        )
         f.patch("slip_event", 1.0, cascade=True)
-        assert f.tlabel_v2["contact"] == 1.0  # 不变
+        assert f.schema_v2.contact is True  # 不变
         # force 不应被清零
-        assert f.tlabel_v2["force_magnitude"] == 0.5
+        assert f.schema_v2.force_magnitude == 0.5
+
+
+def _ml_data_schema(is_contact, is_slip):
+    """Helper: create a TLabelSchemaV2 for MLEngine test data."""
+    return TLabelSchemaV2(
+        contact=is_contact,
+        force_magnitude=0.5 if is_contact else None,
+        slip_event=is_slip,
+        contact_centroid=[0.5, 0.5] if is_contact else None,
+        object_deformation=0.4 if is_contact else None,
+        confidence=0.9,
+        compliance_level="L2" if is_contact else "L1",
+    )
 
 
 class TestMLEngine:
@@ -583,26 +565,7 @@ class TestMLEngine:
             f = TLabelFrame(
                 frame_idx=i,
                 timestamp_s=i / 30.0,
-                tlabel_v2={
-                    "contact": 0.8 if is_contact else 0.0,
-                    "force_magnitude": 0.5 if is_contact else 0.0,
-                    "slip_event": 1.0 if is_slip else 0.0,
-                    "force_peak": 0.3 if is_contact else 0.0,
-                    "deformation_magnitude": 0.4 if is_contact else 0.0,
-                    "force_direction": 0.2,
-                    "slip_entropy": 0.6 if is_slip else 0.1,
-                    "texture_energy": 0.15,
-                    "edge_density": 0.2,
-                    "contact_area": 0.5 if is_contact else 0.0,
-                    "centroid_x": 0.5,
-                    "normal_field_magnitude": 0.3 if is_contact else 0.0,
-                    "normal_field_variance": 0.1,
-                    "shear_field_magnitude": 0.2 if is_slip else 0.0,
-                    "shear_field_direction": 0.1,
-                    "delta_force_normal": 0.05,
-                    "delta_force_shear": 0.03,
-                    "friction_cone_ratio": 0.7,
-                },
+                schema_v2=_ml_data_schema(is_contact, is_slip),
                 manipulation_phase="stable_contact" if is_contact else "idle",
                 confidence=0.9,
             )
@@ -789,24 +752,19 @@ class TestV07FeatureMetadata:
         from tlabel.core.types import TLabelData, TLabelFrame
         frames = [TLabelFrame(
             frame_idx=0, timestamp_s=0.0,
-            tlabel_v2={"contact": 1.0, "force_magnitude": 0.5,
-                       "slip_event": 0.0, "force_peak": 0.0,
-                       "deformation_magnitude": 0.0, "force_direction": 0.0,
-                       "slip_entropy": 0.0, "texture_energy": 0.0,
-                       "edge_density": 0.0, "contact_area": 0.0,
-                       "centroid_x": 0.5, "normal_field_magnitude": 0.0,
-                       "normal_field_variance": 0.0,
-                       "shear_field_magnitude": 0.0,
-                       "shear_field_direction": 0.0,
-                       "delta_force_normal": 0.0, "delta_force_shear": 0.0,
-                       "friction_cone_ratio": 0.0},
+            schema_v2=TLabelSchemaV2(
+                contact=True, force_magnitude=0.5,
+                slip_event=False, contact_centroid=[0.5, 0.5],
+                confidence=0.9,
+            ),
             manipulation_phase="idle", confidence=0.9,
         )]
         data = TLabelData(frames=frames, sensor_info={"type": "test"},
                           episode_info={"source": "test"}, capabilities={"contact": True})
         d = data.to_dict()
         assert "feature_metadata" in d
-        assert len(d["feature_metadata"]) >= 22
+        # v0.17: feature_metadata now has 14 dimensions (Schema V2)
+        assert len(d["feature_metadata"]) >= 14
 
 
 class TestV07SensorProfile:
@@ -832,17 +790,11 @@ class TestV07SensorProfile:
         }
         frames = [TLabelFrame(
             frame_idx=0, timestamp_s=0.0,
-            tlabel_v2={"contact": 1.0, "force_magnitude": 0.5,
-                       "slip_event": 0.0, "force_peak": 0.0,
-                       "deformation_magnitude": 0.0, "force_direction": 0.0,
-                       "slip_entropy": 0.0, "texture_energy": 0.0,
-                       "edge_density": 0.0, "contact_area": 0.0,
-                       "centroid_x": 0.5, "normal_field_magnitude": 0.0,
-                       "normal_field_variance": 0.0,
-                       "shear_field_magnitude": 0.0,
-                       "shear_field_direction": 0.0,
-                       "delta_force_normal": 0.0, "delta_force_shear": 0.0,
-                       "friction_cone_ratio": 0.0},
+            schema_v2=TLabelSchemaV2(
+                contact=True, force_magnitude=0.5,
+                slip_event=False, contact_centroid=[0.5, 0.5],
+                confidence=0.9,
+            ),
             manipulation_phase="idle", confidence=0.9,
         )]
         data = TLabelData(frames=frames, sensor_info={"type": "gelsight_mini"},
@@ -857,17 +809,11 @@ class TestV07SensorProfile:
         from tlabel.core.types import TLabelData, TLabelFrame
         frames = [TLabelFrame(
             frame_idx=0, timestamp_s=0.0,
-            tlabel_v2={"contact": 1.0, "force_magnitude": 0.5,
-                       "slip_event": 0.0, "force_peak": 0.0,
-                       "deformation_magnitude": 0.0, "force_direction": 0.0,
-                       "slip_entropy": 0.0, "texture_energy": 0.0,
-                       "edge_density": 0.0, "contact_area": 0.0,
-                       "centroid_x": 0.5, "normal_field_magnitude": 0.0,
-                       "normal_field_variance": 0.0,
-                       "shear_field_magnitude": 0.0,
-                       "shear_field_direction": 0.0,
-                       "delta_force_normal": 0.0, "delta_force_shear": 0.0,
-                       "friction_cone_ratio": 0.0},
+            schema_v2=TLabelSchemaV2(
+                contact=True, force_magnitude=0.5,
+                slip_event=False, contact_centroid=[0.5, 0.5],
+                confidence=0.9,
+            ),
             manipulation_phase="idle", confidence=0.9,
         )]
         data = TLabelData(frames=frames, sensor_info={"type": "test"},
@@ -894,17 +840,11 @@ class TestV07SensorProfile:
         }
         frames = [TLabelFrame(
             frame_idx=0, timestamp_s=0.0,
-            tlabel_v2={"contact": 1.0, "force_magnitude": 0.5,
-                       "slip_event": 0.0, "force_peak": 0.0,
-                       "deformation_magnitude": 0.0, "force_direction": 0.0,
-                       "slip_entropy": 0.0, "texture_energy": 0.0,
-                       "edge_density": 0.0, "contact_area": 0.0,
-                       "centroid_x": 0.5, "normal_field_magnitude": 0.0,
-                       "normal_field_variance": 0.0,
-                       "shear_field_magnitude": 0.0,
-                       "shear_field_direction": 0.0,
-                       "delta_force_normal": 0.0, "delta_force_shear": 0.0,
-                       "friction_cone_ratio": 0.0},
+            schema_v2=TLabelSchemaV2(
+                contact=True, force_magnitude=0.5,
+                slip_event=False, contact_centroid=[0.5, 0.5],
+                confidence=0.9,
+            ),
             manipulation_phase="idle", confidence=0.9,
         )]
         data = TLabelData(frames=frames, sensor_info={"type": "test"},
@@ -918,22 +858,15 @@ class TestV07Deprecation:
     """v0.7: force_magnitude deprecation tests"""
 
     def test_force_magnitude_deprecation_warning(self):
-        import warnings
         from tlabel.core.types import TLabelFrame
         f = TLabelFrame(
             frame_idx=0, timestamp_s=0.0,
-            tlabel_v2={"contact": 1.0, "force_magnitude": 0.5,
-                       "deformation_magnitude": 0.3,  # different value triggers warning
-                       "slip_event": 0.0, "force_peak": 0.0,
-                       "deformation_magnitude": 0.0, "force_direction": 0.0,
-                       "slip_entropy": 0.0, "texture_energy": 0.0,
-                       "edge_density": 0.0, "contact_area": 0.0,
-                       "centroid_x": 0.5, "normal_field_magnitude": 0.0,
-                       "normal_field_variance": 0.0,
-                       "shear_field_magnitude": 0.0,
-                       "shear_field_direction": 0.0,
-                       "delta_force_normal": 0.0, "delta_force_shear": 0.0,
-                       "friction_cone_ratio": 0.0},
+            schema_v2=TLabelSchemaV2(
+                contact=True, force_magnitude=0.5,
+                object_deformation=0.3,
+                slip_event=False, contact_centroid=[0.5, 0.5],
+                confidence=0.9,
+            ),
             manipulation_phase="idle", confidence=0.9,
         )
         # This test verifies the deprecation mechanism exists

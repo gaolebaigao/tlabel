@@ -174,23 +174,13 @@ def run_test(demo_root):
     assert data.num_frames > 0
     print("  PASSED")
 
-    print("\n=== Test 4: Verify 22-dim format ===")
+    print("\n=== Test 4: Verify 14-dim Schema V2 format ===")
     frame = data.frames[0]
-    expected_keys = [
-        "contact", "deformation_magnitude", "force_magnitude",
-        "force_peak", "force_direction", "slip_entropy",
-        "slip_event", "texture_energy", "edge_density",
-        "contact_area", "centroid_x",
-        "normal_field_magnitude", "normal_field_variance",
-        "shear_field_magnitude", "shear_field_direction",
-        "delta_force_normal", "delta_force_shear",
-        "friction_cone_ratio",
-        "optical_flow_magnitude", "optical_flow_direction",
-        "temporal_deformation_rate", "contact_transition",
-    ]
-    for key in expected_keys:
-        assert key in frame.tlabel_v2, f"Missing key: {key}"
-    print(f"  All {len(expected_keys)} dimensions present")
+    from tlabel.core.schema import SCHEMA_V2_FIELD_NAMES
+    sv2_dict = frame.schema_v2.to_dict()
+    for key in SCHEMA_V2_FIELD_NAMES:
+        assert key in sv2_dict, f"Missing key: {key}"
+    print(f"  All {len(SCHEMA_V2_FIELD_NAMES)} dimensions present")
     print("  PASSED")
 
     print("\n=== Test 5: Phase inference ===")

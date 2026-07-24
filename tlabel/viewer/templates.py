@@ -39,8 +39,7 @@ def generate_panel_html(
     images_json = json.dumps(tactile_images or [], ensure_ascii=False, default=str)
     tid = instance_id
 
-    return f"""<!DOCTYPE html>
-<div id="{tid}-root" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    return f"""<div id="{tid}-root" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
      max-width: 960px; margin: 0 auto; background: #f8f9fa; color: #343a40;
      border-radius: 12px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.08);">
 
@@ -798,12 +797,12 @@ def generate_panel_html(
         <span style="font-size:11px;color:#868e96;">conf: ${{(f.confidence * 100).toFixed(0)}}%</span>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;">
-        <span>🟢 ${{t('detail.contact')}}: <b>${{tv2.contact !== undefined ? tv2.contact.toFixed(2) : '-'}}</b></span>
-        <span>🔴 ${{t('detail.slip')}}: <b>${{tv2.slip_event !== undefined ? tv2.slip_event.toFixed(2) : '-'}}</b></span>
-        <span>💪 ${{t('dim.force_magnitude')}}: <b>${{tv2.force_magnitude !== undefined ? tv2.force_magnitude.toFixed(3) : '-'}}</b></span>
-        <span>📐 ${{t('dim.object_deformation')}}: <b>${{tv2.object_deformation !== undefined ? tv2.object_deformation.toFixed(3) : '-'}}</b></span>
-        <span>🌡️ ${{t('dim.temperature')}}: <b>${{tv2.temperature !== undefined ? tv2.temperature.toFixed(1) : '-'}}</b></span>
-        <span>✅ ${{t('dim.confidence')}}: <b>${{tv2.confidence !== undefined ? tv2.confidence.toFixed(2) : '-'}}</b></span>
+        <span>🟢 ${{t('detail.contact')}}: <b>${{typeof tv2.contact === 'boolean' ? (tv2.contact ? '✅' : '—') : (tv2.contact != null ? Number(tv2.contact).toFixed(2) : '-')}}</b></span>
+        <span>🔴 ${{t('detail.slip')}}: <b>${{typeof tv2.slip_event === 'boolean' ? (tv2.slip_event ? '✅' : '—') : (tv2.slip_event != null ? Number(tv2.slip_event).toFixed(2) : '-')}}</b></span>
+        <span>💪 ${{t('dim.force_magnitude')}}: <b>${{tv2.force_magnitude != null ? Number(tv2.force_magnitude).toFixed(3) : '-'}}</b></span>
+        <span>📐 ${{t('dim.object_deformation')}}: <b>${{tv2.object_deformation != null ? Number(tv2.object_deformation).toFixed(3) : '-'}}</b></span>
+        <span>🌡️ ${{t('dim.temperature')}}: <b>${{tv2.temperature != null ? Number(tv2.temperature).toFixed(1) : '-'}}</b></span>
+        <span>✅ ${{t('dim.confidence')}}: <b>${{tv2.confidence != null ? Number(tv2.confidence).toFixed(2) : '-'}}</b></span>
       </div>
     `;
 
@@ -1096,10 +1095,11 @@ def generate_panel_html(
             undoBatch.push({{idx: i, field: field, old: old}});
             if (!frames[i].schema_v2) frames[i].schema_v2 = {{}};
             frames[i].schema_v2[field] = val;
-            if (field === 'contact' && val === 0) {{
-              if (frames[i].schema_v2.slip_event > 0) {{
-                undoBatch.push({{idx: i, field: 'slip_event', old: frames[i].schema_v2.slip_event}});
-                frames[i].schema_v2.slip_event = 0;
+            if (field === 'contact' && (val === 0 || val === false)) {{
+              const curSlip = frames[i].schema_v2.slip_event;
+              if (curSlip === true || curSlip > 0) {{
+                undoBatch.push({{idx: i, field: 'slip_event', old: curSlip}});
+                frames[i].schema_v2.slip_event = false;
               }}
               if (frames[i].schema_v2.force_magnitude > 0) {{
                 undoBatch.push({{idx: i, field: 'force_magnitude', old: frames[i].schema_v2.force_magnitude}});
@@ -1722,10 +1722,10 @@ def generate_panel_html(
         e.preventDefault();
         const frame = data.frames[currentFrameIdx];
         if (frame) {{
-          const newContact = frame.schema_v2.contact > 0.5 ? 0.0 : 1.0;
-          frame.schema_v2.contact = newContact;
-          if (newContact === 0.0) {{
-            frame.schema_v2.slip_event = 0.0;
+          const wasContact = typeof frame.schema_v2.contact === 'boolean' ? frame.schema_v2.contact : (frame.schema_v2.contact > 0.5);
+          frame.schema_v2.contact = !wasContact;
+          if (wasContact) {{
+            frame.schema_v2.slip_event = false;
             frame.schema_v2.force_magnitude = 0.0;
             frame.manipulation_phase = 'idle';
           }}
@@ -1734,9 +1734,11 @@ def generate_panel_html(
         break;
       case 's': case 'S':
         const f2 = data.frames[currentFrameIdx];
-        if (f2 && f2.schema_v2.contact > 0.5) {{
-          f2.schema_v2.slip_event = f2.schema_v2.slip_event > 0.5 ? 0.0 : 1.0;
-          if (f2.schema_v2.slip_event > 0.5) f2.manipulation_phase = 'slip';
+        const f2Contact = typeof f2.schema_v2.contact === 'boolean' ? f2.schema_v2.contact : (f2.schema_v2.contact > 0.5);
+        if (f2 && f2Contact) {{
+          const wasSlip = typeof f2.schema_v2.slip_event === 'boolean' ? f2.schema_v2.slip_event : (f2.schema_v2.slip_event > 0.5);
+          f2.schema_v2.slip_event = !wasSlip;
+          if (!wasSlip) f2.manipulation_phase = 'slip';
           modifiedCount++; updateStats(); showFrame(currentFrameIdx);
         }}
         break;
