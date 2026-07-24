@@ -3,7 +3,7 @@
 > **这份文档是给"未来的Agent session"看的。**
 > 上下文溢出后新session醒来，读完这份文档就能独立开发，不会忘记之前的约定。
 >
-> 最后更新：2026-07-22 | 基线版本：v0.16.0
+> 最后更新：2026-07-24 | 基线版本：v0.17.1
 
 ---
 
@@ -23,7 +23,7 @@ TLabel的核心定位是**触觉数据标注工具+标准**，采用"工具带�
 GelSight ──┐                                              ├─ JSON / CSV / HDF5
 DIGIT ─────┤                                              ├─ FTP-1/MTTS Zarr
 PaXini ────┤                                              ├─ LeRobot Parquet
-ToucHD ────┼──→ Adapter → 22维统一格式(tlabel_v2) ──→    ├─ RLDS（stub→正式）
+ToucHD ────┼──→ Adapter → 14维统一格式(Schema V2) ──→    ├─ RLDS（stub→正式）
 VTouch ────┤              ↑                               ├─ ROS2 Bag（stub→正式）
 YCB-Slide ─┤         TLabel Format Schema                 └─ 未来新格式...
 UniVTAC ──┘          （传感器无关）                          ↑
@@ -35,8 +35,8 @@ UniVTAC ──┘          （传感器无关）                          ↑
 
 | 层 | 职责 | 代码位置 | 扩展方式 |
 |----|------|---------|---------|
-| **输入层（Adapter）** | 把各种传感器原始数据转成22维tlabel_v2 | `tlabel/adapters/` | 继承 DataAdapterBase（数据集）或 SensorAdapterBase（实时传感器）+ register |
-| **核心层（Schema）** | 定义22维统一格式、cascade规则、验证 | `tlabel/core/` + `tlabel/schema/` | RFC流程 |
+| **输入层（Adapter）** | 把各种传感器原始数据转成14维Schema V2 | `tlabel/adapters/` | 继承 DataAdapterBase（数据集）或 SensorAdapterBase（实时传感器）+ register |
+| **核心层（Schema）** | 定义14维统一格式、cascade规则、验证 | `tlabel/core/` + `tlabel/schema/` | RFC流程 |
 | **输出层（Exporter）** | 把统一格式转成下游框架需要的格式 | `tlabel/export/` + `tlabel/converters/` | 继承ExporterBase + register |
 
 ---
@@ -46,7 +46,7 @@ UniVTAC ──┘          （传感器无关）                          ↑
 ```
 tlabel/
 ├── core/
-│   ├── types.py          # TLabelData数据结构，22维特征定义
+│   ├── types.py          # TLabelData数据结构，14维Schema V2定义
 │   ├── loader.py         # tlabel.load() 入口，自动识别格式
 │   └── registry.py       # 适配器注册表
 ├── adapters/             # 每种传感器一个文件（表驱动注册）
@@ -80,7 +80,7 @@ tlabel/
 ├── viewer/               # Web UI面板
 │   ├── panel.py          # Python入口，Jupyter集成
 │   └── templates.py      # HTML/JS/CSS模板（Canvas渲染）
-├── features_meta.py      # 22维特征元数据定义
+├── features_meta.py      # 14维特征元数据定义
 └── schema/
     └── tlabel-schema.json # JSON Schema定义
 ```
@@ -90,14 +90,14 @@ tlabel/
 ## 三、核心设计原则（不可违反）
 
 ### 3.1 标准层原则
-1. **22维特征空间是神圣的** —— 增删字段必须走RFC流程，不能直接在代码里改
-2. **传感器无关** —— 核心层不知道传感器是什么，只知道22维向量
+1. **14维Schema V2是神圣的** —— 增删字段必须走RFC流程，不能直接在代码里改
+2. **传感器无关** —— 核心层不知道传感器是什么，只知道14维向量
 3. **Cascade联动规则** —— contact=0时7个字段自动归零，这个逻辑不能改
 4. **向后兼容** —— 旧版本tlabel.json能被新版本load()正常读取
 
 ### 3.2 适配器层原则（v0.16 架构更新）
 1. **一个传感器一个文件** —— 不要把多个传感器塞到一个文件里
-2. **适配器只负责"翻译"** —— 原始数据 → 22维tlabel_v2，不做质量判断
+2. **适配器只负责"翻译"** —— 原始数据 → 14维Schema V2，不做质量判断
 3. **必须有demo数据** —— 每个适配器都要有 `tlabel.demo('sensor_name')` 可调用
 4. **必须有auto_detect支持** —— `tlabel.load()` 能自动识别该格式
 5. **两类基类，选对继承**：
@@ -145,8 +145,8 @@ pip download tlabel==$(curl -s https://pypi.org/pypi/tlabel/json | python3 -c "i
 | 信息来源 | 可靠度 | 历史教训 |
 |----------|--------|---------|
 | **PyPI** | ✅ 唯一权威 | — |
-| GitHub tag | ⚠️ 可能落后 | tag v0.9.0 但实际是 0.10.2 |
-| 本地代码 | ❌ 可能很旧 | 云电脑上是0.2.0，实际已经到0.10.2 |
+| GitHub tag | ⚠️ 可能落后 | tag落后于实际版本 |
+| 本地代码 | ❌ 可能很旧 | 云电脑上是0.2.0，实际已经到0.17.1 |
 | MEMORY.md | ⚠️ 看上次更新时 | 如果没人更新就会过时 |
 
 ### ⚠️ 历史教训：0.2.0事件
@@ -168,7 +168,7 @@ pip download tlabel==$(curl -s https://pypi.org/pypi/tlabel/json | python3 -c "i
 1. 创建 tlabel/adapters/{sensor_name}.py
 2. 继承 AdapterBase，实现：
    - detect(file_path) → bool   # 判断是否是这种格式
-   - load(file_path) → TLabelData  # 加载并转22维
+   - load(file_path) → TLabelData  # 加载并转14维
 3. 在 core/registry.py 的 _ADAPTER_MODULES 字典中加一行（表驱动注册）
    格式: "adapter_name": ("tlabel.adapters.module_name", "ClassName"),
 4. 在 adapters/__init__.py 的 AVAILABLE_ADAPTERS 字典中添加描述
@@ -196,7 +196,7 @@ pip download tlabel==$(curl -s https://pypi.org/pypi/tlabel/json | python3 -c "i
 6. 版本号：MINOR bump
 ```
 
-### 4.3 修改Schema（增删22维字段）
+### 4.3 修改Schema（增删14维字段）
 
 ```
 1. 复制 internal-docs/RFC-TEMPLATE.md
@@ -216,7 +216,7 @@ pip download tlabel==$(curl -s https://pypi.org/pypi/tlabel/json | python3 -c "i
 2. templates.py 是前端代码（HTML/CSS/JS，1405行）
 3. Canvas组件：
    - timeline_canvas: 时间轴 + 帧导航
-   - radar_canvas: 22维雷达图
+   - radar_canvas: 14维雷达图
    - （未来）tactile_image_canvas: 触觉图像显示
 4. 修改UI后必须测试：亮色/暗色模式、中英文切换
 5. 版本号：PATCH bump（如果纯UI改动）
@@ -227,16 +227,16 @@ pip download tlabel==$(curl -s https://pypi.org/pypi/tlabel/json | python3 -c "i
 ## 五、版本线约定
 
 ### 当前状态（2026-07-01）
-- **PyPI最新稳定版**: v0.10.2
-- **GitHub main分支**: 0.10.2（commit 3f27e34）
-- **GitHub最新tag**: v0.9.0（⚠️ tag落后于实际版本，待补）
+- **PyPI最新稳定版**: v0.17.1
+- **GitHub main分支**: 0.17.1
+- **GitHub最新tag**: v0.17.1
 
 ### 版本号规则
 | 变更类型 | 版本变化 | 举例 |
 |---------|---------|------|
-| 修bug/文档/i18n | PATCH | 0.10.2 → 0.10.3 |
-| 新增功能（不破坏旧API） | MINOR | 0.10.2 → 0.11.0 |
-| 破坏性变更 | MAJOR | 0.10.2 → 1.0.0（v0.x阶段免MAJOR） |
+| 修bug/文档/i18n | PATCH | 0.17.1 → 0.17.2 |
+| 新增功能（不破坏旧API） | MINOR | 0.17.1 → 0.18.0 |
+| 破坏性变更 | MAJOR | 0.17.1 → 1.0.0 |
 
 ### 双轨版本管理（2026-07-01 确定）
 
@@ -244,8 +244,8 @@ pip download tlabel==$(curl -s https://pypi.org/pypi/tlabel/json | python3 -c "i
 
 | 轨道 | 用途 | 版本节奏 | 举例 |
 |------|------|---------|------|
-| **主线轨道** | Phase 2规划的核心功能（可视化、增强、ROS2等） | 按规划走，MINOR bump | 0.10.2 → 0.11.0 → 0.12.0 |
-| **BD/适配器轨道** | 新数据包适配器、BD驱动的功能、社区需求 | 随来随发，PATCH bump | 0.10.2 → 0.10.3 → 0.10.4 |
+| **主线轨道** | Phase 2规划的核心功能（可视化、增强、ROS2等） | 按规划走，MINOR bump | 0.17.1 → 0.18.0 → 0.12.0 |
+| **BD/适配器轨道** | 新数据包适配器、BD驱动的功能、社区需求 | 随来随发，PATCH bump | 0.17.1 → 0.17.2 → 0.17.3 |
 
 **规则：**
 - 主线功能和BD适配器**独立发布**，不按顺序排队
@@ -286,7 +286,7 @@ pip download tlabel==$(curl -s https://pypi.org/pypi/tlabel/json | python3 -c "i
 - **converters/**: 复杂双向转换（FTP-1 Zarr需要传感器选择、功能区映射等复杂配置）
 - **原因**: Registry适合简单场景，converters适合需要精细控制的场景
 
-### D3: 为什么22维不能随便加？
+### D3: 为什么14维不能随便加？
 - **每个字段都有下游消费者** —— FTP-1/LeRobot/RLDS都依赖稳定的字段定义
 - **加字段容易，删字段难** —— 一旦有数据集用了这个字段，就不能删
 - **RFC流程保护的是下游兼容性**
@@ -336,8 +336,8 @@ pip download tlabel==$(curl -s https://pypi.org/pypi/tlabel/json | python3 -c "i
 ## 八、常见陷阱（踩过的坑不要再踩）
 
 1. **版本号混乱** —— PyPI版本线是 0.1→0.2a→0.2b→0.3→...→0.10.2，不是从0.2.0a8开始的
-2. **GitHub tag落后** —— 最新tag是v0.9.0但实际是0.10.2，以PyPI为准
-3. **改schema不走RFC** —— 22维字段增删必须走RFC流程
+2. **GitHub tag落后** —— 以PyPI为准，以PyPI为准
+3. **改schema不走RFC** —— 14维Schema V2字段增删必须走RFC流程
 4. **忘记i18n** —— 新增UI文本必须同时加中英文
 5. **忘记暗色模式** —— 新增Canvas/HTML元素必须测试暗色模式
 6. **Panel改了但没测试** —— 修改templates.py后必须test亮色/暗色/中英文四种组合

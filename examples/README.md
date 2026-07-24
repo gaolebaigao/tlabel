@@ -6,21 +6,24 @@ Synthetic datasets for quick testing — no real sensor hardware needed.
 
 | File | Sensor | Frames | Dimensions | Description |
 |------|--------|:------:|:----------:|-------------|
-| `demo_gelsight.json` | GelSight Mini | 150 | 22 | Grasp-hold-release with optical flow |
-| `demo_paxini.json` | PaXini PXCap | 120 | 20 | Grasp demo without optical flow |
+| `demo_gelsight.json` | GelSight Mini | 150 | 14 | Grasp-hold-release with optical flow |
+| `demo_paxini.json` | PaXini PXCap | 120 | 14 | Grasp demo (subset of 14-dim Schema V2) |
 
 ### Usage
 
 ```python
 import json
-from tlabel.core.types import TLabelFrame, TLabelData
+from tlabel.core.types import TLabelFrame, TLabelData, TLabelSchemaV2
 
 with open("examples/data/demo_gelsight.json") as f:
     raw = json.load(f)
 
 frames = [
-    TLabelFrame(f["frame_idx"], f["timestamp_s"], f["tlabel_v2"],
-                f.get("manipulation_phase", "idle"), f.get("confidence", 1.0))
+    TLabelFrame(
+        frame_idx=f["frame_idx"],
+        timestamp_s=f["timestamp_s"],
+        schema_v2=TLabelSchemaV2(**f["schema_v2"])
+    )
     for f in raw["frames"]
 ]
 data = TLabelData(frames, raw["sensor"], raw["episode"], raw["capabilities"])
@@ -33,4 +36,4 @@ data.review()
 python examples/generate_demo_data.py
 ```
 
-This creates synthetic 22-dim (GelSight) and 20-dim (PaXini) demo files in `examples/data/`.
+This creates synthetic 14-dim Schema V2 demo files in `examples/data/`.

@@ -1,8 +1,21 @@
 # TLabel Format Specification
 
-**Version:** 0.8.0  
-**Status:** Active  
-**Last Updated:** 2026-06-28
+> ⚠️ **DEPRECATED — This document describes the legacy v0.8.0 format (22-dim tlabel_v2).**
+> 
+> **Current version: TLabel Schema V2 (14-dim)** — see [`docs/annotation-spec.md`](annotation-spec.md) for the up-to-date specification.
+> 
+> This document is kept as a historical reference only. New projects should use Schema V2.
+> 
+> **Key changes in Schema V2 (v0.17+):**
+> - 22 dimensions → 14 dimensions
+> - `format: tlabel_v2` → `format: tlabel_schema_v2`
+> - New fields: `compliance_level`, `contact_centroid`, `force_vector`, `torque_vector`, `slip_velocity`, `temperature`
+> - Removed fields: `deformation_magnitude`, `force_peak`, `force_direction`, `slip_entropy`, `texture_energy`, `edge_density`, `contact_area`, `normal_field_*`, `shear_field_*`, `delta_force_*`, `friction_cone_ratio`, `optical_flow_*`, `temporal_deformation_rate`, `contact_transition`
+> - Migration guide: `MIGRATION.md` in the tlabel repository
+
+---
+
+## Legacy Document (v0.8.0)
 
 ---
 
