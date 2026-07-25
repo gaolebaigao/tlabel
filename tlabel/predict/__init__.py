@@ -22,6 +22,14 @@ except ImportError:
     MLEngine = None
     MLEngineConfig = None
 
+def _check_ml_deps():
+    """Check if ML dependencies are available, raise helpful error if not."""
+    if MLEngine is None:
+        raise ImportError(
+            "MLEngine requires scikit-learn and joblib. "
+            "Install with: pip install tlabel[ml]"
+        )
+
 from tlabel.predict.postprocess import (
     PostProcessor, PostProcessConfig,
     TemporalSmoother, PhaseHMM,
