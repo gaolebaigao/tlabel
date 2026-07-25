@@ -44,8 +44,12 @@ import tlabel
 # 加载数据（自动识别传感器格式）
 data = tlabel.load("path/to/data")
 
-# 或体验内置 demo
+# 或体验内置 demo（无需任何文件）
 data = tlabel.demo("gelsight")
+
+# 查看标注元数据
+print(data.describe())
+# -> {'num_frames': 500, 'sensor': 'gelsight', 'compliance_level': 'L2', ...}
 
 # 打开交互式标注面板（Jupyter）
 data.review()
@@ -60,6 +64,16 @@ data.export_ftp1("out.zarr")
 tlabel list                    # 查看所有已注册适配器
 tlabel info gelsight           # 查看适配器详情
 tlabel validate data.json      # Schema 合规性检查
+```
+
+### 安装可选依赖
+
+```bash
+pip install tlabel[gelsight]   # opencv-python
+pip install tlabel[paxini]     # h5py
+pip install tlabel[daimon]     # pyarrow + opencv-python
+pip install tlabel[ftp1]       # zarr（FTP-1 导出）
+pip install tlabel[all]        # 全部
 ```
 
 ---
@@ -116,14 +130,6 @@ TLabel Schema V2 定义了 **14 个语义维度**，通过 **合规等级（L1�
 | PaXini GEN3 | 力阵列 | SDK | L2 |
 | Daimon DM-Tac | 视觉式 | USB / `.avi` | L3 |
 
-```bash
-# 按传感器安装依赖
-pip install tlabel[gelsight]   # opencv-python
-pip install tlabel[paxini]     # h5py
-pip install tlabel[daimon]     # pyarrow + opencv-python
-pip install tlabel[all]        # 全部
-```
-
 ---
 
 ## 架构
@@ -151,12 +157,12 @@ pip install tlabel[all]        # 全部
 
 ## 导出格式
 
-| 格式 | 用途 | 命令 |
+| 格式 | 用途 | 用法 |
 |------|------|------|
 | JSON / CSV | 通用分析 | `data.export("out.json")` |
 | FTP-1 Zarr | 基础模型训练 | `data.export_ftp1("out.zarr")` |
-| LeRobot | LeRobot 框架 | `data.export_lerobot("out/")` |
-| RLDS | RLDS/TFDS 管线 | `data.export_rlds("out/")` |
+| LeRobot | LeRobot 框架 | `from tlabel.converters import tlabel_to_lerobot` |
+| RLDS | RLDS/TFDS 管线 | `tlabel.converters.rlds` 模块 |
 | ROS2 | 机器人运行时 | Stub（即将支持） |
 
 ---
