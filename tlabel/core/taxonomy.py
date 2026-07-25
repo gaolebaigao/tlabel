@@ -15,6 +15,7 @@ v0.17 Breaking Change:
 - evaluate_rule() 直接访问 frame.schema_v2，不再使用 _resolve_condition_field
 """
 
+import math
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
@@ -143,8 +144,6 @@ def evaluate_rule(rule: "PrimitiveRule", frame) -> Tuple[bool, float]:
     Returns:
         (matched, confidence): 是否匹配 + 匹配置信度
     """
-    import math
-
     if not rule.conditions:
         return True, rule.base_confidence
 
