@@ -13,16 +13,34 @@ from tlabel.core.taxonomy import (
 )
 from tlabel.core.events import TactileEvent, EVENT_PRESETS
 from tlabel.demo import demo, list_demos
-from tlabel.predict.engine import PredictEngine
-from tlabel.predict.force_estimator import (
-    ForceEstimator, DeformationForceEstimator, ImageForceEstimator,
-    CompositeForceEstimator, auto_force_estimate,
-)
-from tlabel.quality.scorer import QualityScorer
-from tlabel.batch.processor import BatchProcessor
-from tlabel.viewer.batch_panel import TLabelBatchPanel
 
-from tlabel.augment.engine import AugmentEngine
+# Lazy imports for predict module (avoids eager sklearn/joblib load)
+def __getattr__(name):
+    if name == "PredictEngine":
+        from tlabel.predict.engine import PredictEngine
+        return PredictEngine
+    if name == "PredictConfig":
+        from tlabel.predict.engine import PredictConfig
+        return PredictConfig
+    if name == "PredictResult":
+        from tlabel.predict.engine import PredictResult
+        return PredictResult
+    if name == "QualityScorer":
+        from tlabel.quality.scorer import QualityScorer
+        return QualityScorer
+    if name == "BatchProcessor":
+        from tlabel.batch.processor import BatchProcessor
+        return BatchProcessor
+    if name == "TLabelBatchPanel":
+        from tlabel.viewer.batch_panel import TLabelBatchPanel
+        return TLabelBatchPanel
+    if name == "AugmentEngine":
+        from tlabel.augment.engine import AugmentEngine
+        return AugmentEngine
+    raise AttributeError(f"module 'tlabel' has no attribute {name!r}")
+
+from tlabel.core.loader import load
+from tlabel.core.types import TLabelData, TLabelFrame, EpisodeLabel
 
 def augment(data, methods, params=None, seed=None):
     """
@@ -47,8 +65,6 @@ __all__ = [
     "DEFAULT_PRIMITIVE_SUBSET", "GRASP_SUBTYPES", "is_valid_primitive",
     "TaxonomyConfig", "PrimitiveRule", "get_default_taxonomy", "get_full_taxonomy",
     "TactileEvent", "EVENT_PRESETS",
-    "ForceEstimator", "DeformationForceEstimator", "ImageForceEstimator",
-    "CompositeForceEstimator", "auto_force_estimate",
-    "demo", "list_demos", "PredictEngine",
+    "PredictEngine", "PredictConfig", "PredictResult",
     "QualityScorer", "BatchProcessor", "TLabelBatchPanel", "AugmentEngine", "augment", "__version__",
 ]
