@@ -81,12 +81,12 @@ class TLabelFrame:
         self.primitive_confidence = primitive_confidence  # v0.13: 置信度
 
     @property
-    def contact(self) -> float:
-        return 1.0 if self.schema_v2.contact else 0.0
+    def contact(self) -> bool:
+        return bool(self.schema_v2.contact)
 
     @property
-    def slip_event(self) -> float:
-        return 1.0 if self.schema_v2.slip_event else 0.0
+    def slip_event(self) -> bool:
+        return bool(self.schema_v2.slip_event)
 
     @property
     def force_magnitude(self) -> float:
