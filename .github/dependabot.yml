@@ -1,0 +1,25 @@
+version: 2
+updates:
+  # GitHub Actions 依赖自动更新
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "ci"
+
+  # Python 依赖自动更新 (PyPI)
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "python"
+    commit-message:
+      prefix: "deps"
+    # 只关注安全更新，避免太多噪音
+    open-pull-requests-limit: 5
