@@ -4,7 +4,16 @@ All notable changes to the TLabel project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [0.17.2] - 2026-07-25
+## [0.17.3] - 2026-07-30
+
+### Added
+- **Test Layering**: Split tests into `tests/unit/` (pure logic) and `tests/integration/` (end-to-end)
+- **README Freshness Check**: CI test to ensure README code examples remain valid (`tests/unit/test_readme_freshness.py`)
+- **Pytest Configuration**: Added `[tool.pytest.ini_options]` in `pyproject.toml` with markers for `unit`, `integration`, and `slow` tests
+
+### Changed
+- CI workflow now runs unit tests on Python 3.9-3.12 matrix, integration tests separately
+- Updated `tests/unit/conformance/test_schema_validation.py` path resolution for new directory structure
 
 ### Fixed
 - **DEV-004**: Added missing `import math` in `tlabel/core/taxonomy.py` — `_resolve_field_value()` used `math.sqrt()` but math was only imported inside `evaluate_rule()`, causing `NameError`

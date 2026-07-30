@@ -13,7 +13,7 @@ from tlabel.core.types import TLabelData, TLabelFrame
 from tlabel.core.schema import TLabelSchemaV2, SCHEMA_V2_FIELD_NAMES
 
 
-SCHEMA_PATH = Path(__file__).parent.parent.parent / "schema" / "tlabel-schema.json"
+SCHEMA_PATH = Path(__file__).parent.parent.parent.parent / "schema" / "tlabel-schema.json"
 
 
 @pytest.fixture
