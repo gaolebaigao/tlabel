@@ -4,6 +4,11 @@ All notable changes to the TLabel project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.18.1] - 2026-08-03
+
+### Fixed
+- **REGRESSION**: Moved `import math` to module level in `tlabel/core/taxonomy.py` — fixes `NameError` when `evaluate_rule()` computes `force_vector_magnitude` (the fix from v0.17.2 was lost during v0.18 refactoring)
+
 ## [0.18.0] - 2026-08-03
 
 ### Added
