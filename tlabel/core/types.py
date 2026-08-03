@@ -369,6 +369,69 @@ class TLabelData:
         engine = PredictEngine()
         return engine.apply_events(self, min_confidence=min_confidence)
 
+    # ============================================================
+    # v0.18.0: Primitive + Event 标注工具集成
+    # ============================================================
+
+    def validate_annotations(self) -> Dict:
+        """校验 primitive/event 标注一致性
+
+        检查项:
+        - Primitive 名称有效性
+        - 帧范围合法性
+        - Event 类型有效性
+        - confidence/source 合法性
+
+        Returns:
+            dict: {valid: bool, errors: list, warnings: list, stats: dict}
+        """
+        from tlabel.core.annotation import validate_annotations
+        return validate_annotations(self)
+
+    def annotate_from_taxonomy(self, taxonomy=None, min_confidence: float = 0.4,
+                                clear_existing: bool = False) -> int:
+        """批量应用 taxonomy 规则进行 primitive 预标注
+
+        Args:
+            taxonomy: TaxonomyConfig，None 使用默认
+            min_confidence: 最低置信度阈值
+            clear_existing: 是否清除已有标注
+
+        Returns:
+            新增标注数量
+        """
+        from tlabel.core.annotation import annotate_from_taxonomy
+        return annotate_from_taxonomy(self, taxonomy, min_confidence, clear_existing)
+
+    def annotate_events_auto(self, clear_existing: bool = False) -> int:
+        """从数据模式自动检测触觉事件
+
+        检测: contact_onset/loss, slip区间, force_spike, stable_grip
+
+        Returns:
+            新增事件数量
+        """
+        from tlabel.core.annotation import annotate_events_from_data
+        return annotate_events_from_data(self, clear_existing)
+
+    def clear_annotations(self, primitives: bool = True, events: bool = True) -> Dict:
+        """清除标注
+
+        Returns:
+            dict: {cleared_primitives: int, cleared_events: int}
+        """
+        from tlabel.core.annotation import clear_annotations
+        return clear_annotations(self, primitives, events)
+
+    def get_annotation_summary(self) -> Dict:
+        """获取标注摘要 — 统一查询接口
+
+        Returns:
+            dict: {primitives, events, timeline, validation}
+        """
+        from tlabel.core.annotation import get_annotation_summary
+        return get_annotation_summary(self)
+
     def review(self, lang: str = "auto", **kwargs):
         """弹出Jupyter彩色标注面板"""
         from tlabel.viewer.panel import TLabelPanel

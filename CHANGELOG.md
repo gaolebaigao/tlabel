@@ -4,16 +4,23 @@ All notable changes to the TLabel project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [0.17.3] - 2026-07-30
+## [0.18.0] - 2026-08-03
 
 ### Added
-- **Test Layering**: Split tests into `tests/unit/` (pure logic) and `tests/integration/` (end-to-end)
-- **README Freshness Check**: CI test to ensure README code examples remain valid (`tests/unit/test_readme_freshness.py`)
-- **Pytest Configuration**: Added `[tool.pytest.ini_options]` in `pyproject.toml` with markers for `unit`, `integration`, and `slow` tests
+- **Image shape detection** (`detect_image_shape()`): Each adapter now reports its native tactile image dimensions `(H, W, C)`. Supports GelSight (240×320×3), PaXini (8×8×1), ToucHD, VTouch, and LeRobot converter integration with `image_shape`/`adapter` parameters
+- **Annotation module** (`core/annotation.py`): Schema-aware annotation toolkit — `validate_annotations()`, `annotate_from_taxonomy()` (primitive auto-labeling from taxonomy rules), `annotate_events_from_data()` (event detection from signal patterns: contact_onset/loss, slip, force_spike, stable_grip), `clear_annotations()`, `get_annotation_summary()` with timeline view. `TLabelData` convenience methods: `.annotate_from_taxonomy()`, `.annotate_events_auto()`, `.validate_annotations()`, `.clear_annotations()`, `.get_annotation_summary()`
+- **Tactile visualization** (`viewer/tactile_vis.py`): Rich visualization suite — `contact_heatmap()` (pseudo-color deformation overlay), `force_vector_field()` (quiver plot), `contact_region_overlay()` (centroid + region highlight), `composite_view()` (all-in-one from TLabelFrame), `frame_animation()` (GIF/HTML), `text_summary()` (text fallback). Three-tier degradation: Level 1 (numpy+image) → Level 2 (numpy only) → Level 3 (pure text)
 
-### Changed
-- CI workflow now runs unit tests on Python 3.9-3.12 matrix, integration tests separately
-- Updated `tests/unit/conformance/test_schema_validation.py` path resolution for new directory structure
+### Fixed
+- `contact_heatmap()` now accepts scalar intensity values (auto-broadcasts to full image)
+- `force_vector_field()` now accepts list/tuple input (auto-converts to numpy array)
+- `text_summary()` handles 2D force vectors (force_vector with only x,y components)
+
+### Tests
+- 52 unit tests passing (22 detect_image_shape + 30 annotation/visualization)
+- 18 integration tests on real UniVTAC HDF5 data (schema_v2, 57+55 frames, GelSight Mini sensors)
+
+## [0.17.2] - 2026-07-25
 
 ### Fixed
 - **DEV-004**: Added missing `import math` in `tlabel/core/taxonomy.py` — `_resolve_field_value()` used `math.sqrt()` but math was only imported inside `evaluate_rule()`, causing `NameError`

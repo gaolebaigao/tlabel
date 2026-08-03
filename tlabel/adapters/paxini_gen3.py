@@ -710,6 +710,67 @@ class PaxiniGen3Adapter(SensorAdapterBase):
             return 0.85  # 稳定接触
         return 0.6  # 滑移中, 数据较复杂
 
+    def detect_image_shape(self, file_path: Optional[str] = None):
+        """检测PaXini GEN3触觉图像（压力阵列）形状
+
+        根据传感器布局配置返回已知形状：
+          - GEN3-1 指尖: (8, 8, 1) — 单通道灰度
+          - GEN3-2 掌心: (16, 12, 1)
+
+        如果传感器已连接，从实际设备读取。
+        如果提供 file_path，尝试从 .paxini 文件读取元数据。
+
+        Returns:
+            (height, width, channels) 或 None
+        """
+        # 如果已连接，从实际传感器获取
+        if self._connected and self._sensor is not None:
+            try:
+                for seq, tframe in enumerate(self._sensor.stream()):
+                    if seq >= 1:
+                        break
+                    shape = tuple(tframe.pressure_map.shape)
+                    if len(shape) == 2:
+                        return (shape[0], shape[1], 1)
+                    elif len(shape) == 3:
+                        return tuple(shape)
+            except Exception:
+                pass
+
+        # 尝试从文件读取
+        if file_path is not None:
+            try:
+                import h5py
+                with h5py.File(file_path, 'r') as hf:
+                    if 'dataset' in hf and 'observation' in hf['dataset']:
+                        obs = hf['dataset']['observation']
+                        if 'pressure_map' in obs:
+                            shape = obs['pressure_map'].shape
+                            if len(shape) >= 2:
+                                # 取最后几帧中的一帧
+                                if len(shape) == 3:
+                                    return (shape[1], shape[2], 1)
+                                elif len(shape) == 4:
+                                    return (shape[2], shape[3], 1)
+            except Exception:
+                pass
+
+        # 根据已知布局返回（默认指尖）
+        if self._connected:
+            # 尝试从传感器型号推断
+            info = self.get_sensor_info()
+            layout = info.get("layout", {})
+            if isinstance(layout, dict):
+                layout_name = layout.get("type", "")
+                if layout_name in GEN3_LAYOUTS:
+                    regions = GEN3_LAYOUTS[layout_name]["regions"]
+                    first_region = next(iter(regions.values()))
+                    shape = first_region["shape"]
+                    return (shape[0], shape[1], 1)
+
+        # 默认：GEN3-1 指尖 (8, 8, 1)
+        return (8, 8, 1)
+
     @staticmethod
     def _make_pseudo_image(pressure_map_norm: np.ndarray) -> np.ndarray:
         """将归一化压力图转为伪触觉图像 (uint8 灰度)

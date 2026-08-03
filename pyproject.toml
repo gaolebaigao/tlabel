@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tlabel"
-version = "0.17.3"
+version = "0.18.0"
 description = "TouchLabel AI - Tactile Data Annotation Toolkit"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -52,11 +52,3 @@ include = ["tlabel*"]
 
 [tool.setuptools.package-data]
 tlabel = ["demo_data/*.json"]
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-markers = [
-    "unit: Pure logic tests that don't require external dependencies (deselect with '-m \"not unit\"')",
-    "integration: End-to-end tests that may require full environment setup (deselect with '-m \"not integration\"')",
-    "slow: Tests that take longer than 10 seconds to run",
-]
-addopts = "-v --tb=short"

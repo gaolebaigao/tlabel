@@ -22,7 +22,7 @@ from tlabel.converters.ftp1 import (
 
 # LeRobot converter requires pyarrow (optional dependency)
 try:
-    from tlabel.converters.lerobot import lerobot_to_tlabel, tlabel_to_lerobot
+    from tlabel.converters.lerobot import lerobot_to_tlabel, tlabel_to_lerobot, detect_image_shape_for_lerobot
     _HAS_LEROBOT = True
 except ImportError:
     _HAS_LEROBOT = False
@@ -41,4 +41,4 @@ __all__ = [
 
 # Only add lerobot functions if available
 if _HAS_LEROBOT:
-    __all__.extend(["lerobot_to_tlabel", "tlabel_to_lerobot"])
+    __all__.extend(["lerobot_to_tlabel", "tlabel_to_lerobot", "detect_image_shape_for_lerobot"])

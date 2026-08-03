@@ -11,7 +11,7 @@ v0.17起新增 extract_schema() 方法，支持14维Schema V2输出。
 """
 
 from abc import ABC, abstractmethod
-from typing import Optional, Dict, Any, Iterator, List
+from typing import Optional, Dict, Any, Iterator, List, Tuple
 
 from tlabel.core.types import TLabelData, TLabelFrame
 from tlabel.core.schema import TLabelSchemaV2, SCHEMA_V2_FIELD_NAMES
@@ -114,6 +114,21 @@ class DataAdapterBase(ABC):
             }
         """
         pass
+
+    def detect_image_shape(self, file_path: Optional[str] = None) -> Optional[Tuple[int, int, int]]:
+        """检测该数据源输出的触觉图像形状
+
+        用于 LeRobot 等下游框架集成时确定 observation space。
+        返回 (height, width, channels)，如无法确定则返回 None。
+
+        参数:
+            file_path: 可选，数据文件路径。某些适配器需要从实际数据中
+                       推断图像形状；如果适配器可以从配置直接确定，则不需要此参数。
+
+        返回:
+            (height, width, channels) 或 None
+        """
+        return None
 
 
 # =============================================================================
@@ -304,6 +319,24 @@ class SensorAdapterBase(ABC):
             episode_info={},
             capabilities=self.get_capabilities(),
         )
+
+    def detect_image_shape(self, file_path: Optional[str] = None) -> Optional[Tuple[int, int, int]]:
+        """检测该传感器输出的触觉图像形状
+
+        用于 LeRobot 等下游框架集成时确定 observation space。
+        返回 (height, width, channels)，如无法确定则返回 None。
+
+        对于实时传感器，通常可以从已知配置直接返回；
+        对于需要数据的场景，可传入 file_path 从录制文件中采样。
+
+        参数:
+            file_path: 可选，录制文件路径。某些传感器需要从实际数据中
+                       推断图像形状。
+
+        返回:
+            (height, width, channels) 或 None
+        """
+        return None
 
 
 # =============================================================================
