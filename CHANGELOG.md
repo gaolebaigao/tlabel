@@ -4,6 +4,12 @@ All notable changes to the TLabel project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.18.2] - 2026-08-03
+
+### Fixed
+
+- `force_vector_field()` and `contact_region_overlay()` now handle single-channel (grayscale) input images — auto-convert to 3-channel RGB
+
 ## [0.18.1] - 2026-08-03
 
 ### Fixed

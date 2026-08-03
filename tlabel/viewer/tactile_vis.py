@@ -161,6 +161,10 @@ def force_vector_field(image: np.ndarray,
     
     result = image.copy()
     h, w = result.shape[:2]
+    
+    # 单通道转三通道
+    if result.ndim == 2:
+        result = np.stack([result] * 3, axis=-1)
 
     if force_vectors.ndim == 3 and force_vectors.shape[2] == 2:
         # (H, W, 2) 格式 — 每个像素一个向量
@@ -254,6 +258,10 @@ def contact_region_overlay(image: np.ndarray,
 
     result = image.copy()
     h, w = result.shape[:2]
+
+    # 单通道转三通道
+    if result.ndim == 2:
+        result = np.stack([result] * 3, axis=-1)
 
     if contact_centroid is not None:
         cx, cy = contact_centroid
