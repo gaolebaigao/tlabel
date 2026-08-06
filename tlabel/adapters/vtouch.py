@@ -318,6 +318,36 @@ class VTouchAdapter(BaseAdapter):
     每个构型有4个GelSight风格视触觉传感器
     """
 
+    def detect_image_shape(self, file_path: Optional[str] = None):
+        """检测VTouch触觉图像形状
+
+        从HDF5文件中读取第一帧触觉图像确定形状。
+        VTouch使用GelSight风格传感器，典型分辨率约(120, 160, 3)。
+
+        Returns:
+            (height, width, channels) 或 None
+        """
+        if file_path is None or not HAS_H5PY:
+            return None
+
+        try:
+            with h5py.File(file_path, 'r') as hf:
+                sensors = _get_tactile_sensors(hf)
+                if not sensors:
+                    return None
+
+                # 读取第一个传感器的第一帧
+                sensor_path = sensors[0]['path']
+                tactile_data = hf[f"{sensor_path}/data"]
+
+                img = _decode_tactile_frame(tactile_data, 0)
+                if img is not None:
+                    return img.shape
+        except Exception:
+            pass
+
+        return None
+
     # v0.17: Compliance Level L2 — VTouch有GelSight风格触觉，可从图像估算force_magnitude
     default_compliance_level: str = "L2"
 

@@ -355,6 +355,57 @@ class ToucHDAdapter(BaseAdapter):
         data = load("ToucHD-Force/", format="touchd", sensor="all")
     """
 
+    def detect_image_shape(self, file_path: Optional[str] = None):
+        """检测ToucHD触觉图像形状
+
+        从数据目录中读取第一张PNG图像确定形状。
+        不同传感器分辨率可能不同，需从实际数据确认。
+
+        已知典型分辨率:
+          - digit: (120, 160, 3)
+          - gelsight: (240, 320, 3)
+          - biotip/duragel: 各有差异
+
+        Returns:
+            (height, width, channels) 或 None
+        """
+        if file_path is None:
+            return None
+
+        root = Path(file_path)
+        if not root.exists():
+            return None
+
+        # 尝试查找JSON元数据
+        json_path = root / "all_data_direction.json"
+        if not json_path.exists():
+            return None
+
+        try:
+            with open(json_path, "r") as f:
+                json_data = json.load(f)
+
+            # 遍历找到第一个有图像的传感器目录
+            for obj_speed_name, obj_data in json_data.items():
+                for sensor_name in SUPPORTED_SENSORS:
+                    if sensor_name not in obj_data or not obj_data[sensor_name]:
+                        continue
+                    sensor_dir = root / obj_speed_name / sensor_name
+                    if not sensor_dir.exists():
+                        continue
+                    # 找第一张PNG
+                    pngs = sorted(sensor_dir.glob("image_*_r.png"))
+                    if not pngs:
+                        pngs = sorted(sensor_dir.glob("image_*_l.png"))
+                    if pngs:
+                        img = _decode_image(str(pngs[0]))
+                        if img is not None:
+                            return img.shape
+        except Exception:
+            pass
+
+        return None
+
     # v0.17: Compliance Level L3 — ToucHD是唯一拥有完整3D力标签(Fx,Fy,Fz)的数据集
     default_compliance_level: str = "L3"
 

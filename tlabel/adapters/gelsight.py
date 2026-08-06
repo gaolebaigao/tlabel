@@ -532,6 +532,52 @@ class GelSightAdapter(BaseAdapter):
             sensor_id="gelsight_main",  # 默认传感器ID，用户可覆盖
         )
 
+    def detect_image_shape(self, file_path: Optional[str] = None):
+        """检测GelSight/DIGIT触觉图像形状
+
+        根据传感器型号返回已知分辨率：
+          - DIGIT: (120, 160, 3)
+          - GelSight Mini: (240, 320, 3)
+
+        如果提供 file_path，尝试从数据文件中读取第一帧确认。
+
+        Returns:
+            (height, width, channels) 或 None
+        """
+        # 尝试从文件路径推断传感器类型
+        if file_path is not None:
+            path_str = str(file_path).lower()
+            if "digit" in path_str:
+                return (120, 160, 3)
+            elif "gelsight" in path_str:
+                return (240, 320, 3)
+
+            # 尝试从pkl文件读取第一帧
+            try:
+                pkl_path = Path(file_path)
+                if pkl_path.exists():
+                    # 查找同目录下的图像pkl
+                    image_dir = pkl_path.parent
+                    for prefix in ["dataset_gelsight_", "dataset_digit_"]:
+                        for suffix in ["00.pkl", "01.pkl"]:
+                            img_file = image_dir / f"{prefix}{suffix}"
+                            if img_file.exists():
+                                with open(img_file, "rb") as f:
+                                    batch = pickle.load(f)
+                                if isinstance(batch, np.ndarray) and len(batch) > 0:
+                                    img = _decode_jpeg(batch[0])
+                                    if img is not None:
+                                        return img.shape
+                                elif isinstance(batch, list) and len(batch) > 0:
+                                    img = _decode_jpeg(batch[0])
+                                    if img is not None:
+                                        return img.shape
+            except Exception:
+                pass
+
+        # 默认返回GelSight Mini分辨率
+        return (240, 320, 3)
+
     def _compute_confidence(self, frame_info, tlabel_v2):
         """计算标注置信度"""
         # 简单启发式：接触=0且slip=0 → 高置信度
