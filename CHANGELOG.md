@@ -4,6 +4,19 @@ All notable changes to the TLabel project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.20.0] - 2026-08-25
+
+### Added
+- **SynTouch BioTac adapter** (`syntouch`): DataAdapter for SynTouch BioTac sensor data (.h5/.csv/.mat). Maps 4-channel BioTac signals (impedance, static/dynamic pressure, temperature) to Schema V2. Closes #5
+- **Edge case tests**: Comprehensive boundary/edge case test suite for adapter robustness — empty files, corrupted data, missing fields, unsupported formats. Closes #8
+
+### Changed
+- **CI**: Bump `actions/checkout` from v4 to v7
+
+### Tests
+- New `tests/unit/test_edge_cases.py` with 12+ edge case scenarios
+- All existing tests remain passing
+
 ## [0.18.2] - 2026-08-03
 
 ### Fixed

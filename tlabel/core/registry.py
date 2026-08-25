@@ -31,6 +31,7 @@ _ADAPTER_MODULES = {
     "paxini_gen3":   ("tlabel.adapters.paxini_gen3",    "PaxiniGen3Adapter"),
     "paxini_px6d":   ("tlabel.adapters.paxini_px6d",    "PaxiniPX6DAdapter"),  # placeholder
     "daimon_dm_tac": ("tlabel.adapters.daimon_dm_tac",  "DaimonDmTacAdapter"),
+    "syntouch":      ("tlabel.adapters.syntouch",      "SynTouchBioTacAdapter"),
 }
 
 # 社区适配器 entry_point group name

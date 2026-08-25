@@ -33,6 +33,7 @@ AVAILABLE_ADAPTERS = {
     "vtouch":        "VTouch vision-based tactile (.h5 / .hdf5)",
     "ycb_slide":     "YCB-Slide CMU DIGIT sliding (.npy / directory)",
     "tacquad":       "TacQuad AnyTouch multi-sensor (directory)",
+    "syntouch":      "SynTouch BioTac (.h5 / .csv / .mat)",
     # 传感器适配器 (SensorAdapterBase)
     "paxini_gen3":   "PaXini GEN3 realtime (SDK / .paxini)",
     "daimon_dm_tac": "Daimon DM-Tac realtime (USB / UVC)",
