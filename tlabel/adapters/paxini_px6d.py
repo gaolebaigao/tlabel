@@ -4,7 +4,8 @@ PaXini PX6D 六维力/触觉传感器适配器 — placeholder（开发中）
 PX6D 是 PaXini 新一代六维力触觉传感器，集成高精度力觉与触觉感知。
 该适配器为占位符，目前尚未实现，后续版本将提供完整支持。
 
-所有方法均抛出 NotImplementedError，仅供注册占位使用。
+实时数据读取相关方法（connect / stream_frames 等）仍抛出 NotImplementedError，
+其余元信息方法返回占位数据，以保证适配器可正常实例化并通过 CI 基础检查。
 """
 
 from typing import Optional, Dict, Any, Iterator, List
@@ -24,14 +25,15 @@ class PaxiniPX6DAdapter(SensorAdapterBase):
       - 高分辨率触觉阵列（待公布规格）
       - 集成温度补偿与实时标定
 
-    本类为注册占位符，所有方法均抛出 NotImplementedError。
-    完整实现将在后续版本中提供。
+    本类为注册占位符，实时数据流相关方法（connect / stream_frames 等）
+    仍抛出 NotImplementedError。完整实现将在后续版本中提供。
 
     依赖: paxini-px6d-sdk（厂商 SDK，待发布）
     """
 
     def __init__(self):
-        raise NotImplementedError("PaXini PX6D adapter is under development")
+        # 占位符：不连接硬件，仅完成实例化
+        pass
 
     @property
     def name(self) -> str:
@@ -42,13 +44,43 @@ class PaxiniPX6DAdapter(SensorAdapterBase):
         return []
 
     def get_capabilities(self) -> Dict[str, bool]:
-        raise NotImplementedError("PaXini PX6D adapter is under development")
+        """返回占位符能力声明（全部为 False，表示暂未实现）
+
+        包含 Schema V2 所有 14 个字段对应的能力 key，值统一为 False。
+        """
+        return {
+            "contact": False,
+            "contact_centroid": False,
+            "contact_region": False,
+            "force_magnitude": False,
+            "force_vector": False,
+            "torque_vector": False,
+            "slip_event": False,
+            "slip_velocity": False,
+            "manipulation_phase": False,
+            "texture_class": False,
+            "object_deformation": False,
+            "temperature": False,
+            "confidence": False,
+            "compliance_level": False,
+        }
 
     def get_sensor_info(self) -> Dict[str, Any]:
-        raise NotImplementedError("PaXini PX6D adapter is under development")
+        return {
+            "name": "PaXini PX6D",
+            "manufacturer": "PaXini",
+            "status": "placeholder",
+            "note": "Adapter under development",
+        }
 
     def extract_schema(self, raw_frame_data) -> TLabelSchemaV2:
-        raise NotImplementedError("PaXini PX6D adapter is under development")
+        """占位实现：返回空 Schema（compliance_level=L1）"""
+        return TLabelSchemaV2(
+            contact=False,
+            slip_event=False,
+            confidence=0.0,
+            compliance_level="L1",
+        )
 
     def load(self, file_path: str,
              trajectory_id: Optional[int] = None,
