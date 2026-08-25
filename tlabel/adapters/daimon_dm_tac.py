@@ -97,6 +97,130 @@ class DaimonDmTacAdapter(SensorAdapterBase):
             "connection_status": "connected" if self._connected else "disconnected",
         }
 
+    def extract_schema(self, raw_frame_data) -> "TLabelSchemaV2":
+        """从 DM-Tac 三路场数据提取 Schema V2 格式
+
+        将 deformation / shear / depth 三路视觉触觉数据映射为
+        14 维结构化 TLabel Schema V2 标注。
+
+        作为实时传感器适配器，extract_schema 主要在 load() 路径中
+        被间接调用（通过 TLabelSchemaV2.from_tlabel_v1）。此处提供
+        独立接口，便于单帧数据转换与测试。
+
+        参数:
+            raw_frame_data: 原始帧数据。支持以下格式:
+                - dict: 包含 'deformation', 'shear', 'depth' 三路
+                  numpy 数组（灰度图，float32，值范围 [0, 1]）
+                - numpy.ndarray: 整帧 BGR 图像（左=deformation,
+                  中=shear, 右=depth），将自动分割三路
+
+        返回:
+            TLabelSchemaV2 — 14 维结构化触觉语义标注
+        """
+        import numpy as np
+
+        # ── 解析 raw_frame_data ──────────────────────────────────────
+        deform_gray = None
+        shear_gray = None
+
+        if isinstance(raw_frame_data, dict):
+            # 字典格式：三路独立数组
+            deform_arr = raw_frame_data.get("deformation")
+            shear_arr = raw_frame_data.get("shear")
+            if deform_arr is not None:
+                deform_gray = np.asarray(deform_arr, dtype=np.float32)
+                if deform_gray.max() > 1.0:
+                    deform_gray = deform_gray / 255.0
+            if shear_arr is not None:
+                shear_gray = np.asarray(shear_arr, dtype=np.float32)
+                if shear_gray.max() > 1.0:
+                    shear_gray = shear_gray / 255.0
+        elif hasattr(raw_frame_data, "shape") and len(raw_frame_data.shape) >= 2:
+            # numpy 整帧格式：左=deformation, 中=shear, 右=depth
+            frame = np.asarray(raw_frame_data)
+            h, w = frame.shape[:2]
+            third_w = w // 3
+            deform_frame = frame[:, :third_w]
+            shear_frame = frame[:, third_w:2 * third_w]
+
+            # 转灰度
+            if len(deform_frame.shape) == 3:
+                import cv2
+                deform_gray = cv2.cvtColor(deform_frame, cv2.COLOR_BGR2GRAY).astype(np.float32) / 255.0
+                shear_gray = cv2.cvtColor(shear_frame, cv2.COLOR_BGR2GRAY).astype(np.float32) / 255.0
+            else:
+                deform_gray = deform_frame.astype(np.float32)
+                if deform_gray.max() > 1.0:
+                    deform_gray = deform_gray / 255.0
+                shear_gray = shear_frame.astype(np.float32)
+                if shear_gray.max() > 1.0:
+                    shear_gray = shear_gray / 255.0
+
+        # ── 从 deformation 计算核心特征 ───────────────────────────────
+        if deform_gray is not None and deform_gray.size > 0:
+            max_val = float(deform_gray.max())
+            mean_val = float(deform_gray.mean())
+            var_val = float(deform_gray.var())
+
+            contact = max_val > 0.1
+            deformation_mag = float(np.sqrt(mean_val ** 2 + var_val))
+            contact_area = float(np.mean(deform_gray > 0.05))
+            force_mag = deformation_mag * 100.0  # 经验映射
+            force_peak = max_val * 100.0
+
+            # 形心 (归一化到 [0, 1])
+            if contact and contact_area > 0.01:
+                ys, xs = np.where(deform_gray > 0.05)
+                if len(xs) > 0:
+                    h, w = deform_gray.shape
+                    centroid_x = float(xs.mean() / w)
+                    centroid_y = float(ys.mean() / h)
+                    contact_centroid = [round(centroid_x, 4), round(centroid_y, 4)]
+                else:
+                    contact_centroid = None
+            else:
+                contact_centroid = None
+
+            confidence = 0.8 if contact else 0.95
+        else:
+            contact = False
+            deformation_mag = 0.0
+            contact_area = 0.0
+            force_mag = None
+            force_peak = 0.0
+            contact_centroid = None
+            confidence = 0.95
+
+        # ── 从 shear 计算滑移相关 ─────────────────────────────────────
+        slip_event = False
+        slip_velocity = None
+        shear_mag = 0.0
+
+        if shear_gray is not None and shear_gray.size > 0:
+            shear_mag = float(np.sqrt(np.mean(shear_gray ** 2) + np.var(shear_gray)))
+            # 简单阈值法判定滑移
+            slip_event = shear_mag > 0.15
+
+        # ── 构造 Schema V2 ────────────────────────────────────────────
+        schema = TLabelSchemaV2(
+            contact=contact,
+            contact_centroid=contact_centroid,
+            contact_region="palmar" if contact else None,
+            force_magnitude=round(force_mag, 4) if force_mag is not None else None,
+            force_vector=None,       # DM-Tac 单目无法直接得到3D力矢量
+            torque_vector=None,
+            slip_event=slip_event,
+            slip_velocity=slip_velocity,
+            manipulation_phase=None,
+            texture_class=None,
+            object_deformation=round(deformation_mag, 4) if contact else None,
+            temperature=None,
+            confidence=confidence,
+            compliance_level="L2",   # 能提供 contact + force_magnitude
+        )
+
+        return schema
+
     # ─── SensorAdapterBase 实时接口实现 ─────────────────────────────────
 
     def connect(self, device_id: str = "auto", **kwargs) -> bool:
