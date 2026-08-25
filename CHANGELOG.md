@@ -4,6 +4,13 @@ All notable changes to the TLabel project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.20.1] - 2026-08-25
+
+### Fixed
+- **paxini_px6d placeholder adapter**: Added missing `tlabel/adapters/paxini_px6d.py` placeholder module so that registry import of `PaxiniPX6DAdapter` no longer fails with ImportError. All methods raise `NotImplementedError` with descriptive message.
+- **Lazy registry loading**: `list_adapters()`, `list_builtin_adapters()`, and `list_external_adapters()` now call `_ensure_adapters()` before returning, so calling them without prior `get_adapter()` no longer returns an empty dict.
+- **BioTac headerless CSV column mapping**: Fixed column order for headerless CSVs with >=22 columns — corrected to BioTac standard channel order (electrodes 0-18, pac, pdc, tac, tdc). Previously pac/pdc were swapped and the 23rd column was misidentified as timestamp instead of tdc, causing incorrect contact detection.
+
 ## [0.20.0] - 2026-08-25
 
 ### Added

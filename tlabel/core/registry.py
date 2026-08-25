@@ -80,16 +80,19 @@ def get_adapter(name: str) -> Optional[Type]:
 
 def list_adapters() -> Dict[str, Type]:
     """List all registered adapters (内置 + 外部)"""
+    _ensure_adapters()
     return dict(_ADAPTERS)
 
 
 def list_builtin_adapters() -> Dict[str, Type]:
     """仅列出内置适配器"""
+    _ensure_adapters()
     return {k: v for k, v in _ADAPTERS.items() if k not in _EXTERNAL_ADAPTERS}
 
 
 def list_external_adapters() -> Dict[str, Type]:
     """仅列出外部/社区适配器"""
+    _ensure_adapters()
     return dict(_EXTERNAL_ADAPTERS)
 
 

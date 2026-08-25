@@ -361,12 +361,15 @@ def _load_csv(file_path: str) -> Dict[str, np.ndarray]:
         # 无表头，按列数推断
         # 常见模式: 19电极 + pdc + pac + temp (+ timestamp) = 22 或 23 列
         if n_cols >= 22:
+            # BioTac 标准通道顺序：19电极 + pac + pdc + tac (+ tdc)
+            # 前19列为电极阻抗，第20列pac(动态压力)，第21列pdc(静态压力)，
+            # 第22列tac(温度)，第23列tdc(可选，热传导直流分量)
             data["impedance"] = data_arr[:, :19].astype(np.float64)
-            data["pdc"] = data_arr[:, 19].copy()
-            data["pac"] = data_arr[:, 20].copy()
+            data["pac"] = data_arr[:, 19].copy()
+            data["pdc"] = data_arr[:, 20].copy()
             data["temperature"] = data_arr[:, 21].copy()
             if n_cols >= 23:
-                data["timestamp"] = data_arr[:, 22].copy()
+                data["tdc"] = data_arr[:, 22].copy()
         elif n_cols >= 19:
             # 假设前19列是电极
             data["impedance"] = data_arr[:, :19].astype(np.float64)
