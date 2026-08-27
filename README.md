@@ -129,6 +129,7 @@ Capability declarations are the core innovation: each adapter declares which of 
 | TacQuad (AnyTouch) | Multi-sensor | directory | L3 |
 | VTouch | Visuo-tactile | `.h5` | L3 |
 | YCB-Slide | Visuo-tactile | `.npy` | L3 |
+| XELA uSkin (UniTac-NV) | 3-axis taxel force array | `.csv` | L1 |
 
 ### Real-time Sensor Adapters (hardware)
 

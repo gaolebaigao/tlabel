@@ -122,6 +122,7 @@ TLabel Schema V2 定义了 **14 个语义维度**，通过 **合规等级（L1�
 | TacQuad (AnyTouch) | 多传感器 | directory | L3 |
 | VTouch | 视觉式 | `.h5` | L3 |
 | YCB-Slide | 视觉式 | `.npy` | L3 |
+| XELA uSkin (UniTac-NV) | 3轴 taxel 力阵列 | `.csv` | L1 |
 
 ### 实时传感器适配器（硬件直连）
 
