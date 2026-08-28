@@ -15,6 +15,9 @@ VALID_MANIPULATION_PHASES = ("pre_contact", "approach", "grasp", "lift", "hold",
 VALID_TEXTURE_CLASSES = ("smooth", "rough", "granular", "fibrous", "sticky", "slippery")
 VALID_COMPLIANCE_LEVELS = ("L1", "L2", "L3", "L4")
 
+# data_quality.level 枚举（Q1-Q4 用户自声明）
+VALID_DATA_QUALITY_LEVELS = ("Q1", "Q2", "Q3", "Q4")
+
 # 14维字段名列表（有序）
 SCHEMA_V2_FIELD_NAMES = [
     "contact",
@@ -67,12 +70,53 @@ class TLabelSchemaV2:
     temperature: Optional[float] = None               # °C
 
     # ================================================================
+    # Optional 扩展元数据（不属于 14 维核心语义，全部可选，向后兼容）
+    # ================================================================
+
+    data_quality: Optional[Dict[str, Any]] = None
+    """
+    用户自声明的数据处理级别（Q1-Q4）。TLabel 不做数据清洗/判断，
+    仅提供字段和定义规范，类似食品包装的"保质期"。
+
+    结构示例：
+    {
+        "level": "Q2",           # 必填：Q1/Q2/Q3/Q4
+        "raw_processed": False,  # 是否经过原始数据处理
+        "denoised": False,       # 是否已去噪
+        "calibrated": True,      # 是否已校准
+        "verified": False,       # 是否经过第三方/自动抽检
+        "verified_by": None,     # 验证方（字符串或 None）
+        "notes": ""              # 备注
+    }
+
+    Q1: 用户声明"原始数据，未处理"
+    Q2: 用户声明"做过去噪/校准/时序对齐"
+    Q3: 有第三方或自动抽检的置信度评分
+    Q4: 人工全量标注+多传感器交叉验证
+    """
+
+    provenance: Optional[Dict[str, Any]] = None
+    """
+    最小来源元数据（"出生证明"），全部可选。仅保留直接影响数据
+    可比性和校准的 4 个字段。其他（采集人员/环境温湿度/处理历史）
+    属于数据管理平台职责，不在此处。
+
+    结构示例：
+    {
+        "sensor_model": "GelSight Mini v2",
+        "sensor_firmware": "1.3.0",
+        "calibration_date": "2026-08-01",  # ISO 8601 日期
+        "sampling_rate_hz": 270
+    }
+    """
+
+    # ================================================================
     # 序列化
     # ================================================================
 
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典"""
-        return {
+        result = {
             "contact": self.contact,
             "contact_centroid": self.contact_centroid,
             "contact_region": self.contact_region,
@@ -88,6 +132,12 @@ class TLabelSchemaV2:
             "confidence": self.confidence,
             "compliance_level": self.compliance_level,
         }
+        # Optional 扩展元数据：仅当非空时输出，保持向后兼容
+        if self.data_quality is not None:
+            result["data_quality"] = self.data_quality
+        if self.provenance is not None:
+            result["provenance"] = self.provenance
+        return result
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "TLabelSchemaV2":
@@ -107,6 +157,8 @@ class TLabelSchemaV2:
             temperature=data.get("temperature"),
             confidence=float(data.get("confidence", 1.0)),
             compliance_level=str(data.get("compliance_level", "L1")),
+            data_quality=data.get("data_quality"),
+            provenance=data.get("provenance"),
         )
 
     # ================================================================
@@ -294,5 +346,49 @@ class TLabelSchemaV2:
         if self.slip_velocity is not None:
             if not isinstance(self.slip_velocity, (list, tuple)) or len(self.slip_velocity) != 2:
                 errors.append("slip_velocity must be [vx, vy] (2 floats)")
+
+        # 9. data_quality 结构检查（仅当提供时）
+        if self.data_quality is not None:
+            if not isinstance(self.data_quality, dict):
+                errors.append("data_quality must be a dict")
+            else:
+                dq_level = self.data_quality.get("level")
+                if dq_level is not None and dq_level not in VALID_DATA_QUALITY_LEVELS:
+                    errors.append(
+                        f"data_quality.level must be one of {VALID_DATA_QUALITY_LEVELS}, got '{dq_level}'"
+                    )
+                # 已知的 bool/str 字段类型检查
+                for bool_field in ("raw_processed", "denoised", "calibrated", "verified"):
+                    val = self.data_quality.get(bool_field)
+                    if val is not None and not isinstance(val, bool):
+                        errors.append(f"data_quality.{bool_field} must be bool, got {type(val).__name__}")
+                notes_val = self.data_quality.get("notes")
+                if notes_val is not None and not isinstance(notes_val, str):
+                    errors.append("data_quality.notes must be str")
+                vby_val = self.data_quality.get("verified_by")
+                if vby_val is not None and not isinstance(vby_val, (str, type(None))):
+                    errors.append("data_quality.verified_by must be str or None")
+
+        # 10. provenance 结构检查（仅当提供时）
+        if self.provenance is not None:
+            if not isinstance(self.provenance, dict):
+                errors.append("provenance must be a dict")
+            else:
+                for str_field in ("sensor_model", "sensor_firmware", "calibration_date"):
+                    val = self.provenance.get(str_field)
+                    if val is not None and not isinstance(val, str):
+                        errors.append(f"provenance.{str_field} must be str")
+                sr_val = self.provenance.get("sampling_rate_hz")
+                if sr_val is not None:
+                    if not isinstance(sr_val, (int, float)) or isinstance(sr_val, bool):
+                        errors.append("provenance.sampling_rate_hz must be number")
+                    elif sr_val <= 0:
+                        errors.append("provenance.sampling_rate_hz must be > 0")
+                # calibration_date ISO 8601 粗校验（YYYY-MM-DD）
+                cal_date = self.provenance.get("calibration_date")
+                if cal_date is not None and isinstance(cal_date, str):
+                    import re
+                    if not re.match(r"^\d{4}-\d{2}-\d{2}$", cal_date):
+                        errors.append("provenance.calibration_date must be ISO 8601 date (YYYY-MM-DD)")
 
         return (len(errors) == 0, errors)

@@ -4,25 +4,38 @@ All notable changes to the TLabel project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [0.20.1] - 2026-08-25
-
-### Fixed
-- **paxini_px6d placeholder adapter**: Added missing `tlabel/adapters/paxini_px6d.py` placeholder module so that registry import of `PaxiniPX6DAdapter` no longer fails with ImportError. All methods raise `NotImplementedError` with descriptive message.
-- **Lazy registry loading**: `list_adapters()`, `list_builtin_adapters()`, and `list_external_adapters()` now call `_ensure_adapters()` before returning, so calling them without prior `get_adapter()` no longer returns an empty dict.
-- **BioTac headerless CSV column mapping**: Fixed column order for headerless CSVs with >=22 columns — corrected to BioTac standard channel order (electrodes 0-18, pac, pdc, tac, tdc). Previously pac/pdc were swapped and the 23rd column was misidentified as timestamp instead of tdc, causing incorrect contact detection.
-
-## [0.20.0] - 2026-08-25
+## [0.21.0] - 2026-08-28
 
 ### Added
-- **SynTouch BioTac adapter** (`syntouch`): DataAdapter for SynTouch BioTac sensor data (.h5/.csv/.mat). Maps 4-channel BioTac signals (impedance, static/dynamic pressure, temperature) to Schema V2. Closes #5
-- **Edge case tests**: Comprehensive boundary/edge case test suite for adapter robustness — empty files, corrupted data, missing fields, unsupported formats. Closes #8
+- **Optional metadata fields** (non-invasive, fully backward compatible):
+  - `data_quality`: User self-declared data processing level (Q1-Q4). Q1=raw, Q2=denoised/calibrated, Q3=third-party verified, Q4=full manual annotation + cross-sensor validation. TLabel provides the field and definition only — it does not perform data cleaning or quality judgment.
+  - `provenance`: Minimal provenance metadata ("birth certificate") with 4 optional fields: `sensor_model`, `sensor_firmware`, `calibration_date` (ISO 8601), `sampling_rate_hz`. Only fields that directly affect data comparability and calibration are included; other lifecycle metadata belongs to data management platforms.
+- Both fields serialize to JSON only when non-None, preserving backward compatibility with older annotation files.
 
-### Changed
-- **CI**: Bump `actions/checkout` from v4 to v7
+### Validation
+- New structure validators in `TLabelSchemaV2.validate()`:
+  - `data_quality`: dict with enum `level` ∈ {Q1,Q2,Q3,Q4}, typed bool/str sub-fields
+  - `provenance`: dict with typed string fields + positive numeric `sampling_rate_hz` + ISO date format for `calibration_date`
+- Validation errors are independent from compliance level (L1-L4) rules.
 
 ### Tests
-- New `tests/unit/test_edge_cases.py` with 12+ edge case scenarios
-- All existing tests remain passing
+- 22 new tests in `tests/test_v21_metadata_fields.py`: backward compat, data_quality structure, provenance structure, round-trip serialization, validation independence.
+- All 80 core tests (conformance + test_tlabel) still pass with no regression.
+
+## [0.19.0] - 2026-08-06
+
+### Added
+- **CLI convert commands**: `tlabel convert` for single-file format conversion, `tlabel batch-convert` for batch directory conversion. Supports 9 data adapters (gelsight, paxini, daimon, tlabel, touchd, univtac, vtouch, ycb_slide, tacquad) and 2 output formats (lerobot, ftp1)
+- **CLI adapter discovery**: `tlabel list-adapters` shows all available DataAdapters and SensorAdapters with supported formats; `tlabel adapter-info <name>` displays detailed adapter information including field mapping table and compliance level
+- **Converter base layer** (`converters/base.py`): Unified converter interface (`BaseConverter` with `export()` method), wrapping `LeRobotConverter` and `FTP1Converter` for consistent API
+
+### Fixed
+- **lerobot.py `_safe_float()`**: Fixed crash when converting vector/list fields (e.g., `contact_centroid`) — now safely handles vectors (takes magnitude), booleans (0/1), and None (0.0)
+
+### Tests
+- 28 new tests for CLI convert commands (tests/test_cli_convert.py)
+- 14 regression tests passing (tests/test_cli.py)
+- End-to-end validation: tlabel→ftp1 (150 frames .zarr), tlabel→lerobot (150 frames parquet+meta), batch-convert (3 files)
 
 ## [0.18.2] - 2026-08-03
 
