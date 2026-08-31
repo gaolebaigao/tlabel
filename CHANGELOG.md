@@ -4,6 +4,20 @@ All notable changes to the TLabel project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.21.1] - 2026-08-31
+
+### Fixed
+- **GelSightAdapter.load() P0 bug**: `load()` was using `TLabelSchemaV2.from_tlabel_v1()` instead of `self.extract_schema()`, causing:
+  - `compliance_level` always set to L1 (default from `from_tlabel_v1`), ignoring real calibrated force data
+  - Real force vectors (e.g., ATI nano17) only stored in `sensor_specific.force_vector_N` but not in standard `schema_v2.force_vector`
+  - Fix: `load()` now calls `self.extract_schema(raw_frame_data)` with `force_vector_N`, enabling automatic L3 upgrade when calibrated force data is present
+- **GelSightAdapter timestamp**: `timestamp_s` was hardcoded to `gidx / 30.0` instead of using actual `sample_rate` (GelSight=25Hz, DIGIT=60Hz)
+
+### Validation
+- Tested with Sparsh T1 Force dataset (Meta FAIR): 50 frames all correctly achieve L3 compliance level
+- `schema_v2.force_vector` now contains real ATI nano17 force data (unit: Newton), matching `sensor_specific.force_vector_N`
+- Backward compatible: when no `force_vector_N` is available, defaults to L2 as before
+
 ## [0.21.0] - 2026-08-28
 
 ### Added
