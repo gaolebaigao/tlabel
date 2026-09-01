@@ -6,6 +6,7 @@
 [![Tests](https://github.com/liesliy/tlabel/actions/workflows/tests.yml/badge.svg)](https://github.com/liesliy/tlabel/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Downloads](https://img.shields.io/pepy/dt/tlabel)](https://pepy.tech/projects/tlabel)
+[![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.22227847.svg)](https://doi.org/10.5281/zenodo.22227847)
 [![中文文档](https://img.shields.io/badge/README-中文-red)](README_CN.md)
 
 TLabel is the first cross-sensor tactile annotation schema with capability declarations and Compliance Level stratification. It enables heterogeneous tactile sensors — regardless of operating principle — to produce compatible 14-dimensional semantic annotations while preserving their unique strengths.
