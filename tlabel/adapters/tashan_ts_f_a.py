@@ -18,8 +18,8 @@ Compliance Level: L3 (有完整3D力向量: tangential_fx, tangential_fy, normal
 传感器信息层级:
   - 适配器类级别: get_sensor_info() / get_capabilities() → 厂商、型号、维度、单位
   - 帧级别: TLabelFrame.sensor_id → 标识来源传感器 (如 "left_sensor0")
-  - Schema级别: data_quality → 保留原始6维数据值（核心字段只取 force_magnitude/force_vector，原始值会丢失）
-  - provenance 不重复存储传感器信息（已由前两层承载）
+  - Schema级别: raw_sensor_values → 保留原始6维数据值（核心字段只取 force_magnitude/force_vector，原始值会丢失）
+  - 三层传感器信息架构：get_sensor_info() / TLabelFrame.sensor_id / raw_sensor_values
 """
 
 import numpy as np
@@ -100,8 +100,7 @@ class TashanTsFAAdapter(DataAdapterBase):
         传感器身份信息承载方式:
           - get_sensor_info() → 厂商/型号/维度/单位（类级别）
           - TLabelFrame.sensor_id → 来源传感器标识（帧级别）
-          - data_quality → 原始6维数据值保留（防止核心字段映射后丢失）
-          - provenance → 不设置（传感器信息已由前两层承载，避免冗余）
+          - raw_sensor_values → 原始6维数据值保留（防止核心字段映射后丢失）
 
         参数:
             raw_frame_data: dict with keys:
@@ -127,7 +126,7 @@ class TashanTsFAAdapter(DataAdapterBase):
                 force_magnitude=0.0,
                 force_vector=None,
                 compliance_level="L1",
-                data_quality={
+                raw_sensor_values={
                     "raw_normal_force": 0.0,
                     "raw_tangential_force": 0.0,
                     "invalid": True,
@@ -137,7 +136,7 @@ class TashanTsFAAdapter(DataAdapterBase):
 
         contact = bool(nf > CONTACT_THRESHOLD or tf > CONTACT_THRESHOLD)
 
-        # data_quality: 保留原始6维数据值，核心字段只取 force_magnitude 和 force_vector，原始值会丢失
+        # raw_sensor_values: 保留原始6维数据值，核心字段只取 force_magnitude 和 force_vector，原始值会丢失
         dq = {
             "raw_normal_force": float(nf),
             "raw_tangential_force": float(tf),
@@ -160,8 +159,7 @@ class TashanTsFAAdapter(DataAdapterBase):
             texture_class=None,
             confidence=0.9 if contact else 0.5,
             compliance_level="L3" if contact else "L1",
-            # provenance 不设置 — 传感器信息由 TLabelFrame.sensor_id + adapter.get_sensor_info() 承载
-            data_quality=dq,
+            raw_sensor_values=dq,
         )
 
     def load(self, file_path: str, **kwargs) -> Optional[TLabelData]:
