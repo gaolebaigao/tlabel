@@ -110,6 +110,21 @@ class TLabelSchemaV2:
     }
     """
 
+    raw_sensor_values: Optional[Dict[str, Any]] = None
+    """
+    原始传感器读数保留（v2.2 新增）。
+
+    用于存储核心 Schema 字段映射后可能丢失的原始传感器数据。
+    与 data_quality（Q1-Q4 质量级别）语义完全不同。
+
+    典型用途：
+    - Tashan TS-F-A：6维原始数据中 tangential_direction、contact_indicator
+      不会被 force_magnitude/force_vector 覆盖，通过此字段保留
+    - 其他传感器：保留原始 ADC 值、温度补偿前数据等
+
+    结构无固定 Schema，由适配器自行定义键名。
+    """
+
     # ================================================================
     # 序列化
     # ================================================================
@@ -137,6 +152,8 @@ class TLabelSchemaV2:
             result["data_quality"] = self.data_quality
         if self.provenance is not None:
             result["provenance"] = self.provenance
+        if self.raw_sensor_values is not None:
+            result["raw_sensor_values"] = self.raw_sensor_values
         return result
 
     @classmethod
@@ -159,6 +176,7 @@ class TLabelSchemaV2:
             compliance_level=str(data.get("compliance_level", "L1")),
             data_quality=data.get("data_quality"),
             provenance=data.get("provenance"),
+            raw_sensor_values=data.get("raw_sensor_values"),
         )
 
     # ================================================================
@@ -390,5 +408,10 @@ class TLabelSchemaV2:
                     import re
                     if not re.match(r"^\d{4}-\d{2}-\d{2}$", cal_date):
                         errors.append("provenance.calibration_date must be ISO 8601 date (YYYY-MM-DD)")
+
+        # 11. raw_sensor_values 结构检查（仅当提供时）
+        if self.raw_sensor_values is not None:
+            if not isinstance(self.raw_sensor_values, dict):
+                errors.append("raw_sensor_values must be a dict")
 
         return (len(errors) == 0, errors)
