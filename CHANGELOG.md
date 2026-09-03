@@ -4,6 +4,11 @@ All notable changes to the TLabel project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.22.4] - 2026-09-03
+### Added
+- LeRobot dataset exporter: create new LeRobot v2.1 datasets from TLabel annotations
+- UI: LeRobot export panel in the Export tab
+- Registry: new `lerobot_create` exporter plugin
 ## [0.22.0] - 2026-09-03
 
 ### Added
@@ -137,3 +142,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [0.15.0] and earlier
 
 Earlier versions used a feature-vector-centric design (18/22-dimensional). These have been superseded by the Schema V2 architecture introduced in v0.17.0.
+
