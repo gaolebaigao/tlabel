@@ -612,7 +612,10 @@ def generate_panel_html(
       'export.area_title': '🎯 功能区映射', 'export.area_desc': '选择传感器对应的 MTTS 功能区槽位',
       'export.btn_export': '📦 导出为 FTP-1 Zarr', 'export.result_title': '📋 导出结果',
       'export.format_ref': '📖 MTTS Zarr 格式说明', 'export.format_note': '💡 导出的 .zarr 文件可直接被 FTP-1 加载',
-      'export.preset_gripper': '预设: 夹爪 [0,1]', 'export.preset_three': '预设: 三指 [0,1,2]', 'export.preset_five': '预设: 五指 [0-4]',\n      'export.lerobot_create_title': 'LeRobot 数据集创建', 'export.lerobot_create_desc': '从标注数据从零创建完整的 LeRobot v2.1 数据集',\n      'export.lerobot_task_name': '任务名称', 'export.lerobot_task_desc': '任务描述', 'export.lerobot_fps': 'FPS',\n      'export.lerobot_btn_create': '🤖 创建 LeRobot 数据集', 'export.lerobot_result_title': '📋 导出结果',
+      'export.preset_gripper': '预设: 夹爪 [0,1]', 'export.preset_three': '预设: 三指 [0,1,2]', 'export.preset_five': '预设: 五指 [0-4]',
+      'export.lerobot_create_title': 'LeRobot 数据集创建', 'export.lerobot_create_desc': '从标注数据从零创建完整的 LeRobot v2.1 数据集',
+      'export.lerobot_task_name': '任务名称', 'export.lerobot_task_desc': '任务描述', 'export.lerobot_fps': 'FPS',
+      'export.lerobot_btn_create': '🤖 创建 LeRobot 数据集', 'export.lerobot_result_title': '📋 导出结果',
       'episode.title': 'Episode 级标注', 'episode.desc': '为整个交互Episode添加语义标注，描述操作任务的整体结果和属性。标注结果会写入 episode_info 并随数据一起导出。',
       'episode.outcome': '操作结果', 'episode.outcomeDefault': '— 未标注 —',
       'episode.manipType': '操作类型', 'episode.manipTypeDefault': '— 未标注 —',
@@ -684,7 +687,10 @@ def generate_panel_html(
       'export.area_title': '🎯 Functional Area Mapping', 'export.area_desc': 'Select MTTS functional area slots for this sensor',
       'export.btn_export': '📦 Export as FTP-1 Zarr', 'export.result_title': '📋 Export Result',
       'export.format_ref': '📖 MTTS Zarr Format Reference', 'export.format_note': '💡 Exported .zarr can be loaded directly by FTP-1',
-      'export.preset_gripper': 'Preset: Gripper [0,1]', 'export.preset_three': 'Preset: 3-Finger [0,1,2]', 'export.preset_five': 'Preset: 5-Finger [0-4]',\n      'export.lerobot_create_title': 'LeRobot Dataset Creation', 'export.lerobot_create_desc': 'Create a complete LeRobot v2.1 dataset from annotation data',\n      'export.lerobot_task_name': 'Task Name', 'export.lerobot_task_desc': 'Task Description', 'export.lerobot_fps': 'FPS',\n      'export.lerobot_btn_create': '🤖 Create LeRobot Dataset', 'export.lerobot_result_title': '📋 Export Result',
+      'export.preset_gripper': 'Preset: Gripper [0,1]', 'export.preset_three': 'Preset: 3-Finger [0,1,2]', 'export.preset_five': 'Preset: 5-Finger [0-4]',
+      'export.lerobot_create_title': 'LeRobot Dataset Creation', 'export.lerobot_create_desc': 'Create a complete LeRobot v2.1 dataset from annotation data',
+      'export.lerobot_task_name': 'Task Name', 'export.lerobot_task_desc': 'Task Description', 'export.lerobot_fps': 'FPS',
+      'export.lerobot_btn_create': '🤖 Create LeRobot Dataset', 'export.lerobot_result_title': '📋 Export Result',
       'episode.title': 'Episode Annotation', 'episode.desc': 'Add semantic labels for the entire interaction episode. Results are saved to episode_info and exported with data.',
       'episode.outcome': 'Outcome', 'episode.outcomeDefault': '— Not labeled —',
       'episode.manipType': 'Manipulation Type', 'episode.manipTypeDefault': '— Not labeled —',
@@ -1726,6 +1732,8 @@ def generate_panel_html(
   // FTP-1 Export Panel events
   const ftp1ExportBtn = document.getElementById(tid + '-ftp1-export-btn');
   if (ftp1ExportBtn) ftp1ExportBtn.addEventListener('click', handleFTP1Export);
+  const lerobotExportBtn = document.getElementById(tid + '-lerobot-export-btn');
+  if (lerobotExportBtn) lerobotExportBtn.addEventListener('click', handleLeRobotCreateExport);
   const ftp1PresetGripper = document.getElementById(tid + '-ftp1-preset-gripper');
   if (ftp1PresetGripper) ftp1PresetGripper.addEventListener('click', () => setAreaPreset([0, 1], 'gripper'));
   const ftp1PresetThree = document.getElementById(tid + '-ftp1-preset-three');
