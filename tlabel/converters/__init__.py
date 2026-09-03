@@ -27,6 +27,13 @@ try:
 except ImportError:
     _HAS_LEROBOT = False
 
+# LeRobot Exporter (从零创建数据集)
+try:
+    from tlabel.converters.lerobot_export import create_lerobot_dataset, tlabeldata_to_lerobot
+    _HAS_LEROBOT_EXPORT = True
+except ImportError:
+    _HAS_LEROBOT_EXPORT = False
+
 __all__ = [
     "tlabel_to_ftp1",
     "batch_to_ftp1",
@@ -42,3 +49,7 @@ __all__ = [
 # Only add lerobot functions if available
 if _HAS_LEROBOT:
     __all__.extend(["lerobot_to_tlabel", "tlabel_to_lerobot", "detect_image_shape_for_lerobot"])
+
+# Only add lerobot export functions if available
+if _HAS_LEROBOT_EXPORT:
+    __all__.extend(["create_lerobot_dataset", "tlabeldata_to_lerobot"])
