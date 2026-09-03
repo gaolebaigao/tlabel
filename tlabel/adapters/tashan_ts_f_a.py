@@ -68,7 +68,7 @@ class TashanTsFAAdapter(DataAdapterBase):
                          "tangential_fx", "tangential_fy", "contact_indicator"],
             "has_temperature": False,
             "has_spatial_array": False,
-            "has_force_vector": True,  # 3D: (fx, fy, fz)
+            "has_force_vector": True,
             "num_sensors_per_hand": 2,
             "invalid_marker": INVALID_MARKER,
         }
@@ -91,7 +91,7 @@ class TashanTsFAAdapter(DataAdapterBase):
         }
 
     def extract_schema(self, raw_frame_data: Dict[str, Any]) -> TLabelSchemaV2:
-        """将 Tashan TS-F-A 原始数据转换为 TLabel Schema V2 (14维)
+        """将 Tashan TS-F-A 原始数据转换为 TLabel Schema V2 (14维结构化触觉语义标注)
 
         参数:
             raw_frame_data: dict with keys:
@@ -111,18 +111,24 @@ class TashanTsFAAdapter(DataAdapterBase):
         fx = raw_frame_data.get("tangential_fx", 0.0)
         fy = raw_frame_data.get("tangential_fy", 0.0)
 
-        # 检查无效值
+        prov = {
+            "sensor_model": f"{self.manufacturer} {self.model}",
+            "source_hand": raw_frame_data.get("sensor_id", "unknown"),
+            "adapter": self.name,
+        }
+
         if nf == INVALID_MARKER or tf == INVALID_MARKER:
             return TLabelSchemaV2(
                 contact=False,
                 force_magnitude=0.0,
                 force_vector=None,
                 compliance_level="L1",
-                sensor_id=self.name,
-                sensor_specific={
+                provenance=prov,
+                data_quality={
                     "raw_normal_force": 0.0,
                     "raw_tangential_force": 0.0,
                     "invalid": True,
+                    "invalid_marker_value": INVALID_MARKER,
                 },
             )
 
@@ -130,39 +136,30 @@ class TashanTsFAAdapter(DataAdapterBase):
 
         return TLabelSchemaV2(
             contact=contact,
-            contact_centroid=None,  # Tashan 不提供空间位置
+            contact_centroid=None,
             force_magnitude=float(nf) if contact else 0.0,
             force_vector=[float(fx), float(fy), float(nf)] if contact else None,
-            slip_event=None,  # 需要连续帧计算
-            slip_direction=None,
+            slip_event=None,
             manipulation_phase=None,
             object_deformation=None,
             temperature=None,
             texture_class=None,
             confidence=0.9 if contact else 0.5,
             compliance_level="L3" if contact else "L1",
-            sensor_id=self.name,
-            sensor_specific={
+            provenance=prov,
+            data_quality={
                 "raw_normal_force": float(nf),
                 "raw_tangential_force": float(tf),
                 "tangential_direction": float(raw_frame_data.get("tangential_direction", 0.0)),
                 "tangential_fx": float(fx),
                 "tangential_fy": float(fy),
                 "contact_indicator": float(raw_frame_data.get("contact_indicator", 0.0)),
-                "source_hand": raw_frame_data.get("sensor_id", "unknown"),
                 "invalid_marker_value": INVALID_MARKER,
             },
         )
 
     def load(self, file_path: str, **kwargs) -> Optional[TLabelData]:
-        """加载 RoboMIND V2.0 HDF5 触觉数据
-
-        参数:
-            file_path: trajectory.hdf5 文件路径
-
-        返回:
-            TLabelData 包含所有帧的 14 维 Schema V2 标注
-        """
+        """加载 RoboMIND V2.0 HDF5 触觉数据"""
         if not HAS_H5PY:
             raise ImportError("h5py is required for Tashan TS-F-A adapter. Install: pip install h5py")
 
@@ -172,13 +169,12 @@ class TashanTsFAAdapter(DataAdapterBase):
 
         frames = []
         with h5py.File(str(path), "r") as f:
-            # 验证结构
             for side in ["left", "right"]:
                 tactile_key = f"tactile_observations/tactile_{side}_align/data"
                 if tactile_key not in f:
                     raise ValueError(f"Missing tactile data: {tactile_key}")
 
-                data = f[tactile_key]  # (T, 2, 6)
+                data = f[tactile_key]
                 T = data.shape[0]
 
                 for t in range(T):
