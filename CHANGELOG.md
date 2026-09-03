@@ -4,25 +4,69 @@ All notable changes to the TLabel project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [0.20.1] - 2026-08-25
-
-### Fixed
-- **paxini_px6d placeholder adapter**: Added missing `tlabel/adapters/paxini_px6d.py` placeholder module so that registry import of `PaxiniPX6DAdapter` no longer fails with ImportError. All methods raise `NotImplementedError` with descriptive message.
-- **Lazy registry loading**: `list_adapters()`, `list_builtin_adapters()`, and `list_external_adapters()` now call `_ensure_adapters()` before returning, so calling them without prior `get_adapter()` no longer returns an empty dict.
-- **BioTac headerless CSV column mapping**: Fixed column order for headerless CSVs with >=22 columns — corrected to BioTac standard channel order (electrodes 0-18, pac, pdc, tac, tdc). Previously pac/pdc were swapped and the 23rd column was misidentified as timestamp instead of tdc, causing incorrect contact detection.
-
-## [0.20.0] - 2026-08-25
+## [0.22.4] - 2026-09-03
+### Added
+- LeRobot dataset exporter: create new LeRobot v2.1 datasets from TLabel annotations
+- UI: LeRobot export panel in the Export tab
+- Registry: new `lerobot_create` exporter plugin
+## [0.22.0] - 2026-09-03
 
 ### Added
-- **SynTouch BioTac adapter** (`syntouch`): DataAdapter for SynTouch BioTac sensor data (.h5/.csv/.mat). Maps 4-channel BioTac signals (impedance, static/dynamic pressure, temperature) to Schema V2. Closes #5
-- **Edge case tests**: Comprehensive boundary/edge case test suite for adapter robustness — empty files, corrupted data, missing fields, unsupported formats. Closes #8
+- **Tashan TS-F-A adapter** (`tashan_ts_f_a`): DataAdapter for RoboMIND V2.0 AgileX tactile data
+  - Sensor: Tashan (他山科技) TS-F-A 3D Force fingertip sensor
+  - Parses HDF5 files with shape `(T, 2, 6)` float32 tactile observations
+  - 6D per-sensor: normal_force, tangential_force, tangential_direction, tangential_fx, tangential_fy, contact_indicator
+  - 65535.0 (uint16 overflow) treated as invalid/no-contact marker
+  - Compliance Level: L3 (full 3D force vector: fx, fy, fz)
+  - Naming follows brand+model convention: `tashan_ts_f_a`
+  - Validated against 2 trajectories: `data/` (1294 frames) and `data1/` (2066 frames)
 
-### Changed
-- **CI**: Bump `actions/checkout` from v4 to v7
+## [0.21.1] - 2026-08-31
+
+### Fixed
+- **GelSightAdapter.load() P0 bug**: `load()` was using `TLabelSchemaV2.from_tlabel_v1()` instead of `self.extract_schema()`, causing:
+  - `compliance_level` always set to L1 (default from `from_tlabel_v1`), ignoring real calibrated force data
+  - Real force vectors (e.g., ATI nano17) only stored in `sensor_specific.force_vector_N` but not in standard `schema_v2.force_vector`
+  - Fix: `load()` now calls `self.extract_schema(raw_frame_data)` with `force_vector_N`, enabling automatic L3 upgrade when calibrated force data is present
+- **GelSightAdapter timestamp**: `timestamp_s` was hardcoded to `gidx / 30.0` instead of using actual `sample_rate` (GelSight=25Hz, DIGIT=60Hz)
+
+### Validation
+- Tested with Sparsh T1 Force dataset (Meta FAIR): 50 frames all correctly achieve L3 compliance level
+- `schema_v2.force_vector` now contains real ATI nano17 force data (unit: Newton), matching `sensor_specific.force_vector_N`
+- Backward compatible: when no `force_vector_N` is available, defaults to L2 as before
+
+## [0.21.0] - 2026-08-28
+
+### Added
+- **Optional metadata fields** (non-invasive, fully backward compatible):
+  - `data_quality`: User self-declared data processing level (Q1-Q4). Q1=raw, Q2=denoised/calibrated, Q3=third-party verified, Q4=full manual annotation + cross-sensor validation. TLabel provides the field and definition only — it does not perform data cleaning or quality judgment.
+  - `provenance`: Minimal provenance metadata ("birth certificate") with 4 optional fields: `sensor_model`, `sensor_firmware`, `calibration_date` (ISO 8601), `sampling_rate_hz`. Only fields that directly affect data comparability and calibration are included; other lifecycle metadata belongs to data management platforms.
+- Both fields serialize to JSON only when non-None, preserving backward compatibility with older annotation files.
+
+### Validation
+- New structure validators in `TLabelSchemaV2.validate()`:
+  - `data_quality`: dict with enum `level` ∈ {Q1,Q2,Q3,Q4}, typed bool/str sub-fields
+  - `provenance`: dict with typed string fields + positive numeric `sampling_rate_hz` + ISO date format for `calibration_date`
+- Validation errors are independent from compliance level (L1-L4) rules.
 
 ### Tests
-- New `tests/unit/test_edge_cases.py` with 12+ edge case scenarios
-- All existing tests remain passing
+- 22 new tests in `tests/test_v21_metadata_fields.py`: backward compat, data_quality structure, provenance structure, round-trip serialization, validation independence.
+- All 80 core tests (conformance + test_tlabel) still pass with no regression.
+
+## [0.19.0] - 2026-08-06
+
+### Added
+- **CLI convert commands**: `tlabel convert` for single-file format conversion, `tlabel batch-convert` for batch directory conversion. Supports 9 data adapters (gelsight, paxini, daimon, tlabel, touchd, univtac, vtouch, ycb_slide, tacquad) and 2 output formats (lerobot, ftp1)
+- **CLI adapter discovery**: `tlabel list-adapters` shows all available DataAdapters and SensorAdapters with supported formats; `tlabel adapter-info <name>` displays detailed adapter information including field mapping table and compliance level
+- **Converter base layer** (`converters/base.py`): Unified converter interface (`BaseConverter` with `export()` method), wrapping `LeRobotConverter` and `FTP1Converter` for consistent API
+
+### Fixed
+- **lerobot.py `_safe_float()`**: Fixed crash when converting vector/list fields (e.g., `contact_centroid`) — now safely handles vectors (takes magnitude), booleans (0/1), and None (0.0)
+
+### Tests
+- 28 new tests for CLI convert commands (tests/test_cli_convert.py)
+- 14 regression tests passing (tests/test_cli.py)
+- End-to-end validation: tlabel→ftp1 (150 frames .zarr), tlabel→lerobot (150 frames parquet+meta), batch-convert (3 files)
 
 ## [0.18.2] - 2026-08-03
 
@@ -98,3 +142,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [0.15.0] and earlier
 
 Earlier versions used a feature-vector-centric design (18/22-dimensional). These have been superseded by the Schema V2 architecture introduced in v0.17.0.
+

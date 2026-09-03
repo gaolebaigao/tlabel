@@ -115,6 +115,44 @@ class DataAdapterBase(ABC):
         """
         pass
 
+    def build_provenance(self, raw_frame_data: Any = None) -> Optional[Dict[str, Any]]:
+        """根据传感器信息自动填充 provenance 最小元数据（v0.21.0）
+
+        默认实现从 get_sensor_info() 提取 sensor_model；子类可 override 以
+        填充 firmware/calibration_date/sampling_rate_hz 等字段。
+
+        参数:
+            raw_frame_data: 原始帧数据（可选），某些传感器需要从当前帧中
+                           提取 sampling_rate 或 firmware 信息。
+
+        返回:
+            符合 TLabelSchemaV2.provenance 结构的字典，或 None（无可填信息时）
+        """
+        info = self.get_sensor_info()
+        if not info:
+            return None
+
+        provenance: Dict[str, Any] = {}
+
+        # sensor_model: 优先取 info['model']，其次拼 manufacturer+model
+        model = info.get("model")
+        if model:
+            provenance["sensor_model"] = str(model)
+        elif info.get("manufacturer"):
+            provenance["sensor_model"] = str(info["manufacturer"])
+
+        # sampling_rate_hz: 部分适配器在 sensor_info 里声明
+        sr = info.get("sampling_rate_hz") or info.get("sample_rate")
+        if sr is not None:
+            provenance["sampling_rate_hz"] = sr
+
+        # firmware: 部分适配器在 sensor_info 里声明
+        fw = info.get("firmware") or info.get("sensor_firmware")
+        if fw is not None:
+            provenance["sensor_firmware"] = str(fw)
+
+        return provenance if provenance else None
+
     def detect_image_shape(self, file_path: Optional[str] = None) -> Optional[Tuple[int, int, int]]:
         """检测该数据源输出的触觉图像形状
 
@@ -218,6 +256,29 @@ class SensorAdapterBase(ABC):
     def get_sensor_info(self) -> Dict[str, Any]:
         """返回传感器元信息"""
         pass
+
+    def build_provenance(self, raw_frame_data: Any = None) -> Optional[Dict[str, Any]]:
+        """根据传感器信息自动填充 provenance 最小元数据（v0.21.0）
+
+        与 DataAdapterBase.build_provenance 行为一致。子类可 override 以
+        在连接后动态填充 firmware / calibration_date / sampling_rate_hz 等字段。
+        """
+        info = self.get_sensor_info()
+        if not info:
+            return None
+        provenance: Dict[str, Any] = {}
+        model = info.get("model")
+        if model:
+            provenance["sensor_model"] = str(model)
+        elif info.get("manufacturer"):
+            provenance["sensor_model"] = str(info["manufacturer"])
+        sr = info.get("sampling_rate_hz") or info.get("sample_rate")
+        if sr is not None:
+            provenance["sampling_rate_hz"] = sr
+        fw = info.get("firmware") or info.get("sensor_firmware")
+        if fw is not None:
+            provenance["sensor_firmware"] = str(fw)
+        return provenance if provenance else None
 
     # ─── 实时数据流接口（SensorAdapterBase特有）────────────────────────────
 

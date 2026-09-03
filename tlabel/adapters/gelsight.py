@@ -485,10 +485,25 @@ class GelSightAdapter(BaseAdapter):
             if fi["coef_friction"] is not None:
                 sensor_specific["coef_friction"] = fi["coef_friction"]
 
+            # 构造 raw_frame_data 用于 extract_schema，让真实力向量进入标准字段
+            raw_frame_for_schema = {
+                "diff_img": diff_img,
+                "is_contact": fi["is_contact"],
+                "force_vector_N": [round(float(forces[i][j]), 4) for j in range(3)],
+                "delta_mag_shear": fi["delta_mag_shear"],
+                "delta_mag_normal": fi["delta_mag_normal"],
+                "coef_friction": fi["coef_friction"],
+                "prev_diff_img": prev_diff,
+                "optical_flow_magnitude": optical_flow_mag,
+                "optical_flow_direction": optical_flow_dir,
+                "temporal_deformation_rate": temp_deform_rate,
+                "contact_transition": contact_trans,
+            }
+
             frame = TLabelFrame(
                 frame_idx=gidx,
-                timestamp_s=round(gidx / 30.0, 4),
-                schema_v2=TLabelSchemaV2.from_tlabel_v1(tlabel_v2),
+                timestamp_s=round(gidx / sample_rate, 4),  # 修复: 用实际采样率替代硬编码 30.0
+                schema_v2=self.extract_schema(raw_frame_for_schema),  # 修复P0: 用 extract_schema 替代 from_tlabel_v1
                 manipulation_phase=phases[i],
                 confidence=confidence,
                 sensor_specific=sensor_specific,

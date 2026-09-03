@@ -650,6 +650,103 @@ class _LeRobotExporter(ExporterBase):
         )
 
 
+
+class _LeRobotCreateExporter(ExporterBase):
+    """从零创建 LeRobot v2.1 数据集导出器"""
+
+    def spec(self) -> ExporterSpec:
+        return ExporterSpec(
+            id="lerobot_create",
+            name="LeRobot (新建)",
+            description="从标注数据创建全新的 LeRobot v2.1 数据集",
+            category="ecosystem",
+            icon="🤖",
+            file_ext="",
+            fields=[
+                ExportField(
+                    key="adapter_name",
+                    label="适配器名称",
+                    field_type=FieldType.SELECT,
+                    required=False,
+                    default="",
+                    description="数据来源适配器名称（用于元数据记录）",
+                    options=[],  # 运行时动态填充
+                ),
+                ExportField(
+                    key="task",
+                    label="任务名称",
+                    field_type=FieldType.TEXT,
+                    required=False,
+                    default="task",
+                    description="LeRobot 数据集的任务名称",
+                    placeholder="task",
+                ),
+                ExportField(
+                    key="task_description",
+                    label="任务描述",
+                    field_type=FieldType.TEXT,
+                    required=False,
+                    default="",
+                    description="任务的详细描述（可选）",
+                    placeholder="Task description...",
+                ),
+                ExportField(
+                    key="fps",
+                    label="帧率",
+                    field_type=FieldType.INT,
+                    required=False,
+                    default=30,
+                    min_value=1,
+                    max_value=1000,
+                    description="数据采集帧率（FPS）",
+                ),
+            ],
+        )
+
+    def export(self, data, output_path, **kwargs) -> ExporterResult:
+        """
+        从零创建 LeRobot v2.1 数据集。
+
+        output_path 为输出的数据集目录路径。
+        """
+        from tlabel.converters.lerobot_export import tlabeldata_to_lerobot
+
+        task_name = kwargs.get("task", "task")
+        task_description = kwargs.get("task_description", "")
+        fps = kwargs.get("fps", 30)
+        adapter_name = kwargs.get("adapter_name", "")
+
+        result = tlabeldata_to_lerobot(
+            data,
+            str(output_path),
+            task_name=task_name,
+            task_description=task_description,
+        )
+
+        code = (
+            f"from tlabel.converters.lerobot_export import tlabeldata_to_lerobot\n\n"
+            f'tlabeldata_to_lerobot(\n'
+            f'    data,\n'
+            f'    "lerobot_dataset",\n'
+            f'    task_name="{task_name}",\n'
+            f'    task_description="{task_description}",\n'
+            f")"
+        )
+        return ExporterResult(
+            output_path=str(output_path),
+            format_id="lerobot_create",
+            format_name="LeRobot (新建)",
+            stats={
+                "frames": data.num_frames,
+                "fps": fps,
+                "adapter": adapter_name,
+                "num_episodes": result.get("num_episodes", 1),
+                "tactile_dim": result.get("tactile_dim", 14),
+            },
+            generated_code=code,
+        )
+
+
 # ============================================================
 # Future Stubs — 预留扩展位
 # ============================================================
@@ -717,7 +814,9 @@ def get_registry() -> ExporterRegistry:
         # 生态集成
         _registry.register(_FTP1Exporter())
         _registry.register(_LeRobotExporter())
+        _registry.register(_LeRobotCreateExporter())
         # 预留
         _registry.register(_RLDSExporter())
         _registry.register(_ROS2Exporter())
     return _registry
+

@@ -527,6 +527,49 @@ def generate_panel_html(
     </div>
   </div>
 
+  <!-- LeRobot Create Section -->
+  <div style="background:#fff;border-radius:10px;padding:20px;border:1px solid #e9ecef;margin-bottom:16px;">
+    <div style="font-size:14px;font-weight:700;color:#343a40;margin-bottom:4px;">
+      🤖 <span data-i18n="export.lerobot_create_title">LeRobot 数据集创建</span>
+    </div>
+    <div style="font-size:12px;color:#868e96;margin-bottom:16px;" data-i18n="export.lerobot_create_desc">
+      从标注数据从零创建完整的 LeRobot v2.1 数据集，包含 Parquet 数据和 meta 元数据。
+    </div>
+
+    <!-- Config Fields -->
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+      <div style="flex:1;min-width:180px;">
+        <label style="font-size:11px;color:#868e96;display:block;margin-bottom:4px;" data-i18n="export.lerobot_task_name">任务名称</label>
+        <input type="text" id="{tid}-lerobot-task" value="task"
+          style="width:100%;padding:6px 10px;border:1px solid #ced4da;border-radius:6px;font-size:12px;background:#fff;box-sizing:border-box;">
+      </div>
+      <div style="flex:1;min-width:180px;">
+        <label style="font-size:11px;color:#868e96;display:block;margin-bottom:4px;" data-i18n="export.lerobot_task_desc">任务描述</label>
+        <input type="text" id="{tid}-lerobot-task-desc" placeholder=""
+          style="width:100%;padding:6px 10px;border:1px solid #ced4da;border-radius:6px;font-size:12px;background:#fff;box-sizing:border-box;">
+      </div>
+      <div style="flex:0 0 100px;min-width:100px;">
+        <label style="font-size:11px;color:#868e96;display:block;margin-bottom:4px;" data-i18n="export.lerobot_fps">FPS</label>
+        <input type="number" id="{tid}-lerobot-fps" value="30" min="1" max="1000"
+          style="width:100%;padding:6px 10px;border:1px solid #ced4da;border-radius:6px;font-size:12px;background:#fff;box-sizing:border-box;">
+      </div>
+    </div>
+
+    <!-- Export Button -->
+    <div style="display:flex;align-items:center;gap:12px;">
+      <button id="{tid}-lerobot-export-btn" style="padding:8px 24px;border-radius:8px;border:none;background:linear-gradient(135deg,#e85d75,#d63384);color:#fff;font-weight:700;font-size:13px;cursor:pointer;box-shadow:0 2px 8px rgba(232,93,117,0.3);">
+        <span data-i18n="export.lerobot_btn_create">🤖 创建 LeRobot 数据集</span>
+      </button>
+      <span id="{tid}-lerobot-status" style="font-size:12px;color:#868e96;"></span>
+    </div>
+
+    <!-- Export Result -->
+    <div id="{tid}-lerobot-result" style="display:none;margin-top:14px;background:#f1f3f5;border-radius:8px;padding:14px;font-size:12px;">
+      <div style="font-weight:600;color:#343a40;margin-bottom:8px;" data-i18n="export.lerobot_result_title">📋 导出结果</div>
+      <pre id="{tid}-lerobot-result-content" style="margin:0;font-family:monospace;font-size:11px;color:#495057;white-space:pre-wrap;"></pre>
+    </div>
+  </div>
+
 </div>
 </div><!-- end panel-export -->
 
@@ -570,6 +613,9 @@ def generate_panel_html(
       'export.btn_export': '📦 导出为 FTP-1 Zarr', 'export.result_title': '📋 导出结果',
       'export.format_ref': '📖 MTTS Zarr 格式说明', 'export.format_note': '💡 导出的 .zarr 文件可直接被 FTP-1 加载',
       'export.preset_gripper': '预设: 夹爪 [0,1]', 'export.preset_three': '预设: 三指 [0,1,2]', 'export.preset_five': '预设: 五指 [0-4]',
+      'export.lerobot_create_title': 'LeRobot 数据集创建', 'export.lerobot_create_desc': '从标注数据从零创建完整的 LeRobot v2.1 数据集',
+      'export.lerobot_task_name': '任务名称', 'export.lerobot_task_desc': '任务描述', 'export.lerobot_fps': 'FPS',
+      'export.lerobot_btn_create': '🤖 创建 LeRobot 数据集', 'export.lerobot_result_title': '📋 导出结果',
       'episode.title': 'Episode 级标注', 'episode.desc': '为整个交互Episode添加语义标注，描述操作任务的整体结果和属性。标注结果会写入 episode_info 并随数据一起导出。',
       'episode.outcome': '操作结果', 'episode.outcomeDefault': '— 未标注 —',
       'episode.manipType': '操作类型', 'episode.manipTypeDefault': '— 未标注 —',
@@ -642,6 +688,9 @@ def generate_panel_html(
       'export.btn_export': '📦 Export as FTP-1 Zarr', 'export.result_title': '📋 Export Result',
       'export.format_ref': '📖 MTTS Zarr Format Reference', 'export.format_note': '💡 Exported .zarr can be loaded directly by FTP-1',
       'export.preset_gripper': 'Preset: Gripper [0,1]', 'export.preset_three': 'Preset: 3-Finger [0,1,2]', 'export.preset_five': 'Preset: 5-Finger [0-4]',
+      'export.lerobot_create_title': 'LeRobot Dataset Creation', 'export.lerobot_create_desc': 'Create a complete LeRobot v2.1 dataset from annotation data',
+      'export.lerobot_task_name': 'Task Name', 'export.lerobot_task_desc': 'Task Description', 'export.lerobot_fps': 'FPS',
+      'export.lerobot_btn_create': '🤖 Create LeRobot Dataset', 'export.lerobot_result_title': '📋 Export Result',
       'episode.title': 'Episode Annotation', 'episode.desc': 'Add semantic labels for the entire interaction episode. Results are saved to episode_info and exported with data.',
       'episode.outcome': 'Outcome', 'episode.outcomeDefault': '— Not labeled —',
       'episode.manipType': 'Manipulation Type', 'episode.manipTypeDefault': '— Not labeled —',
@@ -1432,6 +1481,47 @@ def generate_panel_html(
     resultContent.textContent = JSON.stringify(summary, null, 2);
   }}
 
+
+  function handleLeRobotCreateExport() {{
+    const taskName = document.getElementById(tid + '-lerobot-task').value || 'task';
+    const taskDesc = document.getElementById(tid + '-lerobot-task-desc').value || '';
+    const fps = parseInt(document.getElementById(tid + '-lerobot-fps').value) || 30;
+    const status = document.getElementById(tid + '-lerobot-status');
+    const resultDiv = document.getElementById(tid + '-lerobot-result');
+    const resultContent = document.getElementById(tid + '-lerobot-result-content');
+
+    status.textContent = currentLang === 'zh-CN' ? '⏳ 正在准备导出...' : '⏳ Preparing export...';
+
+    const nFrames = (data.frames || []).length;
+    const duration = nFrames / fps;
+    const summary = {{
+      task_name: taskName,
+      task_description: taskDesc,
+      fps: fps,
+      num_frames: nFrames,
+      duration_s: duration.toFixed(2),
+      num_episodes: 1,
+      tactile_dim: 14,
+      output_structure: [
+        'data/chunk-000/episode_000000.parquet',
+        'meta/info.json',
+        'meta/episodes.jsonl',
+        'meta/tasks.jsonl',
+      ],
+      python_command: 'from tlabel.converters.lerobot_export import tlabeldata_to_lerobot\\n\\n' +
+        'tlabeldata_to_lerobot(\\n' +
+        '    data,\\n' +
+        '    "lerobot_dataset",\\n' +
+        '    task_name="' + taskName + '",\\n' +
+        '    task_description="' + taskDesc + '",\\n' +
+        ')'
+    }};
+
+    status.textContent = currentLang === 'zh-CN' ? '✅ 导出预览已生成' : '✅ Export preview ready';
+    resultDiv.style.display = 'block';
+    resultContent.textContent = JSON.stringify(summary, null, 2);
+  }}
+
   // ===== Lang Toggle =====
   function toggleLang() {{
     currentLang = currentLang === 'zh-CN' ? 'en' : 'zh-CN';
@@ -1642,6 +1732,8 @@ def generate_panel_html(
   // FTP-1 Export Panel events
   const ftp1ExportBtn = document.getElementById(tid + '-ftp1-export-btn');
   if (ftp1ExportBtn) ftp1ExportBtn.addEventListener('click', handleFTP1Export);
+  const lerobotExportBtn = document.getElementById(tid + '-lerobot-export-btn');
+  if (lerobotExportBtn) lerobotExportBtn.addEventListener('click', handleLeRobotCreateExport);
   const ftp1PresetGripper = document.getElementById(tid + '-ftp1-preset-gripper');
   if (ftp1PresetGripper) ftp1PresetGripper.addEventListener('click', () => setAreaPreset([0, 1], 'gripper'));
   const ftp1PresetThree = document.getElementById(tid + '-ftp1-preset-three');
@@ -1763,7 +1855,8 @@ def generate_panel_html(
   window['_tlabel_' + tid] = {{
     prevFrame, nextFrame, jumpTo, batchPatch, undo,
     exportJSON, exportCSV, exportHDF5, toggleLang,
-    applyEpisodeLabel, switchTab, handleFTP1Export, setAreaPreset
+    applyEpisodeLabel, switchTab, handleFTP1Export, setAreaPreset, handleLeRobotCreateExport
   }};
 }})();
 </script>"""
+

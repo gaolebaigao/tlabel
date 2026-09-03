@@ -33,6 +33,7 @@ _ADAPTER_MODULES = {
     "daimon_dm_tac": ("tlabel.adapters.daimon_dm_tac",  "DaimonDmTacAdapter"),
     "syntouch":      ("tlabel.adapters.syntouch",      "SynTouchBioTacAdapter"),
     "xela":          ("tlabel.adapters.xela",          "XelaUskinAdapter"),
+    "tashan_ts_f_a": ("tlabel.adapters.tashan_ts_f_a", "TashanTsFAAdapter"),
 }
 
 # 社区适配器 entry_point group name

@@ -6,10 +6,10 @@ authors:
     affiliation: "NiuZhu Technology"
   - name: "Luo, Xi"
     affiliation: "NiuZhu Technology"
-version: "0.17.1"
-date-released: "2026-07-24"
+version: "0.21.1"
+date-released: "2026-09-01"
 url: "https://github.com/liesliy/tlabel"
-doi: ""
+doi: "10.5281/zenodo.22227847"
 preferred-citation:
   type: article
   title: "TLabel: Unified Tactile Data Annotation and Interchange for Robotic Manipulation"
@@ -22,7 +22,7 @@ abstract: >
   TLabel is an open-source toolkit and format standard for tactile sensor data annotation.
   It provides a 14-dimension semantic schema with Compliance Levels (L1-L4), sensor-agnostic
   data loading, interactive annotation, AI pre-annotation, and multi-format export
-  (JSON, CSV, FTP-1 Zarr, LeRobot, RLDS, ROS2) across 9 tactile sensor adapters.
+  (JSON, CSV, FTP-1 Zarr, LeRobot, RLDS, ROS2) across 13 tactile sensor adapters.
 keywords:
   - tactile sensing
   - data annotation

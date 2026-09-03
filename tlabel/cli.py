@@ -519,6 +519,58 @@ def cmd_version(args):
     return 0
 
 
+
+
+def cmd_export(args):
+    """执行 export 子命令"""
+    fmt = args.format.lower()
+
+    if fmt == "lerobot":
+        try:
+            from tlabel.converters.lerobot_export import create_lerobot_dataset
+        except ImportError as e:
+            print(f"❌ LeRobot 导出功能不可用: {e}")
+            print("   请安装 pyarrow: pip install pyarrow")
+            return 1
+
+        print(f"📦 导出 LeRobot 数据集")
+        print("=" * 60)
+        print(f"  输入:  {args.input}")
+        print(f"  输出:  {args.output}")
+        print(f"  适配器: {args.adapter}")
+        if args.task:
+            print(f"  任务:  {args.task}")
+        print("=" * 60)
+
+        try:
+            stats = create_lerobot_dataset(
+                input_path=args.input,
+                output_path=args.output,
+                adapter_name=args.adapter,
+                task_name=args.task,
+                task_description=args.task_description,
+                episode_index=args.episode_index,
+            )
+        except Exception as e:
+            print(f"❌ 导出失败: {e}")
+            return 1
+
+        print("=" * 60)
+        print(f"✅ 导出成功！")
+        print(f"   帧数:   {stats['num_frames']}")
+        print(f"   时长:   {stats['duration_s']}s")
+        print(f"   触觉维度: {stats['tactile_dim']}")
+        if stats.get('state_dim', 0) > 0:
+            print(f"   状态维度: {stats['state_dim']}")
+        if stats.get('action_dim', 0) > 0:
+            print(f"   动作维度: {stats['action_dim']}")
+        return 0
+    else:
+        print(f"❌ 不支持的导出格式: {fmt}")
+        print(f"   支持的格式: lerobot")
+        return 1
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="tlabel",
@@ -543,6 +595,31 @@ def main():
     # version
     p_version = subparsers.add_parser("version", help="显示版本号")
     p_version.set_defaults(func=cmd_version)
+    # export
+    p_export = subparsers.add_parser("export", help="导出数据为其他格式（LeRobot 等）")
+    p_export.add_argument("input", help="输入数据文件路径")
+    p_export.add_argument("output", help="输出目录路径")
+    p_export.add_argument(
+        "--format", "-f", default="lerobot",
+        help="导出格式（默认: lerobot）",
+    )
+    p_export.add_argument(
+        "--adapter", "-a", required=True,
+        help="适配器名称（如 tashan_ts_f_a, gelsight）",
+    )
+    p_export.add_argument(
+        "--task", default="",
+        help="任务名称（用于 meta 数据）",
+    )
+    p_export.add_argument(
+        "--task-description", default="",
+        help="任务描述",
+    )
+    p_export.add_argument(
+        "--episode-index", type=int, default=0,
+        help="Episode 编号（默认 0）",
+    )
+    p_export.set_defaults(func=cmd_export)
 
     args = parser.parse_args()
 
