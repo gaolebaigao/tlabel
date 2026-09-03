@@ -32,6 +32,7 @@ _ADAPTER_MODULES = {
     "paxini_px6d":   ("tlabel.adapters.paxini_px6d",    "PaxiniPX6DAdapter"),  # placeholder
     "daimon_dm_tac": ("tlabel.adapters.daimon_dm_tac",  "DaimonDmTacAdapter"),
     "syntouch":      ("tlabel.adapters.syntouch",      "SynTouchBioTacAdapter"),
+    "tashan_ts_f_a": ("tlabel.adapters.tashan_ts_f_a", "TashanTsFAAdapter"),
 }
 
 # 社区适配器 entry_point group name
