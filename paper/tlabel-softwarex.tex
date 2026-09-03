@@ -1,0 +1,212 @@
+%% SoftwareX Original Software Publication template
+%% elsarticle.cls with numbered references
+\documentclass[preprint,12pt,a4paper]{elsarticle}
+
+% --- Packages ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{amsmath,amssymb}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{courier}
+\usepackage{lmodern}
+%\usepackage{lineno}
+%\linenumbers
+
+% --- Listings config ---
+\lstset{
+  basicstyle=\footnotesize\ttfamily,
+  breaklines=true,
+  frame=single,
+  numbers=none,
+  keywordstyle=\bfseries\color{blue!70},
+  commentstyle=\itshape\color{gray},
+  stringstyle=\color{red!60!black},
+  showstringspaces=false,
+  columns=fullflexible,
+  aboveskip=6pt,
+  belowskip=6pt,
+}
+
+\journal{SoftwareX}
+
+\begin{document}
+
+\begin{frontmatter}
+
+\title{TLabel: A Python library for standardized tactile data annotation and quality assessment}
+
+\author[niuxiu]{Xi Luo}
+\cortext[cor1]{Corresponding author.}
+\ead{luoxi@touchlabelai.cn}
+\address[niuxiu]{Tactile Intelligence Lab, Niuxiu Technology, Hangzhou, China}
+
+\begin{abstract}
+Tactile sensors from different manufacturers produce incompatible data formats, and current annotation tooling provides no standardized vocabulary for cross-sensor comparison. Unavailable measurements are frequently conflated with zero or estimated values, introducing silent semantic errors into downstream learning pipelines. We describe \textbf{TLabel}, an open-source Python library that addresses this through a capability-aware 14-dimensional semantic schema built on a non-fabrication principle: a field is populated only when supported by sensor evidence, otherwise it remains explicitly \texttt{None}. The software provides a plug-in adapter system supporting 10 sensor formats, a four-level compliance hierarchy (L1--L4) for automatic quality assessment, and a semantic maturity framework for field-level provenance tracking. Validation on 15,677 real frames from three public datasets confirms 100\% boundary compliance. TLabel is available via PyPI (\texttt{pip install tlabel}), with source on GitHub and archival on Zenodo.
+\end{abstract}
+
+\begin{keyword}
+tactile sensing \sep data annotation \sep semantic schema \sep quality assessment \sep Python \sep robot learning
+\end{keyword}
+
+\end{frontmatter}
+
+% =============================================================================
+% Code Metadata (mandatory; does not count toward page/word limit)
+% =============================================================================
+\section*{Metadata}
+\begin{table}[!h]
+\begin{tabular}{|l|p{6.5cm}|p{6.5cm}|}
+\hline
+\textbf{Nr.} & \textbf{Code metadata description} & \textbf{Metadata} \\
+\hline
+C1 & Current code version & v0.21.1 \\
+\hline
+C2 & Permanent link to code/repository used for this code version & \url{https://github.com/liesliy/tlabel/releases/tag/v0.21.1} \\
+\hline
+C4 & Legal Code License & Apache-2.0 \\
+\hline
+C5 & Code versioning system used & Git \\
+\hline
+C6 & Software code languages, tools, and services used & Python 3, numpy, pandas; optional: opencv-python, h5py, pyarrow \\
+\hline
+C7 & Compilation requirements, operating environments & Python $\geq$ 3.8; Linux, macOS, Windows \\
+\hline
+C8 & If available Link to developer documentation/manual & \url{https://github.com/liesliy/tlabel} \\
+\hline
+C9 & Support email for questions & luoxi@touchlabelai.cn \\
+\hline
+\end{tabular}
+\caption{Code metadata (mandatory).}
+\label{tab:codeMetadata}
+\end{table}
+
+% =============================================================================
+\section{Motivation and significance}
+\label{sec:motivation}
+% =============================================================================
+
+Robotic manipulation relies on tactile feedback for contact detection, force estimation, and slip identification~\cite{lambeta2020digit,yuan2017gelsight}. As sensor variety grows---impedance-based electrodes~\cite{syntouch2018biotac}, vision-based elastomers~\cite{yuan2017gelsight}, piezoresistive taxel grids~\cite{paxini2023}---so does data heterogeneity. While large-scale robot learning initiatives have standardized vision and proprioception (Open~X-Embodiment~\cite{openxembodiment} in RLDS~\cite{rlds}, LeRobot~\cite{lerobot,lerobotdocs}), neither prescribes tactile semantic fields nor how missing measurements are represented.
+
+A fundamental failure mode arises when \textit{unavailable} measurements are conflated with \textit{zero} or \textit{estimated}. When a schema fills unsupported fields with defaults, downstream models silently convert format incompatibility into false observations. TLabel addresses this as a \textit{semantic contract}: a field is populated only when supported by sensor evidence; otherwise it remains explicitly \texttt{None}.
+
+% =============================================================================
+\section{Software description}
+\label{sec:software}
+% =============================================================================
+
+TLabel organizes tactile annotation around three layers: (i)~raw data input from heterogeneous sensors (CSV, PKL, H5, NPY, Parquet, SDK streams); (ii)~an adapter layer implementing capability-aware parsing and semantic routing; and (iii)~a unified 14-dimensional schema with multi-format export (JSON, CSV, Zarr, LeRobot).
+
+\subsection{Core data model}
+
+The central data structure is a 14-dimensional typed \texttt{dataclass} spanning five groups: \textbf{Contact} (binary indicator, optional 2D centroid), \textbf{Force} (scalar magnitude, optional 3D vector), \textbf{Slip} (binary event, optional manipulation phase), \textbf{Surface} (deformation, temperature), and \textbf{Meta} (confidence, compliance level). Each dimension has a provenance classification (\textit{Direct}/\textit{Derived}/\textit{Reserved}) and maturity label (\textit{Stable}/\textit{Tentative}/\textit{Experimental}/\textit{Reserved}). Four dimensions are \textit{Reserved}, providing forward-compatible slots for future modalities.
+
+Each adapter declares a static capability set $C_A \subseteq \mathcal{S}$. For any frame $f$: $\forall d \in \mathcal{S} \setminus C_A: f.d = \texttt{None}$, enabling consumers to filter sensors by required capabilities without inspecting individual frames.
+
+\subsection{Compliance and maturity}
+
+Four compliance levels are assigned automatically: \textbf{L1}~(binary contact only), \textbf{L2}~(contact plus quantitative measurement), \textbf{L3}~(L2 plus spatial information), and \textbf{L4}~(L3 plus multi-modal coverage). The maturity framework classifies each field by \textit{mapping type} and \textit{validation evidence}: \texttt{temperature} from a thermistor is \textit{Stable/Direct}; \texttt{slip\_event} from a heuristic is \textit{Tentative/Derived}; \texttt{texture\_class} with no adapter is \textit{Reserved}.
+
+\subsection{Plug-in adapter system}
+
+TLabel employs a dual-base-class architecture: \textbf{DataAdapterBase} for recorded files, \textbf{SensorAdapterBase} for live hardware streams. Both follow an inheritance-based pattern---(i)~inherit, (ii)~implement \texttt{extract()}, (iii)~register for automatic discovery---with the base class enforcing \texttt{compliance\_level} assignment.
+
+TLabel ships with 10 built-in adapter implementations covering sensor formats from GelSight Mini, DIGIT, PaXini (PXCap and GEN3), Daimon (DM-Tac and DM-TacClaw), UniVTAC, TacQuad, VTouch, YCB-Slide, and ToucHD. Third-party adapters use the \texttt{tlabel} entry point for automatic discovery.
+
+\subsection{Export and integration}
+
+Annotated frames carry full provenance metadata. Export targets include JSON, CSV, FTP-1 Zarr (for foundation model training), and LeRobot dataset format.
+
+% =============================================================================
+\section{Illustrative examples}
+\label{sec:examples}
+% =============================================================================
+
+We demonstrate TLabel using three real-world public datasets (Table~\ref{tab:datasets}).
+
+\begin{table}[ht]
+\centering
+\caption{Dataset characteristics and boundary verification results.}
+\label{tab:datasets}
+\footnotesize
+\begin{tabular}{@{}llllll@{}}
+\toprule
+\textbf{Dataset} & \textbf{Level} & \textbf{Frames} & \textbf{Supported} & \textbf{Unsupported} & \textbf{Violations} \\
+\midrule
+BioTac BTS3~\cite{zapata2018biotac} & L2 & 1,276 & 6/14 & 8/14 & 0 \\
+YCB-Slide~\cite{suresh2022midastouch} & L1 & 3,661 & 6/14 & 8/14 & 0 \\
+Sparsh~\cite{kerr2024sparsh} & L3 & 10,740 & 8/14 & 6/14 & 0 \\
+\midrule
+\textbf{Total} & & \textbf{15,677} & & & \textbf{0} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Example 1: Boundary compliance.}
+For each dataset, we verify that fields outside the adapter's capability set~$C_A$ are \texttt{None} for all frames. We define the boundary compliance rate $B$ as the fraction of unsupported field assignments that are correctly \texttt{None}. Across all 15,677 frames, $B = 100\%$: BioTac sets 8 fields to \texttt{None} per frame (no spatial resolution); YCB-Slide degrades to L1 with 8/14 fields \texttt{None}; Sparsh populates 8/14 fields including full 3D force vectors matching ATI ground truth at 100\%.
+
+\begin{lstlisting}[language=Python]
+import tlabel
+
+# Load any sensor (format auto-detected)
+data = tlabel.load("sparsh_trajectory/")
+print(data.compliance_level)   # "L3"
+print(data.schema.supported)   # 8/14 fields
+
+# Export to downstream formats
+data.export("output.json")       # full provenance
+data.export_ftp1("out.zarr")     # foundation model ready
+\end{lstlisting}
+
+\textbf{Example 2: Semantic corruption detection.}
+Using 10 features from the Sparsh dataset with field-missing rates of 0\%, 42\%, 59\%, and 78\% (c0--c3, respectively), we compare:~\textbf{A}~(naive zero-fill), \textbf{B}~(zero-fill + observation masks), and~\textbf{C}~(TLabel-equivalent: B + maturity one-hot). For logistic regression, zero-fill degrades from area under the precision--recall curve (AUPRC)~1.000 to 0.531, while observation masks preserve 0.607---a gain of $+0.05$ to $+0.11$. Tree-based models remain robust (AUPRC $\geq$~0.967), showing that explicit missingness benefits are model-dependent.
+
+% =============================================================================
+\section{Impact}
+\label{sec:impact}
+% =============================================================================
+
+TLabel fills a gap in embodied~AI data infrastructure as the first open-source, sensor-agnostic semantic standard for tactile data.
+
+\textbf{Reproducibility.} Explicit missingness and full provenance tracking ensure datasets can be audited. The 100\% boundary compliance across 15,677 frames confirms the non-fabrication principle as a structural invariant.
+
+\textbf{Interoperability.} The plug-in adapter system and multi-format export (JSON, CSV, Zarr, LeRobot) enable integration with existing pipelines, with community contributions supported through the entry-point architecture.
+
+\textbf{Downstream reliability.} Naive zero-filling degrades linear models by up to 0.11 AUPRC; TLabel's explicit missingness provides a principled alternative.
+
+TLabel (248 commits, 42 stars) is available via PyPI~\cite{tlabel_pypi} (\texttt{pip install tlabel}), GitHub (\url{https://github.com/liesliy/tlabel}), and Zenodo~\cite{tlabel_zenodo}.
+
+% =============================================================================
+\section{Conclusions}
+\label{sec:conclusion}
+% =============================================================================
+
+We have described TLabel, an open-source Python library implementing a capability-aware 14-dimensional semantic schema with explicit missingness, a four-level compliance hierarchy, and a plug-in adapter system supporting 10 sensor formats. Validation on three public datasets confirms 100\% boundary compliance. Future work includes additional adapters, deeper LeRobot integration, and alignment with ISO~26264-1.
+
+% =============================================================================
+% Back matter
+% =============================================================================
+
+\section*{Data Availability Statement}
+All datasets used in this study are publicly available. BioTac BTS3 from~\cite{zapata2018biotac}; YCB-Slide from~\cite{suresh2022midastouch}; Sparsh from~\cite{kerr2024sparsh}. No new data were generated.
+
+\section*{Declaration of Competing Interest}
+The author declares no competing interests.
+
+\section*{CRediT Author Statement}
+\textbf{Xi Luo:} Conceptualization, Software, Methodology, Validation, Writing -- original draft, Writing -- review \& editing.
+
+\section*{Acknowledgments}
+All code and data processing were conducted at the Tactile Intelligence Lab, Niuxiu Technology. The author thanks the open-source community for contributions to the tlabel package, including the external pull request from gaolebaigao.
+
+% =============================================================================
+% References
+% =============================================================================
+\bibliographystyle{elsarticle-num}
+\bibliography{tlabel_softwarex_refs}
+
+\end{document}
