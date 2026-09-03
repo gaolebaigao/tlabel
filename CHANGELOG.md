@@ -4,6 +4,18 @@ All notable changes to the TLabel project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.22.0] - 2026-09-03
+
+### Added
+- **Tashan TS-F-A adapter** (`tashan_ts_f_a`): DataAdapter for RoboMIND V2.0 AgileX tactile data
+  - Sensor: Tashan (他山科技) TS-F-A 3D Force fingertip sensor
+  - Parses HDF5 files with shape `(T, 2, 6)` float32 tactile observations
+  - 6D per-sensor: normal_force, tangential_force, tangential_direction, tangential_fx, tangential_fy, contact_indicator
+  - 65535.0 (uint16 overflow) treated as invalid/no-contact marker
+  - Compliance Level: L3 (full 3D force vector: fx, fy, fz)
+  - Naming follows brand+model convention: `tashan_ts_f_a`
+  - Validated against 2 trajectories: `data/` (1294 frames) and `data1/` (2066 frames)
+
 ## [0.21.1] - 2026-08-31
 
 ### Fixed
