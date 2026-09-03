@@ -65,16 +65,27 @@ class TashanTsFAAdapter(DataAdapterBase):
     def supported_extensions(self) -> List[str]:
         return [".hdf5", ".h5"]
 
-    def get_capabilities(self) -> Dict[str, Any]:
+    def get_capabilities(self) -> Dict[str, bool]:
+        """Schema V2 14维能力声明
+
+        TS-F-A 是力传感器（非视觉触觉），只能提供接触检测 + 力信息，
+        无法提供形变、纹理、滑移等视觉类传感器能力。
+        """
         return {
-            "dims": 6,
-            "measures": ["normal_force", "tangential_force", "tangential_direction",
-                         "tangential_fx", "tangential_fy", "contact_indicator"],
-            "has_temperature": False,
-            "has_spatial_array": False,
-            "has_force_vector": True,
-            "num_sensors_per_hand": 2,
-            "invalid_marker": INVALID_MARKER,
+            "contact": True,               # 有 contact_indicator 通道
+            "contact_centroid": False,
+            "contact_region": False,
+            "force_magnitude": True,       # 可计算法向力幅值
+            "force_vector": True,          # L3: 完整3D力向量 [fx, fy, nf]
+            "torque_vector": False,
+            "slip_event": False,           # 无直接滑检测
+            "slip_velocity": False,
+            "manipulation_phase": False,
+            "texture_class": False,
+            "object_deformation": False,
+            "temperature": False,
+            "confidence": True,            # extract_schema 输出 confidence
+            "compliance_level": True,      # extract_schema 输出 compliance_level
         }
 
     def get_sensor_info(self) -> Dict[str, Any]:
@@ -83,6 +94,8 @@ class TashanTsFAAdapter(DataAdapterBase):
             "model": self.model,
             "type": "force",
             "dimensions": 6,
+            "channels": ["normal_force", "tangential_force", "tangential_direction",
+                         "tangential_fx", "tangential_fy", "contact_indicator"],
             "units": {
                 "normal_force": "N",
                 "tangential_force": "N",
@@ -91,6 +104,8 @@ class TashanTsFAAdapter(DataAdapterBase):
                 "tangential_fy": "N",
                 "contact_indicator": "binary",
             },
+            "num_sensors_per_hand": 2,
+            "invalid_marker": INVALID_MARKER,
             "notes": "RoboMIND V2.0 data; 65535.0 = invalid/no-contact marker",
         }
 
